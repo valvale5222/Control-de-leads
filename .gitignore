@@ -1,0 +1,16 @@
+# Configuración local de Claude Code (específica de esta máquina)
+.claude/settings.local.json
+
+# Copias de seguridad y archivos temporales
+*.BACKUP.html
+*.bak
+*.tmp
+_preview_check.html
+
+# Dependencias
+node_modules/
+
+# Sistema operativo
+Thumbs.db
+Desktop.ini
+.DS_Store

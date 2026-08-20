@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n '\\\\$0\\\\.[0-9]*M' \"Dashboard Comercial FrioPacking.html\")",
+      "Bash(powershell -command ' *)",
+      "Bash(start \"\" \"c:\\\\Users\\\\vrodriguez\\\\Desktop\\\\Directorio J\\\\Dashboard Comercial FrioPacking.html\")",
+      "Bash(npx playwright *)",
+      "Bash(npm list *)",
+      "Bash(npm root *)",
+      "Bash(ls \"$\\(npm root -g\\)/playwright\")",
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\vrodriguez\\\\Desktop\\\\Directorio J\\\\Dashboard Comercial FrioPacking.html\" | Measure-Object -Line\\).Lines)",
+      "Bash(python -c ' *)",
+      "PowerShell(Get-Command python3, py -ErrorAction SilentlyContinue)",
+      "Bash(node -e ' *)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\vrodriguez\\AppData\\Local\\Temp\\claude\\c--Users-vrodriguez-Desktop-Directorio-J\\02d9500e-95e7-4a02-8df9-7f96c6e88ccf\\scratchpad"
+    ]
+  }
+}
