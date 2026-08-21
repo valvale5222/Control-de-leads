@@ -503,6 +503,48 @@
   .detail-view-btn.active{background:var(--teal);color:#06241d;box-shadow:0 4px 14px rgba(74,179,159,.28);}
   :root[data-theme="light"] .detail-view-btn.active{background:var(--navy);color:#fff;box-shadow:0 4px 14px rgba(58,130,174,.30), inset 0 0 0 1px rgba(49,143,130,.35);}
 
+  /* RESUMEN EJECUTIVO (Detalle > Oportunidades / Entregas) — bloque de consulta
+     rápida antes de cada tabla; no sustituye filtros ni orden de la tabla. */
+  .resumen-block{margin-bottom:16px;}
+  .resumen-search-bar{margin-bottom:12px;}
+  .resumen-search-bar input{flex:1;min-width:0;width:100%;}
+  .resumen-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+  @media (max-width:1200px){ .resumen-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width:767px){ .resumen-grid{grid-template-columns:1fr;} }
+  .resumen-card{
+    position:relative;background:var(--card-surface);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+    border:1px solid var(--glass-border);border-left:3px solid var(--resumen-accent,var(--line));
+    border-radius:var(--radius-md);padding:12px 14px 8px;display:flex;flex-direction:column;min-width:0;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05), var(--shadow-xs);
+  }
+  :root[data-theme="light"] .resumen-card{box-shadow:inset 0 1px 0 rgba(255,255,255,.5), var(--shadow-xs);}
+  /* Halo permanente y sutil (no interactivo) para que el bloque resumen se
+     distinga a simple vista de la tabla — respeta prefers-reduced-motion. */
+  .resumen-card::after{
+    content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    box-shadow:0 0 0 0 var(--resumen-glow,transparent);
+    animation:resumenGlow 3.6s ease-in-out infinite;
+  }
+  .resumen-card:nth-child(2)::after{animation-delay:.5s;}
+  .resumen-card:nth-child(3)::after{animation-delay:1s;}
+  @keyframes resumenGlow{
+    0%,100%{box-shadow:0 0 0 0 var(--resumen-glow,transparent);}
+    50%{box-shadow:0 0 16px 1px var(--resumen-glow,transparent);}
+  }
+  @media (prefers-reduced-motion:reduce){ .resumen-card::after{animation:none;} }
+  .resumen-card-head{display:flex;align-items:baseline;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+  .resumen-card-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .resumen-card-sep{color:var(--ink-dim);font-size:12px;}
+  .resumen-card-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+  .resumen-card-list{display:flex;flex-direction:column;gap:3px;overflow-y:auto;max-height:238px;}
+  /* Oportunidades muestra ~3 filas antes de hacer scroll (Entregas conserva ~5). */
+  #resumen-oportunidades .resumen-card-list{max-height:160px;}
+  .resumen-row{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:8px;cursor:pointer;transition:background-color .15s var(--ease);position:relative;z-index:1;}
+  .resumen-row:hover{background:var(--card-surface-hover);}
+  .resumen-row-top{font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .resumen-row-bottom{display:flex;justify-content:space-between;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .resumen-empty{font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-dim);text-align:center;padding:16px 6px;}
+
   /* FILTERS */
   .filters{
     display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px;align-items:center;
@@ -1245,7 +1287,7 @@
     .header-actions,.sync-indicator,.btn-add,.filters,.filter-reset,.theme-switch,.subtabs,.toast-stack,
     .modal-overlay,.entregable-chip .ent-check,.ent-edit-btn,.rs-toolbar select,
     .rs-view-toggle,.rs-cal-nav,#rs-detail-drawer,.rs-acc-toggle,.detail-view-toggle,.detail-toolbar,#detail-view-entregas,.carga-detail-row,
-    .kpi-context-tag,
+    .kpi-context-tag,.resumen-block,
     .global-tooltip{display:none !important;}
     .cliente-link{background:none !important;border:none !important;color:var(--ink) !important;font-weight:600;cursor:default;text-decoration:none;pointer-events:none;}
     .kpis-primary{grid-template-columns:repeat(3,1fr);margin-bottom:14px;}
@@ -1524,6 +1566,25 @@
     </div>
 
     <div id="detail-view-oportunidades">
+      <div class="resumen-block" id="resumen-oportunidades">
+        <div class="filters resumen-search-bar">
+          <input type="text" id="resumen-op-texto" placeholder="🔍 Buscar Lead o cliente..." oninput="renderResumenOportunidades()">
+        </div>
+        <div class="resumen-grid">
+          <div class="resumen-card" style="--resumen-accent:var(--info);--resumen-glow:color-mix(in srgb, var(--info) 38%, transparent)">
+            <div class="resumen-card-head"><span class="resumen-card-title">Comercial</span><span class="resumen-card-sep">·</span><span class="resumen-card-count" id="resumen-op-comercial-count">0</span></div>
+            <div class="resumen-card-list" id="resumen-op-comercial-list"></div>
+          </div>
+          <div class="resumen-card" style="--resumen-accent:var(--violet);--resumen-glow:color-mix(in srgb, var(--violet) 38%, transparent)">
+            <div class="resumen-card-head"><span class="resumen-card-title">Arquitectura</span><span class="resumen-card-sep">·</span><span class="resumen-card-count" id="resumen-op-arquitectura-count">0</span></div>
+            <div class="resumen-card-list" id="resumen-op-arquitectura-list"></div>
+          </div>
+          <div class="resumen-card" style="--resumen-accent:var(--ok);--resumen-glow:color-mix(in srgb, var(--ok) 38%, transparent)">
+            <div class="resumen-card-head"><span class="resumen-card-title">Presupuestos e Ingeniería</span><span class="resumen-card-sep">·</span><span class="resumen-card-count" id="resumen-op-presupuestos-count">0</span></div>
+            <div class="resumen-card-list" id="resumen-op-presupuestos-list"></div>
+          </div>
+        </div>
+      </div>
       <div class="filters">
         <div class="msel" id="f-kam" data-onchange="applyFiltersDetalle"><button type="button" class="msel-btn" onclick="mselToggleOpen('f-kam',event)"><span class="msel-btn-label">KAM: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
         <div class="msel" id="f-etapa" data-onchange="applyFiltersDetalle"><button type="button" class="msel-btn" onclick="mselToggleOpen('f-etapa',event)"><span class="msel-btn-label">Etapa: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
@@ -1559,6 +1620,25 @@
     </div>
 
     <div id="detail-view-entregas" style="display:none;">
+      <div class="resumen-block" id="resumen-entregas">
+        <div class="filters resumen-search-bar">
+          <input type="text" id="resumen-ent-texto" placeholder="🔍 Buscar Lead o cliente..." oninput="renderResumenEntregas()">
+        </div>
+        <div class="resumen-grid">
+          <div class="resumen-card" style="--resumen-accent:var(--info);--resumen-glow:color-mix(in srgb, var(--info) 38%, transparent)">
+            <div class="resumen-card-head"><span class="resumen-card-title">Análisis de cliente</span><span class="resumen-card-sep">·</span><span class="resumen-card-count" id="resumen-ent-analisis-count">0</span></div>
+            <div class="resumen-card-list" id="resumen-ent-analisis-list"></div>
+          </div>
+          <div class="resumen-card" style="--resumen-accent:var(--violet);--resumen-glow:color-mix(in srgb, var(--violet) 38%, transparent)">
+            <div class="resumen-card-head"><span class="resumen-card-title">Negociación</span><span class="resumen-card-sep">·</span><span class="resumen-card-count" id="resumen-ent-negociacion-count">0</span></div>
+            <div class="resumen-card-list" id="resumen-ent-negociacion-list"></div>
+          </div>
+          <div class="resumen-card" style="--resumen-accent:var(--warn);--resumen-glow:color-mix(in srgb, var(--warn) 38%, transparent)">
+            <div class="resumen-card-head"><span class="resumen-card-title">Postpuesto</span><span class="resumen-card-sep">·</span><span class="resumen-card-count" id="resumen-ent-postpuesto-count">0</span></div>
+            <div class="resumen-card-list" id="resumen-ent-postpuesto-list"></div>
+          </div>
+        </div>
+      </div>
       <div class="filters" id="ent-filters">
         <div class="msel" id="ent-f-kam" data-onchange="renderDetalleEntregas"><button type="button" class="msel-btn" onclick="mselToggleOpen('ent-f-kam',event)"><span class="msel-btn-label">KAM: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
         <div class="msel" id="ent-f-etapa" data-onchange="renderDetalleEntregas"><button type="button" class="msel-btn" onclick="mselToggleOpen('ent-f-etapa',event)"><span class="msel-btn-label">Etapa: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
@@ -3919,6 +3999,47 @@ function renderDetalle(){
   }).join('');
   populateResponsableAsignadoOptions();
   applyFiltersDetalle();
+  renderResumenOportunidades();
+}
+/* ============================================================
+   RESUMEN EJECUTIVO — Detalle > Oportunidades
+   Capa de sólo consulta sobre getOportunidadesInternas(): reutiliza
+   responsableActual (área), getPrimaryPendingDeliverable (próxima fecha de
+   entrega) y compararPorImporte (orden). No persiste nada ni duplica datos.
+   ============================================================ */
+function normalizarBusqueda(s){
+  return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+}
+function resumenRowHtml(o, fechaLabel){
+  return `<div class="resumen-row" onclick="openEditModal(${o.id})" title="Abrir #${o.id} · ${escAttr(o.cliente)}">
+    <div class="resumen-row-top">#${o.id} · ${o.cliente}</div>
+    <div class="resumen-row-bottom"><span>${formatMoneda(o.importe)}</span><span>${fechaLabel}</span></div>
+  </div>`;
+}
+const RESUMEN_OP_AREAS = [
+  {key:'comercial', label:'Comercial'},
+  {key:'arquitectura', label:'Arquitectura'},
+  {key:'presupuestos', label:'Presupuestos e Ingeniería'},
+];
+function renderResumenOportunidades(){
+  const inputEl = document.getElementById('resumen-op-texto');
+  const texto = normalizarBusqueda(inputEl ? inputEl.value.trim() : '');
+  const base = getOportunidadesInternas().filter(o=>{
+    if(!texto) return true;
+    return normalizarBusqueda(String(o.id)+' '+o.cliente).includes(texto);
+  });
+  RESUMEN_OP_AREAS.forEach(area=>{
+    const items = base.filter(o=>o.responsableActual===area.key).slice().sort(compararPorImporte('importe-desc'));
+    const countEl = document.getElementById('resumen-op-'+area.key+'-count');
+    const listEl = document.getElementById('resumen-op-'+area.key+'-list');
+    if(countEl) countEl.textContent = items.length;
+    if(listEl){
+      listEl.innerHTML = items.length ? items.map(o=>{
+        const primary = getPrimaryPendingDeliverable(o);
+        return resumenRowHtml(o, formatFechaCorta(primary ? primary.fechaEntrega : ''));
+      }).join('') : '<div class="resumen-empty">Sin oportunidades</div>';
+    }
+  });
 }
 /* Edición manual e inmediata de la secuencia de Orden de trabajo desde la tabla de
    Oportunidades. Acepta cualquier entero >= 1 (no es una categoría de 1 a 4): la
@@ -4105,6 +4226,39 @@ function renderDetalleEntregas(){
   }).join('') || '';
 
   document.getElementById('ent-f-count').textContent = rows.length + ' de ' + oportunidadesEnCancha().length + ' oportunidades';
+  renderResumenEntregas();
+}
+/* ============================================================
+   RESUMEN EJECUTIVO — Detalle > Entregas
+   Capa de sólo consulta sobre oportunidadesEnCancha(): reutiliza o.etapa
+   (misma clasificación que el filtro Etapa de la tabla), fechaCompletadoRondaActual
+   (fecha marcada como entregado) y compararPorImporte (orden). No persiste nada.
+   Solo cubre las 3 etapas pedidas para el resumen (análisis/negociación/postpuesto);
+   la tabla de abajo sigue mostrando todas las etapas de oportunidadesEnCancha().
+   ============================================================ */
+const RESUMEN_ENT_ETAPAS = [
+  {key:'analisis', label:'Análisis de cliente'},
+  {key:'negociacion', label:'Negociación'},
+  {key:'postpuesto', label:'Postpuesto'},
+];
+function renderResumenEntregas(){
+  const inputEl = document.getElementById('resumen-ent-texto');
+  const texto = normalizarBusqueda(inputEl ? inputEl.value.trim() : '');
+  const base = oportunidadesEnCancha().filter(o=>{
+    if(!texto) return true;
+    return normalizarBusqueda(String(o.id)+' '+o.cliente).includes(texto);
+  });
+  RESUMEN_ENT_ETAPAS.forEach(etapa=>{
+    const items = base.filter(o=>o.etapa===etapa.key).slice().sort(compararPorImporte('importe-desc'));
+    const countEl = document.getElementById('resumen-ent-'+etapa.key+'-count');
+    const listEl = document.getElementById('resumen-ent-'+etapa.key+'-list');
+    if(countEl) countEl.textContent = items.length;
+    if(listEl){
+      listEl.innerHTML = items.length ? items.map(o=>
+        resumenRowHtml(o, formatFechaCorta(fechaCompletadoRondaActual(o)))
+      ).join('') : '<div class="resumen-empty">Sin oportunidades</div>';
+    }
+  });
 }
 
 /* ============================================================
