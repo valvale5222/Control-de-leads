@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de usuarios — Control de Oportunidades</title>
+<script>
+  /* Guardia rápida: sin sesión guardada, ni vale la pena pintar esta vista.
+     La restricción real por rol admin la hace RLS en Supabase (ver
+     supabase/11_admin_usuarios.sql); esto es solo para no mostrar nada
+     mientras no hay sesión. */
+  (function(){
+    try{
+      var haySesion = Object.keys(localStorage).some(function(k){
+        return k.indexOf('-auth-token') !== -1 && !!localStorage.getItem(k);
+      });
+      if(!haySesion){ window.location.replace('login.html'); }
+    }catch(e){}
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --navy:#4A9FD1; --navy-deep:#3A82AE; --teal:#4AB39F; --teal-deep:#3B9684;
+    --app-bg:#0E1520; --section-surface:rgba(35,42,51,.76); --card-surface:rgba(43,51,61,.70);
+    --border-soft:rgba(190,207,224,.10);
+    --bg:var(--app-bg); --surface:#252E38; --surface-alt:#303B47; --line:var(--border-soft);
+    --ink:#EAF0F6; --ink-soft:#A8B5C4; --ink-dim:#78879A;
+    --danger:#D46A63; --danger-bg:rgba(212,106,99,0.10);
+    --ok:#4AAE83; --ok-bg:rgba(74,174,131,0.10);
+    --radius-sm:8px; --radius-md:12px; --radius-lg:18px; --radius-xl:24px; --radius-pill:999px;
+    --shadow-sm:0 6px 18px rgba(4,8,20,.22); --shadow-lg:0 24px 60px rgba(2,6,16,.40);
+    --ease:cubic-bezier(.2,.8,.2,1);
+    --glass-border:rgba(203,218,235,.10); --glass-blur:blur(18px) saturate(112%);
+  }
+  :root[data-theme="light"]{
+    --navy:#477EA5; --navy-deep:#3D6D90; --teal:#318F82; --teal-deep:#297A6F;
+    --app-bg:#EEF2F5; --section-surface:rgba(218,226,232,.78); --card-surface:rgba(231,237,241,.82);
+    --border-soft:rgba(37,55,76,.09);
+    --surface:#E9EEF2; --surface-alt:#DCE4E9; --line:var(--border-soft);
+    --ink:#263548; --ink-soft:#657489; --ink-dim:#8B97A5;
+    --danger:#C35E57; --danger-bg:rgba(195,94,87,0.08);
+    --ok:#3D936F; --ok-bg:rgba(61,147,111,0.10);
+    --shadow-sm:0 6px 18px rgba(10,18,45,.05); --shadow-lg:0 24px 60px rgba(6,12,32,.12);
+    --glass-border:rgba(36,51,72,.09); --glass-blur:blur(18px) saturate(112%);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;min-height:100vh;padding:24px;
+    font-family:'Inter','Segoe UI',Arial,sans-serif;color:var(--ink);font-size:14px;line-height:1.5;
+    background:
+      radial-gradient(circle at 10% -5%, rgba(74,179,159,0.10), transparent 45%),
+      radial-gradient(circle at 95% 8%, rgba(74,159,209,0.12), transparent 42%),
+      var(--bg);
+    transition:background-color .25s var(--ease),color .25s var(--ease);
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+  .topbar h1{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;}
+  .topbar .subtitulo{margin:4px 0 0;font-size:12.5px;color:var(--ink-soft);}
+  .topbar-actions{display:flex;align-items:center;gap:10px;}
+  .link-volver{
+    display:inline-flex;align-items:center;gap:6px;color:var(--ink-soft);text-decoration:none;
+    font-size:13px;font-weight:600;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    transition:color .16s var(--ease),border-color .16s var(--ease);
+  }
+  .link-volver:hover{color:var(--ink);border-color:var(--teal);}
+  .btn-logout{
+    background:var(--surface-alt);color:var(--ink);border:1px solid var(--line);border-radius:var(--radius-sm);
+    padding:8px 14px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .card{
+    background:var(--section-surface);border:1px solid var(--glass-border);border-radius:var(--radius-xl);
+    box-shadow:var(--shadow-lg);padding:24px;margin-bottom:20px;
+    backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  }
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin:0 0 16px;}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;}
+  .field{display:block;text-align:left;}
+  .field span{display:block;font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.03em;text-transform:uppercase;}
+  .field input, .field select{
+    width:100%;height:38px;padding:0 12px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:13px;outline:none;
+    transition:border-color .16s var(--ease),box-shadow .16s var(--ease);
+  }
+  .field input:focus, .field select:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--ok-bg);}
+  .form-actions{margin-top:16px;display:flex;align-items:center;gap:12px;}
+  .btn-submit{
+    height:40px;padding:0 20px;border:none;border-radius:var(--radius-sm);
+    background:linear-gradient(135deg,var(--teal-deep),var(--teal));color:#fff;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13.5px;cursor:pointer;
+    transition:filter .16s var(--ease),transform .16s var(--ease);
+  }
+  .btn-submit:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px);}
+  .btn-submit:disabled{opacity:.6;cursor:default;}
+  .msg{border-radius:var(--radius-sm);padding:9px 12px;font-size:12.5px;}
+  .msg.error{color:var(--danger);background:var(--danger-bg);}
+  .msg.ok{color:var(--ok);background:var(--ok-bg);}
+  .hint{margin:10px 0 0;font-size:11.5px;color:var(--ink-dim);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-dim);font-weight:600;padding:0 10px 10px;border-bottom:1px solid var(--line);}
+  td{padding:10px;border-bottom:1px solid var(--line);color:var(--ink);}
+  tr:last-child td{border-bottom:none;}
+  td select{
+    height:32px;padding:0 8px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:12.5px;
+  }
+  .rol-status{font-size:11px;color:var(--ink-dim);margin-left:8px;}
+  .empty-state, .access-denied{text-align:center;color:var(--ink-soft);padding:30px 10px;font-size:13px;}
+  .access-denied h2{font-family:'Space Grotesk',sans-serif;color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1>Gestión de usuarios</h1>
+      <p class="subtitulo">Alta de cuentas y roles — Control de Oportunidades</p>
+    </div>
+    <div class="topbar-actions">
+      <a href="index.html" class="link-volver">← Volver al panel</a>
+      <button type="button" class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div id="contenido">
+    <div class="card"><p class="empty-state">Verificando permisos…</p></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://tfzanbbdvzullwlauxia.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_q-RLhPZqhDtnPHhmkkXaHA_d7FRXHC6';
+let db = null;
+let rolesDisponibles = [];
+
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function renderAccesoDenegado(){
+  document.getElementById('contenido').innerHTML =
+    '<div class="card access-denied">' +
+      '<h2>No tenés acceso a esta vista</h2>' +
+      '<p>Esta sección es solo para usuarios con rol <b>admin</b>. Si creés que deberías tener acceso, pedile a un administrador que te lo asigne.</p>' +
+      '<p><a class="link-volver" href="index.html">← Volver al panel</a></p>' +
+    '</div>';
+}
+
+async function cargarRoles(){
+  const {data, error} = await db.from('roles').select('identificador, descripcion').order('descripcion');
+  if(error){ console.error('No se pudieron cargar los roles:', error); return; }
+  rolesDisponibles = data || [];
+}
+
+function opcionesRol(rolIdSeleccionado){
+  return rolesDisponibles.map(function(r){
+    return '<option value="' + r.identificador + '"' + (r.identificador === rolIdSeleccionado ? ' selected' : '') + '>' + escapeHtml(r.descripcion) + '</option>';
+  }).join('');
+}
+
+async function cargarUsuarios(){
+  const {data, error} = await db.from('usuario').select('identificador, user, nombre, rol_id, roles(descripcion)').order('nombre');
+  const tbody = document.getElementById('tabla-usuarios-body');
+  if(error){
+    tbody.innerHTML = '<tr><td colspan="4"><p class="msg error">No se pudo cargar la lista de usuarios: ' + escapeHtml(error.message) + '</p></td></tr>';
+    return;
+  }
+  if(!data || !data.length){
+    tbody.innerHTML = '<tr><td colspan="4"><p class="empty-state">Todavía no hay usuarios cargados.</p></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(function(u){
+    return '<tr data-id="' + u.identificador + '">' +
+      '<td>' + escapeHtml(u.nombre) + '</td>' +
+      '<td>' + escapeHtml(u.user) + '</td>' +
+      '<td><select onchange="handleCambiarRol(' + u.identificador + ', this)">' + opcionesRol(u.rol_id) + '</select><span class="rol-status" id="rol-status-' + u.identificador + '"></span></td>' +
+    '</tr>';
+  }).join('');
+}
+
+async function handleCambiarRol(id, select){
+  const status = document.getElementById('rol-status-' + id);
+  status.textContent = 'Guardando…';
+  const {error} = await db.from('usuario').update({rol_id: Number(select.value)}).eq('identificador', id);
+  status.textContent = error ? 'Error al guardar' : 'Guardado ✓';
+  if(error) console.error('No se pudo cambiar el rol:', error);
+  setTimeout(function(){ status.textContent = ''; }, 2500);
+}
+
+async function handleCrearUsuario(ev){
+  ev.preventDefault();
+  const nombre = document.getElementById('nuevo-nombre').value.trim();
+  const usuarioInput = document.getElementById('nuevo-user').value.trim();
+  const email = document.getElementById('nuevo-email').value.trim();
+  const password = document.getElementById('nuevo-password').value;
+  const rolId = Number(document.getElementById('nuevo-rol').value);
+  const btn = document.getElementById('btn-crear-usuario');
+  const msg = document.getElementById('crear-usuario-msg');
+  msg.hidden = true;
+  btn.disabled = true; btn.textContent = 'Creando…';
+
+  try{
+    /* Único mecanismo disponible sin backend propio para crear una cuenta de
+       Supabase Auth es signUp con la clave anon. El problema: si el proyecto
+       tiene "Confirm email" desactivado, signUp deja logueado automáticamente
+       al usuario recién creado en ESTE cliente, pisando la sesión del admin
+       que está usando este formulario. Por eso se guarda la sesión actual
+       antes y se restaura después, pase lo que pase. */
+    const {data:{session: sesionAdmin}} = await db.auth.getSession();
+
+    const {data, error} = await db.auth.signUp({email, password});
+    if(sesionAdmin){
+      await db.auth.setSession({access_token: sesionAdmin.access_token, refresh_token: sesionAdmin.refresh_token});
+    }
+    if(error) throw error;
+    if(!data.user){ throw new Error('Supabase no devolvió el usuario creado.'); }
+
+    const {error: errPerfil} = await db.from('usuario').insert({
+      auth_user_id: data.user.id,
+      user: usuarioInput,
+      nombre: nombre,
+      rol_id: rolId,
+    });
+    if(errPerfil) throw errPerfil;
+
+    msg.className = 'msg ok';
+    msg.textContent = 'Usuario creado. Si el proyecto tiene "Confirm email" activado en Supabase, la persona debe confirmar su correo antes de poder ingresar.';
+    msg.hidden = false;
+    document.getElementById('form-crear-usuario').reset();
+    cargarUsuarios();
+  }catch(e){
+    console.error('Error al crear usuario:', e);
+    msg.className = 'msg error';
+    msg.textContent = e.message || 'No se pudo crear el usuario.';
+    msg.hidden = false;
+  }finally{
+    btn.disabled = false; btn.textContent = 'Crear usuario';
+  }
+}
+
+function renderPanelAdmin(){
+  document.getElementById('contenido').innerHTML =
+    '<div class="card">' +
+      '<h2>Crear usuario</h2>' +
+      '<form id="form-crear-usuario">' +
+        '<div class="form-grid">' +
+          '<label class="field"><span>Nombre completo</span><input type="text" id="nuevo-nombre" required></label>' +
+          '<label class="field"><span>Usuario</span><input type="text" id="nuevo-user" required></label>' +
+          '<label class="field"><span>Correo</span><input type="email" id="nuevo-email" required></label>' +
+          '<label class="field"><span>Contraseña</span><input type="password" id="nuevo-password" minlength="6" required></label>' +
+          '<label class="field"><span>Rol</span><select id="nuevo-rol" required>' + opcionesRol(null) + '</select></label>' +
+        '</div>' +
+        '<div class="form-actions">' +
+          '<button type="submit" class="btn-submit" id="btn-crear-usuario">Crear usuario</button>' +
+        '</div>' +
+        '<p class="msg" id="crear-usuario-msg" hidden></p>' +
+        '<p class="hint">La cuenta se crea con Supabase Auth (correo + contraseña). Si el proyecto exige confirmar el correo, la persona no va a poder ingresar hasta que lo confirme.</p>' +
+      '</form>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h2>Usuarios existentes</h2>' +
+      '<table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th></tr></thead><tbody id="tabla-usuarios-body">' +
+        '<tr><td colspan="3"><p class="empty-state">Cargando…</p></td></tr>' +
+      '</tbody></table>' +
+    '</div>';
+  document.getElementById('form-crear-usuario').addEventListener('submit', handleCrearUsuario);
+  cargarUsuarios();
+}
+
+async function verificarAccesoYRenderizar(session){
+  const {data, error} = await db.from('usuario').select('rol_id, roles(descripcion)').eq('auth_user_id', session.user.id).maybeSingle();
+  if(error){ console.error('No se pudo verificar el rol:', error); renderAccesoDenegado(); return; }
+  const rol = data && data.roles ? data.roles.descripcion : '';
+  if(rol !== 'admin'){ renderAccesoDenegado(); return; }
+  await cargarRoles();
+  renderPanelAdmin();
+}
+
+document.getElementById('btn-logout').addEventListener('click', async function(){
+  if(db) await db.auth.signOut();
+});
+
+window.addEventListener('DOMContentLoaded', function(){
+  if(typeof supabase === 'undefined'){
+    document.getElementById('contenido').innerHTML = '<div class="card"><p class="msg error">No se pudo conectar con el servidor. Revisá tu conexión a internet y recargá la página.</p></div>';
+    return;
+  }
+  db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  db.auth.onAuthStateChange(function(event, session){
+    if(session){
+      verificarAccesoYRenderizar(session);
+    }else{
+      window.location.replace('login.html');
+    }
+  });
+});
+</script>
+</body>
+</html>

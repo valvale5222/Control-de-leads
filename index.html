@@ -4,6 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Oportunidades — Grupo Friopacking</title>
+<script>
+  /* Guardia de sesión: se ejecuta antes de pintar nada del panel. Si no hay
+     un token de sesión de Supabase en localStorage, redirige de una al login
+     (login.html) sin llegar a mostrar un solo dato del panel. No reemplaza
+     la seguridad real (eso lo hace RLS en Supabase, ver supabase/09_auth_login.sql):
+     esto es solo para no mostrar la interfaz mientras no hay sesión.
+     Se hace así, sin esperar a que cargue supabase-js (que va "defer"), para
+     que la redirección sea inmediata y no haya parpadeo del panel. */
+  (function(){
+    try{
+      var haySesion = Object.keys(localStorage).some(function(k){
+        return k.indexOf('-auth-token') !== -1 && !!localStorage.getItem(k);
+      });
+      if(!haySesion){ window.location.replace('login.html'); }
+    }catch(e){}
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script defer src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -317,6 +334,7 @@
     border-radius:var(--radius-sm);
     border:1px solid var(--line);background:var(--surface);color:var(--ink);
     display:inline-flex;align-items:center;justify-content:center;
+    text-decoration:none;
     transition:filter .16s var(--ease),border-color .16s var(--ease),transform .16s var(--ease),box-shadow .16s var(--ease);
   }
   .btn-toolbar .btn-emoji{font-size:16px;line-height:1;}
@@ -355,6 +373,44 @@
     transition:opacity .15s var(--ease);
   }
   .sync-indicator:hover .tt{opacity:1;}
+
+  /* USUARIO / LOGOUT — junto al selector de tema en el header */
+  .user-badge{display:flex;align-items:center;gap:10px;}
+  /* Los estilos de autor le ganan al [hidden] del user-agent aunque la
+     especificidad "parezca" igual, así que el display:flex de arriba deja
+     el elemento visible pese al atributo hidden si no se anula acá. */
+  .user-badge[hidden]{display:none;}
+  .user-badge-info{display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;}
+  .user-badge-name{font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;color:var(--ink);}
+  .user-badge-role{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em;}
+  .btn-toolbar.btn-logout{background:var(--surface-alt);}
+
+  /* MODO SOLO LECTURA (rol visor) — se esconde todo lo que modifica datos.
+     Esto es comodidad visual, no seguridad: quien manda de verdad son las
+     políticas RLS de supabase/12_roles_permisos.sql, que rechazan la
+     escritura aunque alguien llame a la API por su cuenta.
+     Va con !important porque varios de estos botones llevan display inline
+     puesto por JS (ver setDetailView), que si no le ganaría a esta regla. */
+  body.solo-lectura .btn-add,
+  body.solo-lectura .btn-toolbar.btn-import,
+  body.solo-lectura .btn-toolbar.btn-restore,
+  body.solo-lectura .btn-delete,
+  body.solo-lectura .ent-remove-btn,
+  body.solo-lectura .ent-toggle-btn,
+  body.solo-lectura #m-delete-btn,
+  body.solo-lectura .modal-footer-right .btn-primary{display:none !important;}
+  /* En solo lectura la ficha se abre igual (sirve para consultar el detalle),
+     pero sus campos no se pueden tocar y "Cancelar" pasa a ser "Cerrar". */
+  body.solo-lectura .modal-box input,
+  body.solo-lectura .modal-box select,
+  body.solo-lectura .modal-box textarea{pointer-events:none;background:var(--surface-alt);opacity:.75;}
+  .readonly-badge{
+    display:none;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+    background:var(--surface-alt);border:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--ink-dim);
+    text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
+  }
+  body.solo-lectura .readonly-badge{display:inline-flex;}
 
   /* KPI ROW — dos niveles: atención inmediata + estado general */
   .kpis-primary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:10px;}
@@ -1360,6 +1416,17 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
           </button>
         </div>
+        <div class="user-badge" id="user-badge" hidden>
+          <span class="readonly-badge" title="Tu rol es visor: podés consultar todo, pero no modificar">👁️ Solo lectura</span>
+          <div class="user-badge-info">
+            <span class="user-badge-name" id="user-badge-name">—</span>
+            <span class="user-badge-role" id="user-badge-role">—</span>
+          </div>
+          <button type="button" class="btn-toolbar btn-logout" onclick="handleLogout()" aria-label="Cerrar sesión">
+            <span class="btn-emoji" aria-hidden="true">🚪</span>
+            <span class="tt">Cerrar sesión</span>
+          </button>
+        </div>
         <div class="meta">
           Semana: <b id="meta-semana">—</b><br>
           <span id="meta-hoyhora">Hoy: — · Hora: —</span>
@@ -1385,6 +1452,10 @@
           <span class="btn-emoji" aria-hidden="true">↩️</span>
           <span class="tt">Restaurar cambios</span>
         </button>
+        <a href="usuarios.html" class="btn-toolbar btn-usuarios" id="btn-usuarios" style="display:none" aria-label="Gestión de usuarios">
+          <span class="btn-emoji" aria-hidden="true">👤</span>
+          <span class="tt">Gestión de usuarios</span>
+        </a>
         <span id="sync-indicator" class="sync-indicator"><span class="sync-dot ok" id="sync-dot"></span><span class="tt" id="sync-tt">Sin cambios locales</span></span>
       </div>
       <div class="tabs">
@@ -2314,6 +2385,12 @@ let lastSavedAt = null;
 const SUPABASE_URL = 'https://tfzanbbdvzullwlauxia.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_q-RLhPZqhDtnPHhmkkXaHA_d7FRXHC6';
 let db = null;
+/* Permiso de escritura del rol (admin/editor sí, visor no). Se declara acá
+   arriba, y no junto al resto del código de login que está al final del
+   script, porque persistLocal() la consulta y se definiría después: con `let`
+   eso sería un ReferenceError si algo intentara guardar durante la carga.
+   El valor real lo pone cargarPerfilUsuario() cuando llega el perfil. */
+let puedeEditar = false;
 let supabaseSyncTimer = null;
 /* Escrituras propias en vuelo: mientras haya alguna, un refresco por Realtime
    traería un estado a medio subir, así que se posterga. */
@@ -2702,6 +2779,13 @@ function loadFromStorage(){
   }catch(e){ console.error('No se pudo leer el respaldo local', e); return false; }
 }
 function persistLocal(opts){
+  /* Único portón por el que pasa todo cambio de datos (ficha, borrado,
+     arrastrar en el calendario, importar Excel, orden de trabajo...), así que
+     alcanza con frenar acá para que un visor no modifique nada — incluidas las
+     interacciones que no son botones y que el CSS no puede esconder.
+     La seguridad real igual está en la base (12_roles_permisos.sql): esto
+     evita que el visor crea que guardó algo que la base va a rechazar. */
+  if(!puedeEditar){ avisarSoloLectura(); return; }
   lastSavedAt = new Date().toISOString();
   try{
     const anterior = localStorage.getItem(STORAGE_KEY);
@@ -5274,18 +5358,89 @@ renderAll();
 updateSyncIndicator();
 initBgFx();
 
+/* ============================================================
+   LOGIN — el panel exige sesión iniciada (Supabase Auth). El login en sí
+   vive en login.html; acá solo se valida que haya sesión (si no, se
+   redirige) y se carga el perfil (nombre + rol) para el badge del header.
+   La guardia rápida del <head> ya evitó pintar el panel sin sesión; esto
+   es la verificación real, contra Supabase.
+   ============================================================ */
+let usuarioActual = null; // {nombre, rol} de la sesión actual, desde la tabla `usuario`
+let appIniciada = false;  // evita recargar datos/realtime en cada TOKEN_REFRESHED
+
+/* Los 3 roles: admin edita y gestiona usuarios, editor edita, visor solo mira.
+   `puedeEditar` (declarada más arriba, junto al cliente de Supabase) arranca
+   en false a propósito: hasta que el perfil confirme que el rol permite
+   escribir, el panel se comporta como solo lectura. Si el perfil no carga
+   (sin fila en `usuario`, sin conexión), se queda en false — negar por
+   defecto es lo correcto acá, y además coincide con lo que va a hacer la base,
+   así que el panel no ofrece botones que el servidor después va a rechazar. */
+const ROLES_QUE_EDITAN = ['admin', 'editor'];
+
+function aplicarPermisosDeRol(){
+  document.body.classList.toggle('solo-lectura', !puedeEditar);
+  document.getElementById('btn-usuarios').style.display = (usuarioActual && usuarioActual.rol === 'admin') ? '' : 'none';
+}
+
+/* Se avisa una sola vez por sesión: el visor puede intentar arrastrar tarjetas
+   varias veces, y un toast por intento sería insoportable. */
+let avisoSoloLecturaMostrado = false;
+function avisarSoloLectura(){
+  if(avisoSoloLecturaMostrado) return;
+  avisoSoloLecturaMostrado = true;
+  showToast('Tu rol es visor: podés consultar el panel, pero no modificarlo. Pedile a un admin que te cambie el rol si necesitás editar.', 'warn');
+}
+
+async function cargarPerfilUsuario(session){
+  try{
+    const {data, error} = await db.from('usuario').select('nombre, roles(descripcion)').eq('auth_user_id', session.user.id).maybeSingle();
+    if(error) throw error;
+    usuarioActual = data ? {nombre:data.nombre, rol:(data.roles && data.roles.descripcion) || ''} : {nombre:session.user.email, rol:''};
+  }catch(e){
+    console.warn('No se pudo cargar el perfil de usuario (tabla `usuario`):', e);
+    usuarioActual = {nombre:session.user.email, rol:''};
+  }
+  if(!usuarioActual.rol){
+    console.warn('La cuenta ' + session.user.email + ' no tiene rol asignado en la tabla `usuario`. El panel queda en solo lectura hasta que un admin la vincule (ver supabase/12_roles_permisos.sql).');
+  }
+  puedeEditar = ROLES_QUE_EDITAN.indexOf(usuarioActual.rol) !== -1;
+  document.getElementById('user-badge-name').textContent = usuarioActual.nombre;
+  document.getElementById('user-badge-role').textContent = usuarioActual.rol || 'sin rol';
+  document.getElementById('user-badge').hidden = false;
+  aplicarPermisosDeRol();
+}
+
+async function handleLogout(){
+  await db.auth.signOut();
+}
+
 /* Supabase-js se carga con "defer", así que todavía no existe cuando este
-   script inline se ejecuta. Se inicializa el cliente y se hace la primera
-   carga recién cuando el documento termina de parsear todos los scripts
-   diferidos (DOMContentLoaded), sin bloquear el primer pintado local. */
+   script inline se ejecuta. Se inicializa el cliente recién cuando el
+   documento termina de parsear todos los scripts diferidos
+   (DOMContentLoaded), sin bloquear el primer pintado local; a partir de ahí,
+   onAuthStateChange decide si cargar la app o mandar a login.html (ya trae
+   el estado inicial de la sesión, así que no hace falta pedirlo aparte). */
 window.addEventListener('DOMContentLoaded', function(){
   if(typeof supabase === 'undefined'){
-    console.error('No se pudo cargar la librería de Supabase (sin conexión a internet o CDN bloqueado). El panel sigue funcionando en modo local.');
+    console.error('No se pudo cargar la librería de Supabase (sin conexión a internet o CDN bloqueado).');
     return;
   }
   db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  cargarDesdeSupabase();
-  suscribirRealtime();
+  db.auth.onAuthStateChange(function(event, session){
+    console.log('[auth]', event, session ? session.user.email : '(sin sesión)');
+    if(session){
+      cargarPerfilUsuario(session);
+      if(!appIniciada){
+        appIniciada = true;
+        cargarDesdeSupabase();
+        suscribirRealtime();
+      }
+    }else{
+      appIniciada = false;
+      if(realtimeCanal){ db.removeChannel(realtimeCanal); realtimeCanal = null; }
+      window.location.replace('login.html');
+    }
+  });
 });
 </script>
 </body>
