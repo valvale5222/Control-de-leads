@@ -15,6 +15,13 @@
 -- Reemplaza a 09_auth_login.sql, 10_revert_auth_login.sql y
 -- 11_admin_usuarios.sql. Es idempotente: se puede correr varias veces.
 --
+-- ATENCIÓN — SI VOLVÉS A CORRER ESTE SCRIPT, CORRÉ TAMBIÉN 13 DESPUÉS.
+-- Las políticas de lectura de acá dejan leer a cualquier usuario logueado
+-- (`using (true)`), y con el registro abierto en Supabase eso significa que
+-- un desconocido puede registrarse solo y leer todo. 13_login_por_usuario.sql
+-- lo corrige exigiendo además tener perfil en `usuario`. Correr el 12 solo
+-- reabre ese agujero.
+--
 -- Escrito contra el esquema REAL de la base (verificado en el proyecto
 -- tfzanbbdvzullwlauxia), que no es el que suponían los scripts anteriores:
 --
