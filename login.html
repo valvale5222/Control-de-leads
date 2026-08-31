@@ -55,8 +55,6 @@
     --fp-accent:#3fbfa0;
     --fp-ring:rgba(63,191,160,.18);
     --fp-shadow:0 30px 60px -30px rgba(0,0,0,.75);
-    --fp-pattern:#3fbfa0;
-    --fp-pattern-op:.09;
     --fp-mark-op:.11;
     --fp-glow1:radial-gradient(circle, rgba(63,191,160,.20) 0%, transparent 70%);
     --fp-glow2:radial-gradient(circle, rgba(56,140,168,.18) 0%, transparent 70%);
@@ -85,8 +83,6 @@
     --fp-accent:#1f9c80;
     --fp-ring:rgba(31,156,128,.16);
     --fp-shadow:0 24px 50px -26px rgba(17,54,63,.22);
-    --fp-pattern:#1f9c80;
-    --fp-pattern-op:.16;
     --fp-mark-op:.15;
     --fp-glow1:radial-gradient(circle, rgba(31,156,128,.16) 0%, transparent 70%);
     --fp-glow2:radial-gradient(circle, rgba(83,150,175,.14) 0%, transparent 70%);
@@ -140,34 +136,6 @@
   .fp-glow-1{width:700px;height:700px;left:-180px;top:-220px;background:var(--fp-glow1);animation:fpGlow1 26s ease-in-out infinite;}
   .fp-glow-2{width:760px;height:760px;right:-200px;bottom:-260px;background:var(--fp-glow2);animation:fpGlow2 34s ease-in-out infinite;}
 
-  /* 3.3 — Dos mallas de copos en parallax.
-     El patrón va como máscara y el color lo pone background-color, en vez de
-     ir pintado dentro del SVG: así el trazo toma --fp-pattern y cambia con el
-     tema. Un data-URI con el color escrito adentro no puede leer variables
-     CSS, y habría hecho falta duplicar el SVG por tema. */
-  .fp-meshes{position:absolute;inset:0;opacity:var(--fp-pattern-op);}
-  .fp-mesh{
-    position:absolute;
-    background-color:var(--fp-pattern);
-    -webkit-mask-repeat:repeat;mask-repeat:repeat;
-    -webkit-mask-position:0 0;mask-position:0 0;
-    will-change:transform;
-  }
-  .fp-mesh-a{
-    inset:-300px;
-    -webkit-mask-size:260px 260px;mask-size:260px 260px;
-    animation:fpDriftA 90s linear infinite;
-  }
-  .fp-mesh-b{
-    inset:-400px;
-    -webkit-mask-size:380px 380px;mask-size:380px 380px;
-    animation:fpDriftB 160s linear infinite;
-  }
-  .fp-mesh-a,.fp-mesh-b{
-    -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M60 26V94M30.6 43L89.4 77M30.6 77L89.4 43'/%3E%3Cpath d='M60 36l-6 6M60 36l6 6M60 84l-6-6M60 84l6-6'/%3E%3Cpath d='M38 47.5l1 8.5M38 47.5l8.2-2.2M82 72.5l-1-8.5M82 72.5l-8.2 2.2'/%3E%3Cpath d='M38 72.5l8.2 2.2M38 72.5l1-8.5M82 47.5l-8.2-2.2M82 47.5l-1 8.5'/%3E%3Cg stroke-width='2.4'%3E%3Cpath d='M150 132v36M134.4 141l31.2 18M134.4 159l31.2-18'/%3E%3Cpath d='M150 138l-4 4M150 138l4 4M150 162l-4-4M150 162l4-4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M60 26V94M30.6 43L89.4 77M30.6 77L89.4 43'/%3E%3Cpath d='M60 36l-6 6M60 36l6 6M60 84l-6-6M60 84l6-6'/%3E%3Cpath d='M38 47.5l1 8.5M38 47.5l8.2-2.2M82 72.5l-1-8.5M82 72.5l-8.2 2.2'/%3E%3Cpath d='M38 72.5l8.2 2.2M38 72.5l1-8.5M82 47.5l-8.2-2.2M82 47.5l-1 8.5'/%3E%3Cg stroke-width='2.4'%3E%3Cpath d='M150 132v36M134.4 141l31.2 18M134.4 159l31.2-18'/%3E%3Cpath d='M150 138l-4 4M150 138l4 4M150 162l-4-4M150 162l4-4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  }
-
   /* 3.4 — Isotipos flotantes.
      Wrapper e imagen anidados a propósito: el wrapper flota y la imagen gira.
      En un solo elemento, la segunda transform pisaría a la primera y sólo se
@@ -194,8 +162,6 @@
     animation:fpSheen 11s ease-in-out infinite;will-change:opacity;
   }
 
-  @keyframes fpDriftA { from { transform: translate3d(0,0,0); }    to { transform: translate3d(-260px,-260px,0); } }
-  @keyframes fpDriftB { from { transform: translate3d(0,0,0); }    to { transform: translate3d(190px,-380px,0); } }
   @keyframes fpGlow1 { 0%,100% { transform: translate3d(0,0,0) scale(1);   opacity: .75; }
                        50%     { transform: translate3d(60px,40px,0) scale(1.18); opacity: 1; } }
   @keyframes fpGlow2 { 0%,100% { transform: translate3d(0,0,0) scale(1.1); opacity: .6; }
@@ -320,11 +286,6 @@
   <div class="fp-bg" aria-hidden="true">
     <div class="fp-glow fp-glow-1" data-fp-anim></div>
     <div class="fp-glow fp-glow-2" data-fp-anim></div>
-
-    <div class="fp-meshes">
-      <div class="fp-mesh fp-mesh-a" data-fp-anim></div>
-      <div class="fp-mesh fp-mesh-b" data-fp-anim></div>
-    </div>
 
     <div class="fp-mark fp-mark-1" data-fp-anim><img src="isotipo.png" alt="" data-fp-anim></div>
     <div class="fp-mark fp-mark-2" data-fp-anim><img src="isotipo.png" alt="" data-fp-anim></div>
