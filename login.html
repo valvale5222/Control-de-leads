@@ -5,20 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Iniciar sesión — Control de Oportunidades</title>
 <script>
-  /* Si ya hay sesión guardada, no tiene sentido mostrar el login: se manda
-     derecho al panel. Chequeo rápido por localStorage (sin esperar a que
-     cargue supabase-js) para que sea instantáneo. */
   (function(){
-    /* Tema día/noche. Comparte la clave con el panel (la escribe applyTheme()
-       en index.html), así que el tema elegido acá se respeta al entrar y
-       viceversa. Por defecto, oscuro. Se aplica antes de pintar para que no
-       haya un destello del tema equivocado. */
+    /* Tema, antes de pintar, para que no haya destello del tema equivocado.
+       Fuente de verdad: fp-theme. Si nunca se eligió, manda la preferencia
+       del sistema operativo. */
     try{
-      var tema = localStorage.getItem('panelOportunidadesTheme');
-      document.documentElement.setAttribute('data-theme', tema === 'light' ? 'light' : 'dark');
+      var guardado = localStorage.getItem('fp-theme');
+      var tema = (guardado === 'light' || guardado === 'dark')
+        ? guardado
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', tema);
     }catch(e){
       document.documentElement.setAttribute('data-theme','dark');
     }
+    /* Si ya hay sesión guardada, no tiene sentido mostrar el login: se manda
+       derecho al panel. Chequeo rápido por localStorage (sin esperar a que
+       cargue supabase-js) para que sea instantáneo. */
     try{
       var haySesion = Object.keys(localStorage).some(function(k){
         return k.indexOf('-auth-token') !== -1 && !!localStorage.getItem(k);
@@ -28,222 +30,351 @@
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+  /* ============================================================
+     1. TOKENS DE TEMA
+     Todo el color de los componentes sale de acá: no hay hex sueltos más
+     abajo. Cambiar un tema es cambiar este bloque, nada más.
+     ============================================================ */
   :root{
-    --navy:#4A9FD1; --navy-deep:#3A82AE; --teal:#4AB39F; --teal-deep:#3B9684;
-    --app-bg:#0E1520;
-    --section-surface:rgba(35,42,51,.76);
-    --border-soft:rgba(190,207,224,.10);
-    --bg:var(--app-bg); --surface:#252E38; --line:var(--border-soft);
-    --ink:#EAF0F6; --ink-soft:#A8B5C4; --ink-dim:#78879A;
-    --danger:#D46A63; --danger-bg:rgba(212,106,99,0.10);
-    --ok-bg:rgba(74,174,131,0.10);
-    --radius-sm:8px; --radius-xl:24px; --radius-pill:999px;
-    --surface-alt:#303B47;
-    --shadow-sm:0 2px 8px rgba(2,6,16,.28);
-    --shadow-lg:0 24px 60px rgba(2,6,16,.40);
-    --ease:cubic-bezier(.2,.8,.2,1);
-    --glass-border:rgba(203,218,235,.10); --glass-blur:blur(18px) saturate(112%);
-    /* Halo de los isotipos del fondo. Es lo que los hace leer como puntos de
-       luz —nodos de un sistema— en vez de stickers pegados. */
-    --nodo-glow:rgba(74,179,159,.60);
-    --nodo-op:.22;
+    --fp-canvas: radial-gradient(1100px 620px at 20% -10%, #16323a 0%, transparent 60%),
+                 radial-gradient(900px 700px at 92% 108%, #123039 0%, transparent 55%), #0d181d;
+    --fp-card:#17232a;
+    --fp-field:#1f2c33;
+    --fp-border:rgba(255,255,255,.09);
+    --fp-chip:rgba(255,255,255,.04);
+    --fp-text:#eaf1f3;
+    --fp-muted:#8fa3ad;
+    /* Especificado como #66787f, pero sobre --fp-card daba 3.48:1 y el pie va
+       en 12px, así que AA pide 4.5:1. Este valor mide 4.85:1 y sigue leyéndose
+       más apagado que --fp-muted, que es lo que la jerarquía necesitaba. */
+    --fp-faint:#7e9099;
+    --fp-accent:#3fbfa0;
+    --fp-ring:rgba(63,191,160,.18);
+    --fp-shadow:0 30px 60px -30px rgba(0,0,0,.75);
+    --fp-pattern:#3fbfa0;
+    --fp-pattern-op:.09;
+    --fp-mark-op:.11;
+    --fp-glow1:radial-gradient(circle, rgba(63,191,160,.20) 0%, transparent 70%);
+    --fp-glow2:radial-gradient(circle, rgba(56,140,168,.18) 0%, transparent 70%);
+    --fp-btn:linear-gradient(180deg, #4fd0af, #2fae90);
+    --fp-btn-hover:linear-gradient(180deg, #5ddcbb, #35baa0);
+    --fp-btn-text:#06231c;
+    --fp-btn-shadow:0 12px 26px -12px rgba(47,174,144,.75);
+    /* El error no estaba en la lista de tokens, pero el login ya mostraba
+       errores y la regla es que ningún componente lleve color suelto. */
+    --fp-danger:#ff9089;
+    --fp-danger-bg:rgba(255,144,137,.10);
   }
-  :root[data-theme="light"]{
-    --navy:#477EA5; --navy-deep:#3D6D90; --teal:#318F82; --teal-deep:#297A6F;
-    --app-bg:#EEF2F5;
-    --section-surface:rgba(218,226,232,.78);
-    --border-soft:rgba(37,55,76,.09);
-    --surface:#E9EEF2; --line:var(--border-soft);
-    --ink:#263548; --ink-soft:#657489; --ink-dim:#8B97A5;
-    --danger:#C35E57; --danger-bg:rgba(195,94,87,0.08);
-    --ok-bg:rgba(61,147,111,0.10);
-    --surface-alt:#DCE4E9;
-    --shadow-sm:0 2px 8px rgba(6,12,32,.10);
-    --shadow-lg:0 24px 60px rgba(6,12,32,.12);
-    --glass-border:rgba(36,51,72,.09); --glass-blur:blur(18px) saturate(112%);
-    /* Sobre fondo claro el halo verde ensucia, así que casi se apaga y los
-       isotipos se apoyan en su propio color con algo más de opacidad. */
-    --nodo-glow:rgba(41,122,111,.18);
-    --nodo-op:.22;
+
+  [data-theme="light"]{
+    --fp-canvas: radial-gradient(1000px 600px at 12% -12%, #e6f2ef 0%, transparent 60%),
+                 radial-gradient(900px 700px at 95% 110%, #e4edf1 0%, transparent 55%), #f5f8f9;
+    --fp-card:#ffffff;
+    --fp-field:#f3f7f8;
+    --fp-border:#dfe8ea;
+    --fp-chip:#f3f7f8;
+    --fp-text:#0f2229;
+    --fp-muted:#5f7681;
+    /* Especificado como #8a9ca3: sobre la card blanca daba 2.85:1. Este mide
+       4.51:1, el mínimo que cumple AA a 12px. */
+    --fp-faint:#647a84;
+    --fp-accent:#1f9c80;
+    --fp-ring:rgba(31,156,128,.16);
+    --fp-shadow:0 24px 50px -26px rgba(17,54,63,.22);
+    --fp-pattern:#1f9c80;
+    --fp-pattern-op:.16;
+    --fp-mark-op:.15;
+    --fp-glow1:radial-gradient(circle, rgba(31,156,128,.16) 0%, transparent 70%);
+    --fp-glow2:radial-gradient(circle, rgba(83,150,175,.14) 0%, transparent 70%);
+    /* Verde profundo con texto blanco, como pedía la especificación. Los
+       valores van más oscuros que los indicados (#27b191/#178a70) porque con
+       blanco encima medían 2.70:1 arriba y 4.28:1 abajo: el texto del botón va
+       en 16px, que no califica como texto grande, así que AA exige 4.5:1.
+       Estos miden 5.08:1 y 6.93:1. La intención era la correcta, sólo faltaba
+       bajar más el verde. */
+    --fp-btn:linear-gradient(180deg, #0f7d63, #0a6650);
+    --fp-btn-hover:linear-gradient(180deg, #108165, #0b6b54);
+    --fp-btn-text:#ffffff;
+    --fp-btn-shadow:0 12px 26px -14px rgba(23,138,112,.6);
+    --fp-danger:#b3261e;
+    --fp-danger-bg:rgba(179,38,30,.07);
   }
+
   *{box-sizing:border-box;}
+
+  html,body{min-height:100%;}
   body{
-    margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
-    font-family:'Inter','Segoe UI',Arial,sans-serif;color:var(--ink);
-    background:
-      radial-gradient(circle at 10% -5%, rgba(74,179,159,0.14), transparent 45%),
-      radial-gradient(circle at 95% 8%, rgba(74,159,209,0.16), transparent 42%),
-      var(--bg);
-    transition:background-color .25s var(--ease),color .25s var(--ease);
-  }
-  .login-card{
-    /* La capa de nodos va con position:fixed, que crea contexto de apilado y
-       pintaría por encima de la tarjeta. Con esto la tarjeta queda adelante. */
-    position:relative;z-index:1;
-    width:100%;max-width:380px;
-    background:var(--section-surface);border:1px solid var(--glass-border);border-radius:var(--radius-xl);
-    box-shadow:var(--shadow-lg);padding:34px 28px 28px;text-align:center;
-    backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-  }
-  .logo-card{display:flex;justify-content:center;margin-bottom:16px;}
-  .logo-card img{height:44px;display:block;}
-  /* El logotipo es blanco (pensado para fondo oscuro) y sobre la tarjeta clara
-     quedaba casi ilegible. No se veía antes porque el tema claro existía en el
-     CSS pero no había forma de activarlo; al agregar el interruptor quedó a la
-     vista. El filtro lleva el texto a gris oscuro y el isotipo al teal profundo
-     de la paleta clara, así que sigue siendo el logo de la marca.
-     Si algún día hay una versión oscura del logotipo, reemplaza esto. */
-  :root[data-theme="light"] .logo-card img{filter:brightness(.42) saturate(1.55);}
-  .login-card h1{font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;color:var(--ink);margin:0;letter-spacing:-.01em;}
-  .login-subtitle{margin:6px 0 26px;font-size:12.5px;color:var(--ink-soft);}
-  .login-field{display:block;text-align:left;margin-bottom:14px;}
-  .login-field span{display:block;font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;letter-spacing:.03em;text-transform:uppercase;}
-  .login-field input{
-    width:100%;height:40px;padding:0 12px;border-radius:var(--radius-sm);border:1px solid var(--line);
-    background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:13.5px;outline:none;
-    transition:border-color .16s var(--ease),box-shadow .16s var(--ease);
-  }
-  .login-field input:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--ok-bg);}
-  .login-error{color:var(--danger);background:var(--danger-bg);border-radius:var(--radius-sm);padding:9px 11px;font-size:12px;margin:0 0 14px;text-align:left;}
-  .login-error[hidden]{display:none;}
-  .login-submit{
-    width:100%;height:42px;border:none;border-radius:var(--radius-sm);margin-top:4px;
-    background:linear-gradient(135deg,var(--teal-deep),var(--teal));color:#fff;
-    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;cursor:pointer;
-    transition:filter .16s var(--ease),transform .16s var(--ease),box-shadow .16s var(--ease);
-  }
-  .login-submit:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 6px 18px rgba(4,8,20,.22);}
-  .login-submit:disabled{opacity:.6;cursor:default;}
-
-  /* ============================================================
-     ISOTIPOS DEL FONDO — seis nodos pequeños.
-     El isotipo mide 40x40 px, así que se usan a 20–34 px: por debajo de su
-     tamaño real, nunca ampliado. Así quedan nítidos, incluso en pantallas
-     retina, y no hace falta desenfocarlos para tapar el escalonado.
-     La lectura de "app técnica" no viene del tamaño sino de tres cosas
-     juntas: el halo que los convierte en puntos de luz, el giro lento y
-     constante (el copo tiene simetría de seis, así que girando se ve preciso
-     y mecánico) y el pulso desfasado entre unos y otros, que hace que el
-     conjunto parezca un sistema con actividad y no un adorno quieto.
-     ============================================================ */
-  .bg-nodos{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
-
-  /* Dos nodos anidados a propósito: el contenedor deriva y pulsa, la imagen
-     gira. Si el giro fuera en el mismo elemento, su transform pisaría la de
-     la deriva y sólo se vería una de las dos. Deriva y pulso sí conviven en
-     el contenedor porque tocan propiedades distintas (transform y opacity). */
-  .nodo{
-    position:absolute;opacity:var(--nodo-op);
-    animation:nodoDeriva var(--deriva) ease-in-out infinite,
-              nodoPulso  var(--pulso)  ease-in-out infinite;
-  }
-  .nodo img{
-    display:block;width:100%;height:auto;
-    filter:drop-shadow(0 0 7px var(--nodo-glow));
-    animation:nodoGiro var(--giro) linear infinite;
-  }
-
-  /* Posiciones repartidas por los bordes: la tarjeta ocupa el centro y los
-     nodos no deben pasar por detrás del formulario. Duraciones todas
-     distintas y sin múltiplos comunes, para que no se sincronicen nunca. */
-  .nodo-1{width:30px;top:14%;left:12%; --deriva:23s; --pulso:7s;  --giro:64s;}
-  .nodo-2{width:24px;top:27%;right:13%;--deriva:19s; --pulso:9s;  --giro:48s;}
-  .nodo-3{width:34px;bottom:17%;left:19%;--deriva:27s;--pulso:11s;--giro:78s;}
-  .nodo-4{width:26px;bottom:12%;right:17%;--deriva:21s;--pulso:8s;--giro:56s;}
-  .nodo-5{width:20px;top:49%;left:5%;  --deriva:17s; --pulso:6s;  --giro:40s;}
-  .nodo-6{width:28px;top:63%;right:7%; --deriva:25s; --pulso:10s; --giro:70s;}
-
-  .nodo-2 img,.nodo-4 img,.nodo-6 img{animation-direction:reverse;}
-
-  @keyframes nodoGiro{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
-  @keyframes nodoDeriva{
-    0%,100%{transform:translate3d(0,0,0);}
-    50%    {transform:translate3d(12px,-16px,0);}
-  }
-  /* El pulso arranca y termina en 1 (la opacidad base la fija --nodo-op) y
-     baja a la mitad en el medio: respira, no titila. */
-  @keyframes nodoPulso{
-    0%,100%{opacity:var(--nodo-op);}
-    50%    {opacity:calc(var(--nodo-op) * .45);}
-  }
-
-  /* En pantallas chicas la tarjeta ocupa casi todo el ancho: se dejan sólo
-     los nodos de las esquinas para que no queden detrás del formulario. */
-  @media (max-width:560px){
-    .nodo-5,.nodo-6{display:none;}
-    .nodo-1{left:7%;} .nodo-3{left:10%;}
-  }
-
-  /* Quien pidió menos movimiento ve los mismos nodos, quietos. */
-  @media (prefers-reduced-motion:reduce){
-    .nodo,.nodo img{animation:none !important;}
-  }
-
-  /* ============================================================
-     SWITCH DÍA / NOCHE — mismo componente que el header del panel, para que
-     no haya dos interruptores distintos en el mismo producto.
-     ============================================================ */
-  .theme-switch{
-    position:relative;display:flex;background:var(--surface-alt);border:1px solid var(--line);
-    border-radius:var(--radius-pill);padding:3px;gap:2px;width:96px;margin:0 auto 18px;
-  }
-  .theme-switch::before{
-    content:"";position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:calc(100% - 6px);
-    background:linear-gradient(135deg,var(--navy),#1B3FA8);border-radius:var(--radius-pill);
-    transition:transform .22s var(--ease);box-shadow:var(--shadow-sm);
-  }
-  :root[data-theme="light"] .theme-switch::before{background:linear-gradient(135deg,var(--teal-deep),var(--teal));}
-  .theme-switch:has([data-theme-btn="light"].active)::before{transform:translateX(100%);}
-  .theme-switch button{
-    position:relative;z-index:1;flex:1;background:transparent;border:none;color:var(--ink-dim);
-    padding:6px 0;border-radius:var(--radius-pill);cursor:pointer;
+    margin:0;
+    /* overflow-x en hidden: ninguna capa del fondo debe poder generar scroll
+       lateral, ni siquiera a mitad de una animación que la desplaza. */
+    overflow-x:hidden;
     display:flex;align-items:center;justify-content:center;
-    transition:color .15s var(--ease);
+    padding:32px 20px;
+    background:var(--fp-canvas);
+    background-attachment:fixed;
+    font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+    color:var(--fp-text);
+    min-height:100vh;
+    transition:background-color .3s ease,color .3s ease;
   }
-  .theme-switch button svg{width:15px;height:15px;}
-  .theme-switch button.active{color:#fff;}
-  :root[data-theme="light"] .theme-switch button.active{color:#06241d;}
+
+  /* ============================================================
+     3. FONDO ANIMADO — cinco capas, todas decorativas.
+     El contenedor va fijo y con overflow oculto, así las capas
+     sobredimensionadas se recortan y nunca empujan la página.
+     Se anima sólo transform y opacity: la GPU las resuelve sin recalcular
+     layout. Nada de animar blur ni degradados, que obligan a repintar en
+     cada frame y en una pantalla de entrada se notaría como tirones.
+     ============================================================ */
+  .fp-bg{
+    position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;
+    background:var(--fp-canvas);
+  }
+
+  /* 3.2 — Resplandores */
+  .fp-glow{position:absolute;border-radius:50%;filter:blur(10px);will-change:transform,opacity;}
+  .fp-glow-1{width:700px;height:700px;left:-180px;top:-220px;background:var(--fp-glow1);animation:fpGlow1 26s ease-in-out infinite;}
+  .fp-glow-2{width:760px;height:760px;right:-200px;bottom:-260px;background:var(--fp-glow2);animation:fpGlow2 34s ease-in-out infinite;}
+
+  /* 3.3 — Dos mallas de copos en parallax.
+     El patrón va como máscara y el color lo pone background-color, en vez de
+     ir pintado dentro del SVG: así el trazo toma --fp-pattern y cambia con el
+     tema. Un data-URI con el color escrito adentro no puede leer variables
+     CSS, y habría hecho falta duplicar el SVG por tema. */
+  .fp-meshes{position:absolute;inset:0;opacity:var(--fp-pattern-op);}
+  .fp-mesh{
+    position:absolute;
+    background-color:var(--fp-pattern);
+    -webkit-mask-repeat:repeat;mask-repeat:repeat;
+    -webkit-mask-position:0 0;mask-position:0 0;
+    will-change:transform;
+  }
+  .fp-mesh-a{
+    inset:-300px;
+    -webkit-mask-size:260px 260px;mask-size:260px 260px;
+    animation:fpDriftA 90s linear infinite;
+  }
+  .fp-mesh-b{
+    inset:-400px;
+    -webkit-mask-size:380px 380px;mask-size:380px 380px;
+    animation:fpDriftB 160s linear infinite;
+  }
+  .fp-mesh-a,.fp-mesh-b{
+    -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M60 26V94M30.6 43L89.4 77M30.6 77L89.4 43'/%3E%3Cpath d='M60 36l-6 6M60 36l6 6M60 84l-6-6M60 84l6-6'/%3E%3Cpath d='M38 47.5l1 8.5M38 47.5l8.2-2.2M82 72.5l-1-8.5M82 72.5l-8.2 2.2'/%3E%3Cpath d='M38 72.5l8.2 2.2M38 72.5l1-8.5M82 47.5l-8.2-2.2M82 47.5l-1 8.5'/%3E%3Cg stroke-width='2.4'%3E%3Cpath d='M150 132v36M134.4 141l31.2 18M134.4 159l31.2-18'/%3E%3Cpath d='M150 138l-4 4M150 138l4 4M150 162l-4-4M150 162l4-4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M60 26V94M30.6 43L89.4 77M30.6 77L89.4 43'/%3E%3Cpath d='M60 36l-6 6M60 36l6 6M60 84l-6-6M60 84l6-6'/%3E%3Cpath d='M38 47.5l1 8.5M38 47.5l8.2-2.2M82 72.5l-1-8.5M82 72.5l-8.2 2.2'/%3E%3Cpath d='M38 72.5l8.2 2.2M38 72.5l1-8.5M82 47.5l-8.2-2.2M82 47.5l-1 8.5'/%3E%3Cg stroke-width='2.4'%3E%3Cpath d='M150 132v36M134.4 141l31.2 18M134.4 159l31.2-18'/%3E%3Cpath d='M150 138l-4 4M150 138l4 4M150 162l-4-4M150 162l4-4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* 3.4 — Isotipos flotantes.
+     Wrapper e imagen anidados a propósito: el wrapper flota y la imagen gira.
+     En un solo elemento, la segunda transform pisaría a la primera y sólo se
+     vería una de las dos animaciones. */
+  .fp-mark{position:absolute;will-change:transform;}
+  .fp-mark img{display:block;width:100%;height:auto;opacity:var(--fp-mark-op);will-change:transform;}
+
+  .fp-mark-1{width:38px;left:9%;top:16%;animation:fpFloat1 26s ease-in-out infinite;}
+  .fp-mark-2{width:54px;left:20%;bottom:13%;animation:fpFloat2 33s ease-in-out infinite;}
+  .fp-mark-3{width:66px;right:11%;top:22%;animation:fpFloat3 38s ease-in-out infinite;}
+  .fp-mark-4{width:96px;right:20%;bottom:12%;animation:fpFloat1 44s ease-in-out infinite;}
+  .fp-mark-5{width:116px;left:46%;top:6%;animation:fpFloat2 40s ease-in-out infinite;}
+
+  .fp-mark-1 img{animation:fpSpin 90s linear infinite;}
+  .fp-mark-2 img{animation:fpSpin 120s linear infinite reverse;}
+  .fp-mark-3 img{animation:fpSpin 150s linear infinite;}
+  .fp-mark-4 img{animation:fpSpin 175s linear infinite reverse;}
+  .fp-mark-5 img{animation:fpSpin 200s linear infinite;}
+
+  /* 3.5 — Destello superior */
+  .fp-sheen{
+    position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg, transparent, var(--fp-accent), transparent);
+    animation:fpSheen 11s ease-in-out infinite;will-change:opacity;
+  }
+
+  @keyframes fpDriftA { from { transform: translate3d(0,0,0); }    to { transform: translate3d(-260px,-260px,0); } }
+  @keyframes fpDriftB { from { transform: translate3d(0,0,0); }    to { transform: translate3d(190px,-380px,0); } }
+  @keyframes fpGlow1 { 0%,100% { transform: translate3d(0,0,0) scale(1);   opacity: .75; }
+                       50%     { transform: translate3d(60px,40px,0) scale(1.18); opacity: 1; } }
+  @keyframes fpGlow2 { 0%,100% { transform: translate3d(0,0,0) scale(1.1); opacity: .6; }
+                       50%     { transform: translate3d(-70px,-50px,0) scale(1); opacity: .95; } }
+  @keyframes fpSheen { 0% { opacity: 0; } 45% { opacity: .55; } 100% { opacity: 0; } }
+  @keyframes fpFloat1 { 0%,100% { transform: translate3d(0,0,0) rotate(0deg); } 50% { transform: translate3d(34px,-46px,0) rotate(24deg); } }
+  @keyframes fpFloat2 { 0%,100% { transform: translate3d(0,0,0) rotate(0deg); } 50% { transform: translate3d(-40px,38px,0) rotate(-30deg); } }
+  @keyframes fpFloat3 { 0%,100% { transform: translate3d(0,0,0) rotate(0deg); } 50% { transform: translate3d(26px,52px,0) rotate(18deg); } }
+  @keyframes fpSpin { to { transform: rotate(360deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-fp-anim] { animation: none !important; }
+  }
+
+  /* ============================================================
+     5. SELECTOR DE TEMA — un solo botón, fijo arriba a la derecha.
+     ============================================================ */
+  .fp-theme-btn{
+    position:fixed;top:20px;right:20px;z-index:2;
+    width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+    border-radius:12px;border:1px solid var(--fp-border);background:var(--fp-chip);
+    color:var(--fp-muted);cursor:pointer;
+    transition:color .18s ease,border-color .18s ease;
+  }
+  .fp-theme-btn:hover{color:var(--fp-accent);border-color:var(--fp-accent);}
+  .fp-theme-btn:focus-visible{outline:none;border-color:var(--fp-accent);box-shadow:0 0 0 3px var(--fp-ring);}
+  .fp-theme-btn svg{width:19px;height:19px;}
+  /* Luna en oscuro, sol en claro. */
+  .fp-theme-btn .fp-ico-sun{display:none;}
+  [data-theme="light"] .fp-theme-btn .fp-ico-sun{display:block;}
+  [data-theme="light"] .fp-theme-btn .fp-ico-moon{display:none;}
+
+  /* ============================================================
+     4. LA CARD
+     ============================================================ */
+  .fp-card{
+    position:relative;z-index:1;
+    width:424px;max-width:100%;
+    padding:44px 44px 34px;
+    border-radius:22px;
+    background:var(--fp-card);
+    border:1px solid var(--fp-border);
+    box-shadow:var(--fp-shadow);
+  }
+
+  .fp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:30px;}
+  .fp-brand{display:flex;align-items:center;gap:9px;}
+  .fp-brand img{width:30px;height:30px;display:block;}
+  .fp-brand span{font-family:'Outfit',sans-serif;font-weight:700;font-size:17px;color:var(--fp-text);letter-spacing:-.01em;}
+  /* Bandera peruana: tres franjas verticales. Los colores son los de la
+     bandera, no del tema, así que son los únicos hex fuera de los tokens. */
+  .fp-flag{display:flex;width:26px;height:17px;border-radius:3px;overflow:hidden;flex:none;}
+  .fp-flag i{display:block;flex:1;}
+  .fp-flag i:nth-child(1),.fp-flag i:nth-child(3){background:#D91023;}
+  .fp-flag i:nth-child(2){background:#FFFFFF;}
+
+  .fp-title{
+    font-family:'Outfit',sans-serif;font-weight:600;font-size:30px;line-height:1.12;
+    letter-spacing:-.02em;color:var(--fp-text);margin:0;
+  }
+  .fp-subtitle{margin:10px 0 28px;font-size:15px;line-height:1.45;color:var(--fp-muted);}
+
+  .fp-field{margin-bottom:18px;}
+  .fp-field label{
+    display:block;font-size:11px;font-weight:500;text-transform:uppercase;
+    letter-spacing:.14em;color:var(--fp-muted);margin-bottom:8px;
+  }
+  .fp-field input{
+    width:100%;height:50px;padding:0 16px;
+    border-radius:12px;border:1px solid var(--fp-border);
+    background:var(--fp-field);color:var(--fp-text);
+    font-family:'DM Sans',sans-serif;font-size:15px;
+    transition:border-color .16s ease,box-shadow .16s ease;
+  }
+  .fp-field input::placeholder{color:var(--fp-faint);}
+  .fp-field input:focus{outline:none;border-color:var(--fp-accent);box-shadow:0 0 0 3px var(--fp-ring);}
+  .fp-field input.is-error{border-color:var(--fp-danger);}
+
+  .fp-error{
+    color:var(--fp-danger);background:var(--fp-danger-bg);
+    border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4;
+    margin:0 0 16px;
+  }
+  .fp-error[hidden]{display:none;}
+
+  .fp-submit{
+    width:100%;height:52px;border:none;border-radius:12px;
+    background:var(--fp-btn);color:var(--fp-btn-text);box-shadow:var(--fp-btn-shadow);
+    font-family:'Outfit',sans-serif;font-weight:600;font-size:16px;cursor:pointer;
+    transition:background .18s ease,transform .1s ease,filter .18s ease;
+  }
+  .fp-submit:hover:not(:disabled){background:var(--fp-btn-hover);}
+  .fp-submit:active:not(:disabled){transform:translateY(1px);}
+  .fp-submit:focus-visible{outline:none;box-shadow:var(--fp-btn-shadow),0 0 0 3px var(--fp-ring);}
+  .fp-submit:disabled{opacity:.6;cursor:default;}
+
+  .fp-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-top:26px;padding-top:16px;border-top:1px solid var(--fp-border);
+    font-size:12px;color:var(--fp-faint);
+  }
+
+  /* Responsive: a 360px la card pasa a ancho completo con 20px de margen
+     lateral (los da el padding del body) y se aflojan los interiores. */
+  @media (max-width:480px){
+    body{padding:24px 20px;}
+    .fp-card{width:100%;padding:32px 24px 26px;border-radius:20px;}
+    .fp-title{font-size:26px;}
+    .fp-subtitle{font-size:14px;margin-bottom:24px;}
+    .fp-theme-btn{top:14px;right:14px;}
+    .fp-foot{flex-direction:column;align-items:flex-start;gap:4px;}
+    /* Los isotipos más grandes quedarían detrás de la card en pantallas
+       angostas y ensuciarían la lectura del formulario. */
+    .fp-mark-4,.fp-mark-5{display:none;}
+  }
 </style>
 </head>
 <body>
-  <!-- Nodos del fondo: decorativos, así que aria-hidden y alt vacío. -->
-  <div class="bg-nodos" aria-hidden="true">
-    <div class="nodo nodo-1"><img src="isotipo.png" alt=""></div>
-    <div class="nodo nodo-2"><img src="isotipo.png" alt=""></div>
-    <div class="nodo nodo-3"><img src="isotipo.png" alt=""></div>
-    <div class="nodo nodo-4"><img src="isotipo.png" alt=""></div>
-    <div class="nodo nodo-5"><img src="isotipo.png" alt=""></div>
-    <div class="nodo nodo-6"><img src="isotipo.png" alt=""></div>
+
+  <!-- 3. Fondo animado. Decorativo de punta a punta: aria-hidden, sin captura
+       de puntero, y los <img> con alt vacío. -->
+  <div class="fp-bg" aria-hidden="true">
+    <div class="fp-glow fp-glow-1" data-fp-anim></div>
+    <div class="fp-glow fp-glow-2" data-fp-anim></div>
+
+    <div class="fp-meshes">
+      <div class="fp-mesh fp-mesh-a" data-fp-anim></div>
+      <div class="fp-mesh fp-mesh-b" data-fp-anim></div>
+    </div>
+
+    <div class="fp-mark fp-mark-1" data-fp-anim><img src="isotipo.png" alt="" data-fp-anim></div>
+    <div class="fp-mark fp-mark-2" data-fp-anim><img src="isotipo.png" alt="" data-fp-anim></div>
+    <div class="fp-mark fp-mark-3" data-fp-anim><img src="isotipo.png" alt="" data-fp-anim></div>
+    <div class="fp-mark fp-mark-4" data-fp-anim><img src="isotipo.png" alt="" data-fp-anim></div>
+    <div class="fp-mark fp-mark-5" data-fp-anim><img src="isotipo.png" alt="" data-fp-anim></div>
+
+    <div class="fp-sheen" data-fp-anim></div>
   </div>
 
-  <div class="login-card">
-    <div class="logo-card"><img src="data:image/png;base64,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" alt="Grupo Friopacking"></div>
-    <h1>Control de Oportunidades</h1>
-    <p class="login-subtitle">Ingresá con tu cuenta para continuar</p>
-    <form id="login-form">
-      <label class="login-field">
-        <span>Usuario</span>
-        <input type="text" id="login-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
-      </label>
-      <label class="login-field">
-        <span>Contraseña</span>
-        <input type="password" id="login-password" autocomplete="current-password" required>
-      </label>
-      <p class="login-error" id="login-error" hidden></p>
-      <button type="submit" class="login-submit" id="login-submit">Ingresar</button>
-    </form>
-    <div class="theme-switch" id="theme-switch">
-      <button type="button" data-theme-btn="dark" onclick="applyTheme('dark')" title="Modo oscuro" aria-label="Modo oscuro">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
-      <button type="button" data-theme-btn="light" onclick="applyTheme('light')" title="Modo claro" aria-label="Modo claro">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      </button>
+  <button type="button" class="fp-theme-btn" id="fp-theme-btn" onclick="toggleTema()" aria-label="Cambiar tema">
+    <svg class="fp-ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="fp-ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+  </button>
+
+  <main class="fp-card">
+    <div class="fp-head">
+      <div class="fp-brand">
+        <img src="isotipo.png" alt="">
+        <span>Friopacking</span>
+      </div>
+      <div class="fp-flag" role="img" aria-label="Perú"><i></i><i></i><i></i></div>
     </div>
-  </div>
+
+    <h1 class="fp-title">Control de<br>Oportunidades</h1>
+    <p class="fp-subtitle">Ingresá con tu cuenta para continuar.</p>
+
+    <form id="login-form" novalidate>
+      <div class="fp-field">
+        <label for="login-usuario">Usuario</label>
+        <input type="text" id="login-usuario" name="usuario" placeholder="tu.usuario"
+               autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </div>
+      <div class="fp-field">
+        <label for="login-password">Contraseña</label>
+        <input type="password" id="login-password" name="password" placeholder="••••••••"
+               autocomplete="current-password" required>
+      </div>
+
+      <p class="fp-error" id="login-error" role="alert" hidden></p>
+
+      <button type="submit" class="fp-submit" id="login-submit">Ingresar</button>
+    </form>
+
+    <div class="fp-foot">
+      <span>Acceso interno · Friopacking S.A.C.</span>
+      <span>v1.0</span>
+    </div>
+  </main>
+
 <script>
 const SUPABASE_URL = 'https://tfzanbbdvzullwlauxia.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_q-RLhPZqhDtnPHhmkkXaHA_d7FRXHC6';
@@ -263,16 +394,33 @@ function correoDesdeUsuario(entrada){
   return v.includes('@') ? v : v + '@' + DOMINIO_USUARIOS;
 }
 
-/* Misma clave y mismos valores que applyTheme() en index.html, así el tema
-   viaja entre el login y el panel. El estado inicial ya lo dejó puesto el
-   script del <head>; acá sólo se marca el botón activo y se responde al clic. */
-const THEME_KEY = 'panelOportunidadesTheme';
+/* ============================================================
+   TEMA — fp-theme es la fuente de verdad. Se espeja además en la clave del
+   panel para que el tema siga viajando entre las dos pantallas: el panel lee
+   la suya y no conoce fp-theme.
+   ============================================================ */
+const FP_THEME_KEY = 'fp-theme';
+const PANEL_THEME_KEY = 'panelOportunidadesTheme';
 
-function applyTheme(tema){
+function aplicarTema(tema){
   document.documentElement.setAttribute('data-theme', tema);
-  try{ localStorage.setItem(THEME_KEY, tema); }catch(e){}
-  document.querySelectorAll('[data-theme-btn]').forEach(function(b){
-    b.classList.toggle('active', b.dataset.themeBtn === tema);
+  try{
+    localStorage.setItem(FP_THEME_KEY, tema);
+    localStorage.setItem(PANEL_THEME_KEY, tema);
+  }catch(e){}
+}
+
+function toggleTema(){
+  const actual = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  aplicarTema(actual === 'light' ? 'dark' : 'light');
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+function camposConError(hayError){
+  ['login-usuario','login-password'].forEach(function(id){
+    document.getElementById(id).classList.toggle('is-error', hayError);
   });
 }
 
@@ -280,10 +428,17 @@ function mostrarError(mensaje){
   const err = document.getElementById('login-error');
   err.textContent = mensaje;
   err.hidden = false;
+  camposConError(true);
+}
+
+function limpiarError(){
+  document.getElementById('login-error').hidden = true;
+  camposConError(false);
 }
 
 async function handleLoginSubmit(ev){
   ev.preventDefault();
+  limpiarError();
   if(!db){ mostrarError('Todavía se está cargando la librería de autenticación. Esperá un segundo y probá de nuevo.'); return; }
   const email = correoDesdeUsuario(document.getElementById('login-usuario').value);
   const password = document.getElementById('login-password').value;
@@ -300,13 +455,11 @@ async function handleLoginSubmit(ev){
 }
 
 document.getElementById('login-form').addEventListener('submit', handleLoginSubmit);
+['login-usuario','login-password'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', limpiarError);
+});
 
 window.addEventListener('DOMContentLoaded', function(){
-  /* El <head> ya dejó puesto el tema, pero los botones todavía no existían,
-     así que acá se marca el activo. Va antes del chequeo de supabase-js: si
-     el CDN no cargó, el interruptor tiene que seguir funcionando igual. */
-  applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
-
   if(typeof supabase === 'undefined'){
     mostrarError('No se pudo conectar con el servidor. Revisa tu conexión a internet y recargá la página.');
     return;
