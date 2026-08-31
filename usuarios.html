@@ -164,21 +164,28 @@ function opcionesRol(rolIdSeleccionado){
 }
 
 async function cargarUsuarios(){
-  const {data, error} = await db.from('usuario').select('identificador, user, nombre, rol_id, roles(descripcion)').order('nombre');
+  /* Sin columna "user": la tabla `usuario` de la base no la tiene (ver el
+     encabezado de supabase/12_roles_permisos.sql). Se muestra `activo`, que
+     sí existe, para distinguir a alguien dado de baja. */
+  const {data, error} = await db.from('usuario').select('identificador, nombre, activo, rol_id, roles(descripcion)').order('nombre');
   const tbody = document.getElementById('tabla-usuarios-body');
   if(error){
-    tbody.innerHTML = '<tr><td colspan="4"><p class="msg error">No se pudo cargar la lista de usuarios: ' + escapeHtml(error.message) + '</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3"><p class="msg error">No se pudo cargar la lista de usuarios: ' + escapeHtml(error.message) + '</p></td></tr>';
     return;
   }
   if(!data || !data.length){
-    tbody.innerHTML = '<tr><td colspan="4"><p class="empty-state">Todavía no hay usuarios cargados.</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3"><p class="empty-state">Todavía no hay usuarios cargados.</p></td></tr>';
     return;
   }
   tbody.innerHTML = data.map(function(u){
-    return '<tr data-id="' + u.identificador + '">' +
+    /* El identificador es un uuid, no un número: va entre comillas dentro del
+       onchange. Sin las comillas, 2cb308f1-6236-... se interpreta como una
+       resta de identificadores y rompe el handler con un error de sintaxis. */
+    const id = escapeHtml(u.identificador);
+    return '<tr data-id="' + id + '">' +
       '<td>' + escapeHtml(u.nombre) + '</td>' +
-      '<td>' + escapeHtml(u.user) + '</td>' +
-      '<td><select onchange="handleCambiarRol(' + u.identificador + ', this)">' + opcionesRol(u.rol_id) + '</select><span class="rol-status" id="rol-status-' + u.identificador + '"></span></td>' +
+      '<td>' + (u.activo === false ? 'Inactivo' : 'Activo') + '</td>' +
+      '<td><select onchange="handleCambiarRol(&quot;' + id + '&quot;, this)">' + opcionesRol(u.rol_id) + '</select><span class="rol-status" id="rol-status-' + id + '"></span></td>' +
     '</tr>';
   }).join('');
 }
@@ -195,7 +202,6 @@ async function handleCambiarRol(id, select){
 async function handleCrearUsuario(ev){
   ev.preventDefault();
   const nombre = document.getElementById('nuevo-nombre').value.trim();
-  const usuarioInput = document.getElementById('nuevo-user').value.trim();
   const email = document.getElementById('nuevo-email').value.trim();
   const password = document.getElementById('nuevo-password').value;
   const rolId = Number(document.getElementById('nuevo-rol').value);
@@ -220,9 +226,14 @@ async function handleCrearUsuario(ev){
     if(error) throw error;
     if(!data.user){ throw new Error('Supabase no devolvió el usuario creado.'); }
 
+    /* `identificador` es uuid, no tiene valor por defecto y además lleva una
+       clave foránea contra auth.users(id): no se puede generar al azar, tiene
+       que ser el id de la cuenta recién creada. `auth_user_id` apunta a lo
+       mismo (es el vínculo que consulta el panel), así que se escribe el mismo
+       valor en las dos para que no queden desfasadas. */
     const {error: errPerfil} = await db.from('usuario').insert({
+      identificador: data.user.id,
       auth_user_id: data.user.id,
-      user: usuarioInput,
       nombre: nombre,
       rol_id: rolId,
     });
@@ -250,7 +261,6 @@ function renderPanelAdmin(){
       '<form id="form-crear-usuario">' +
         '<div class="form-grid">' +
           '<label class="field"><span>Nombre completo</span><input type="text" id="nuevo-nombre" required></label>' +
-          '<label class="field"><span>Usuario</span><input type="text" id="nuevo-user" required></label>' +
           '<label class="field"><span>Correo</span><input type="email" id="nuevo-email" required></label>' +
           '<label class="field"><span>Contraseña</span><input type="password" id="nuevo-password" minlength="6" required></label>' +
           '<label class="field"><span>Rol</span><select id="nuevo-rol" required>' + opcionesRol(null) + '</select></label>' +
@@ -264,7 +274,7 @@ function renderPanelAdmin(){
     '</div>' +
     '<div class="card">' +
       '<h2>Usuarios existentes</h2>' +
-      '<table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th></tr></thead><tbody id="tabla-usuarios-body">' +
+      '<table><thead><tr><th>Nombre</th><th>Estado</th><th>Rol</th></tr></thead><tbody id="tabla-usuarios-body">' +
         '<tr><td colspan="3"><p class="empty-state">Cargando…</p></td></tr>' +
       '</tbody></table>' +
     '</div>';
