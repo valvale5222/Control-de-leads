@@ -136,6 +136,19 @@ const SUPABASE_ANON_KEY = 'sb_publishable_q-RLhPZqhDtnPHhmkkXaHA_d7FRXHC6';
 let db = null;
 let rolesDisponibles = [];
 
+/* Igual que en login.html: Supabase Auth identifica por correo, así que el
+   usuario que se elija acá se convierte en "usuario@friopacking.pe" para
+   crear la cuenta. Ese correo no necesita existir. El usuario elegido se
+   guarda además en la columna `usuario_login` de la tabla `usuario`, porque
+   auth.users no se puede leer desde el navegador y si no no habría forma de
+   mostrar con qué usuario entra cada persona. */
+const DOMINIO_USUARIOS = 'friopacking.pe';
+
+function correoDesdeUsuario(entrada){
+  const v = String(entrada || '').trim().toLowerCase();
+  return v.includes('@') ? v : v + '@' + DOMINIO_USUARIOS;
+}
+
 function escapeHtml(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -167,7 +180,7 @@ async function cargarUsuarios(){
   /* Sin columna "user": la tabla `usuario` de la base no la tiene (ver el
      encabezado de supabase/12_roles_permisos.sql). Se muestra `activo`, que
      sí existe, para distinguir a alguien dado de baja. */
-  const {data, error} = await db.from('usuario').select('identificador, nombre, activo, rol_id, roles(descripcion)').order('nombre');
+  const {data, error} = await db.from('usuario').select('identificador, nombre, usuario_login, rol_id, roles(descripcion)').order('nombre');
   const tbody = document.getElementById('tabla-usuarios-body');
   if(error){
     tbody.innerHTML = '<tr><td colspan="3"><p class="msg error">No se pudo cargar la lista de usuarios: ' + escapeHtml(error.message) + '</p></td></tr>';
@@ -184,7 +197,7 @@ async function cargarUsuarios(){
     const id = escapeHtml(u.identificador);
     return '<tr data-id="' + id + '">' +
       '<td>' + escapeHtml(u.nombre) + '</td>' +
-      '<td>' + (u.activo === false ? 'Inactivo' : 'Activo') + '</td>' +
+      '<td>' + escapeHtml(u.usuario_login || '—') + '</td>' +
       '<td><select onchange="handleCambiarRol(&quot;' + id + '&quot;, this)">' + opcionesRol(u.rol_id) + '</select><span class="rol-status" id="rol-status-' + id + '"></span></td>' +
     '</tr>';
   }).join('');
@@ -202,7 +215,8 @@ async function handleCambiarRol(id, select){
 async function handleCrearUsuario(ev){
   ev.preventDefault();
   const nombre = document.getElementById('nuevo-nombre').value.trim();
-  const email = document.getElementById('nuevo-email').value.trim();
+  const usuarioLogin = document.getElementById('nuevo-usuario').value.trim().toLowerCase();
+  const email = correoDesdeUsuario(usuarioLogin);
   const password = document.getElementById('nuevo-password').value;
   const rolId = Number(document.getElementById('nuevo-rol').value);
   const btn = document.getElementById('btn-crear-usuario');
@@ -234,6 +248,7 @@ async function handleCrearUsuario(ev){
     const {error: errPerfil} = await db.from('usuario').insert({
       identificador: data.user.id,
       auth_user_id: data.user.id,
+      usuario_login: usuarioLogin,
       nombre: nombre,
       rol_id: rolId,
     });
@@ -261,7 +276,7 @@ function renderPanelAdmin(){
       '<form id="form-crear-usuario">' +
         '<div class="form-grid">' +
           '<label class="field"><span>Nombre completo</span><input type="text" id="nuevo-nombre" required></label>' +
-          '<label class="field"><span>Correo</span><input type="email" id="nuevo-email" required></label>' +
+          '<label class="field"><span>Usuario</span><input type="text" id="nuevo-usuario" autocapitalize="none" spellcheck="false" required></label>' +
           '<label class="field"><span>Contraseña</span><input type="password" id="nuevo-password" minlength="6" required></label>' +
           '<label class="field"><span>Rol</span><select id="nuevo-rol" required>' + opcionesRol(null) + '</select></label>' +
         '</div>' +
@@ -269,12 +284,12 @@ function renderPanelAdmin(){
           '<button type="submit" class="btn-submit" id="btn-crear-usuario">Crear usuario</button>' +
         '</div>' +
         '<p class="msg" id="crear-usuario-msg" hidden></p>' +
-        '<p class="hint">La cuenta se crea con Supabase Auth (correo + contraseña). Si el proyecto exige confirmar el correo, la persona no va a poder ingresar hasta que lo confirme.</p>' +
+        '<p class="hint">La persona entra con ese usuario y esa contraseña. No hace falta ningún correo: por detrás la cuenta se crea como <b>usuario@' + DOMINIO_USUARIOS + '</b>, que no necesita existir. Si alguien olvida su contraseña, se la cambiás desde Supabase (Authentication &rsaquo; Users), porque sin correo real no hay recuperación por mail.</p>' +
       '</form>' +
     '</div>' +
     '<div class="card">' +
       '<h2>Usuarios existentes</h2>' +
-      '<table><thead><tr><th>Nombre</th><th>Estado</th><th>Rol</th></tr></thead><tbody id="tabla-usuarios-body">' +
+      '<table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th></tr></thead><tbody id="tabla-usuarios-body">' +
         '<tr><td colspan="3"><p class="empty-state">Cargando…</p></td></tr>' +
       '</tbody></table>' +
     '</div>';

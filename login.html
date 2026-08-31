@@ -94,8 +94,8 @@
     <p class="login-subtitle">Ingresá con tu cuenta para continuar</p>
     <form id="login-form">
       <label class="login-field">
-        <span>Correo</span>
-        <input type="email" id="login-email" autocomplete="username" required>
+        <span>Usuario</span>
+        <input type="text" id="login-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </label>
       <label class="login-field">
         <span>Contraseña</span>
@@ -110,6 +110,20 @@ const SUPABASE_URL = 'https://tfzanbbdvzullwlauxia.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_q-RLhPZqhDtnPHhmkkXaHA_d7FRXHC6';
 let db = null;
 
+/* Supabase Auth identifica las cuentas por correo — no tiene login por
+   usuario suelto (la alternativa sería por teléfono, que cuesta SMS). Así que
+   el panel pide un usuario y le agrega este dominio por detrás: "hugo" entra
+   como "hugo@friopacking.pe". El correo no necesita existir de verdad; es
+   solo el identificador interno de la cuenta.
+   Si alguien escribe un correo completo, se respeta tal cual, para que las
+   cuentas viejas y una eventual migración a correos reales sigan entrando. */
+const DOMINIO_USUARIOS = 'friopacking.pe';
+
+function correoDesdeUsuario(entrada){
+  const v = String(entrada || '').trim().toLowerCase();
+  return v.includes('@') ? v : v + '@' + DOMINIO_USUARIOS;
+}
+
 function mostrarError(mensaje){
   const err = document.getElementById('login-error');
   err.textContent = mensaje;
@@ -119,14 +133,14 @@ function mostrarError(mensaje){
 async function handleLoginSubmit(ev){
   ev.preventDefault();
   if(!db){ mostrarError('Todavía se está cargando la librería de autenticación. Esperá un segundo y probá de nuevo.'); return; }
-  const email = document.getElementById('login-email').value.trim();
+  const email = correoDesdeUsuario(document.getElementById('login-usuario').value);
   const password = document.getElementById('login-password').value;
   const btn = document.getElementById('login-submit');
   btn.disabled = true; btn.textContent = 'Ingresando…';
   const {error} = await db.auth.signInWithPassword({email, password});
   if(error){
     console.error('Error al iniciar sesión:', error);
-    mostrarError(error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos.' : error.message);
+    mostrarError(error.message === 'Invalid login credentials' ? 'Usuario o contraseña incorrectos.' : error.message);
     btn.disabled = false; btn.textContent = 'Ingresar';
     return;
   }
