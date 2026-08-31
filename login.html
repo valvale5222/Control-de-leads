@@ -9,17 +9,16 @@
      derecho al panel. Chequeo rápido por localStorage (sin esperar a que
      cargue supabase-js) para que sea instantáneo. */
   (function(){
-    /* Mismo tema que el panel. La clave y los valores los escribe applyTheme()
-       en index.html; acá solo se leen. Va antes de pintar para que no haya un
-       destello oscuro al entrar con el tema claro puesto: la paleta clara ya
-       existía en el CSS pero nunca se activaba, así que el login se veía
-       oscuro aunque el panel estuviera en claro. */
+    /* Tema día/noche. Comparte la clave con el panel (la escribe applyTheme()
+       en index.html), así que el tema elegido acá se respeta al entrar y
+       viceversa. Por defecto, oscuro. Se aplica antes de pintar para que no
+       haya un destello del tema equivocado. */
     try{
       var tema = localStorage.getItem('panelOportunidadesTheme');
-      if(tema === 'light' || tema === 'dark'){
-        document.documentElement.setAttribute('data-theme', tema);
-      }
-    }catch(e){}
+      document.documentElement.setAttribute('data-theme', tema === 'light' ? 'light' : 'dark');
+    }catch(e){
+      document.documentElement.setAttribute('data-theme','dark');
+    }
     try{
       var haySesion = Object.keys(localStorage).some(function(k){
         return k.indexOf('-auth-token') !== -1 && !!localStorage.getItem(k);
@@ -41,18 +40,16 @@
     --ink:#EAF0F6; --ink-soft:#A8B5C4; --ink-dim:#78879A;
     --danger:#D46A63; --danger-bg:rgba(212,106,99,0.10);
     --ok-bg:rgba(74,174,131,0.10);
-    --radius-sm:8px; --radius-xl:24px;
+    --radius-sm:8px; --radius-xl:24px; --radius-pill:999px;
+    --surface-alt:#303B47;
+    --shadow-sm:0 2px 8px rgba(2,6,16,.28);
     --shadow-lg:0 24px 60px rgba(2,6,16,.40);
     --ease:cubic-bezier(.2,.8,.2,1);
     --glass-border:rgba(203,218,235,.10); --glass-blur:blur(18px) saturate(112%);
-    /* Ambientación del fondo (ver ADN_DISENO.md §8: grid tecnológico a .045,
-       halos radiales de baja opacidad, y copos decorativos "grandes pero no
-       invasivos"). Las opacidades de los copos van como tokens porque sobre
-       fondo claro el verde menta necesita menos presencia para no ensuciar. */
-    --grid-line:rgba(58,171,239,.045);
-    --halo-teal:rgba(74,179,159,.20);
-    --halo-navy:rgba(74,159,209,.20);
-    --copo-1:.038; --copo-2:.05; --copo-3:.034; --copo-4:.044;
+    /* Halo de los isotipos del fondo. Es lo que los hace leer como puntos de
+       luz —nodos de un sistema— en vez de stickers pegados. */
+    --nodo-glow:rgba(74,179,159,.60);
+    --nodo-op:.22;
   }
   :root[data-theme="light"]{
     --navy:#477EA5; --navy-deep:#3D6D90; --teal:#318F82; --teal-deep:#297A6F;
@@ -63,159 +60,43 @@
     --ink:#263548; --ink-soft:#657489; --ink-dim:#8B97A5;
     --danger:#C35E57; --danger-bg:rgba(195,94,87,0.08);
     --ok-bg:rgba(61,147,111,0.10);
+    --surface-alt:#DCE4E9;
+    --shadow-sm:0 2px 8px rgba(6,12,32,.10);
     --shadow-lg:0 24px 60px rgba(6,12,32,.12);
     --glass-border:rgba(36,51,72,.09); --glass-blur:blur(18px) saturate(112%);
-    --grid-line:rgba(41,122,111,.055);
-    --halo-teal:rgba(49,143,130,.16);
-    --halo-navy:rgba(71,126,165,.16);
-    --copo-1:.05; --copo-2:.062; --copo-3:.044; --copo-4:.055;
+    /* Sobre fondo claro el halo verde ensucia, así que casi se apaga y los
+       isotipos se apoyan en su propio color con algo más de opacidad. */
+    --nodo-glow:rgba(41,122,111,.18);
+    --nodo-op:.22;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
     font-family:'Inter','Segoe UI',Arial,sans-serif;color:var(--ink);
-    /* Los dos degradados radiales que estaban acá pasaron a .halo, para poder
-       animarlos. Siguen siendo dos: el ADN pide no superar ese número. */
-    background:var(--bg);
+    background:
+      radial-gradient(circle at 10% -5%, rgba(74,179,159,0.14), transparent 45%),
+      radial-gradient(circle at 95% 8%, rgba(74,159,209,0.16), transparent 42%),
+      var(--bg);
     transition:background-color .25s var(--ease),color .25s var(--ease);
   }
-
-  /* ============================================================
-     FONDO ANIMADO — tres capas, de atrás hacia adelante:
-     grid tecnológico, dos halos ambientales y los copos del isotipo.
-     Todo decorativo: aria-hidden y sin capturar el puntero.
-     Se anima sólo `transform` y `opacity`, que la GPU resuelve sin
-     recalcular layout; nada de animar blur ni degradados, que obligan a
-     repintar en cada frame y en un login se notaría como tirones.
-     ============================================================ */
-  .bg-fx{
-    position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;
-    animation:fxEntrada 2s var(--ease) both;
-  }
-  @keyframes fxEntrada{from{opacity:0;}to{opacity:1;}}
-
-  /* Grid de 32px (ADN §8.2). El desplazamiento es exactamente un mosaico, así
-     que el ciclo cierra sin salto visible: parece un movimiento infinito. */
-  .bg-grid{
-    position:absolute;inset:-40px;
-    background-image:
-      linear-gradient(var(--grid-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size:32px 32px;
-    animation:gridDeriva 60s linear infinite;
-  }
-  @keyframes gridDeriva{
-    from{transform:translate3d(0,0,0);}
-    to{transform:translate3d(32px,32px,0);}
-  }
-
-  /* Halos ambientales (ADN §8.3): 520px, radial, opacidad baja, blur suave.
-     El blur es estático y sólo se mueve/escala el elemento, así el navegador
-     reutiliza la capa ya desenfocada en vez de recalcularla. */
-  .halo{
-    position:absolute;width:520px;height:520px;border-radius:50%;
-    filter:blur(20px);will-change:transform;
-  }
-  .halo-teal{
-    top:-20%;left:-12%;
-    background:radial-gradient(circle, var(--halo-teal), transparent 68%);
-    animation:haloA 28s ease-in-out infinite;
-  }
-  .halo-navy{
-    top:-10%;right:-16%;
-    background:radial-gradient(circle, var(--halo-navy), transparent 68%);
-    animation:haloB 36s ease-in-out infinite;
-  }
-  @keyframes haloA{
-    0%,100%{transform:translate3d(0,0,0) scale(1);}
-    50%    {transform:translate3d(46px,34px,0) scale(1.12);}
-  }
-  @keyframes haloB{
-    0%,100%{transform:translate3d(0,0,0) scale(1.06);}
-    50%    {transform:translate3d(-38px,42px,0) scale(1);}
-  }
-
-  /* COPOS — el isotipo como elemento decorativo.
-     Dos elementos anidados a propósito: el contenedor flota y la imagen gira.
-     Si ambas animaciones fueran sobre el mismo nodo, la segunda `transform`
-     pisaría a la primera y sólo se vería una.
-     El copo tiene simetría de seis, así que al girar lee como algo preciso y
-     mecánico —de marca— y no como una animación juguetona. Las duraciones son
-     largas y distintas entre sí para que los copos nunca queden sincronizados:
-     el fondo no se siente como un bucle. */
-  .copo{position:absolute;will-change:transform;}
-  .copo img{display:block;width:100%;height:auto;will-change:transform;}
-
-  /* El isotipo original mide 40x40 px, así que los copos grandes lo amplían
-     varias veces y sin ayuda se verían con el borde escalonado. El desenfoque
-     va graduado según cuánto amplía cada uno (el de 430px lo hace 10,7 veces;
-     el de 68px, menos de dos) y es estático, no animado: el navegador
-     desenfoca una sola vez y después sólo mueve la capa ya resuelta.
-     Con una imagen más grande o un SVG, estos blur se pueden bajar a cero. */
-  .copo-1 img{filter:blur(3px);}
-  .copo-2 img{filter:blur(.7px);}
-  .copo-3 img{filter:blur(.3px);}
-  .copo-4 img{filter:blur(.5px);}
-
-  /* Composición deliberada: un copo grande de ancla abajo a la derecha y tres
-     acentos en las otras esquinas. Con un quinto copo la esquina del ancla
-     quedaba con dos formas superpuestas y el fondo se leía cargado; cuatro
-     alcanzan para dar profundidad sin competir con el formulario. */
-  .copo-1{width:430px;bottom:-14%;right:-8%;opacity:var(--copo-1);animation:flota1 26s ease-in-out infinite;}
-  .copo-2{width:168px;top:11%;left:7%;opacity:var(--copo-2);animation:flota2 19s ease-in-out infinite;}
-  .copo-3{width:104px;bottom:16%;left:14%;opacity:var(--copo-3);animation:flota3 23s ease-in-out infinite;}
-  .copo-4{width:132px;top:14%;right:11%;opacity:var(--copo-4);animation:flota4 31s ease-in-out infinite;}
-
-  .copo-1 img{animation:giro 150s linear infinite;}
-  .copo-2 img{animation:giro 74s linear infinite reverse;}
-  .copo-3 img{animation:giro 96s linear infinite;}
-  .copo-4 img{animation:giro 112s linear infinite reverse;}
-
-  @keyframes giro{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
-  @keyframes flota1{0%,100%{transform:translate3d(0,0,0);}50%{transform:translate3d(-18px,-24px,0);}}
-  @keyframes flota2{0%,100%{transform:translate3d(0,0,0);}50%{transform:translate3d(14px,20px,0);}}
-  @keyframes flota3{0%,100%{transform:translate3d(0,0,0);}50%{transform:translate3d(20px,-16px,0);}}
-  @keyframes flota4{0%,100%{transform:translate3d(0,0,0);}50%{transform:translate3d(-16px,22px,0);}}
-
-  /* En pantallas chicas la tarjeta ocupa casi todo el ancho: los copos del
-     medio quedarían detrás del formulario, ensuciando la lectura. Se dejan
-     sólo los de las esquinas y más chicos. */
-  @media (max-width:560px){
-    .copo-1{width:260px;bottom:-8%;right:-14%;}
-    .copo-2{width:110px;}
-    .copo-3{display:none;}
-    .copo-4{width:88px;}
-    .halo{width:380px;height:380px;}
-  }
-
-  /* Quien pidió menos movimiento en su sistema recibe la misma composición,
-     quieta. No se esconde nada: sólo se congela. */
-  @media (prefers-reduced-motion:reduce){
-    .bg-fx,.bg-grid,.halo,.copo,.copo img,.login-card{animation:none !important;}
-  }
   .login-card{
+    /* La capa de nodos va con position:fixed, que crea contexto de apilado y
+       pintaría por encima de la tarjeta. Con esto la tarjeta queda adelante. */
     position:relative;z-index:1;
     width:100%;max-width:380px;
     background:var(--section-surface);border:1px solid var(--glass-border);border-radius:var(--radius-xl);
     box-shadow:var(--shadow-lg);padding:34px 28px 28px;text-align:center;
     backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-    animation:tarjetaEntrada .8s var(--ease) both;
-  }
-  /* Filete de luz en el borde superior: un degradado de 1px que se apaga hacia
-     los extremos. Es el mismo par teal→navy de los botones primarios, así que
-     no introduce color nuevo — sólo hace que el canto de la tarjeta atrape la
-     luz y separe la pieza del fondo. */
-  .login-card::before{
-    content:"";position:absolute;top:0;left:22px;right:22px;height:1px;border-radius:1px;
-    background:linear-gradient(90deg,transparent,var(--teal),var(--navy),transparent);
-    opacity:.55;
-  }
-  @keyframes tarjetaEntrada{
-    from{opacity:0;transform:translate3d(0,16px,0) scale(.985);}
-    to  {opacity:1;transform:none;}
   }
   .logo-card{display:flex;justify-content:center;margin-bottom:16px;}
   .logo-card img{height:44px;display:block;}
+  /* El logotipo es blanco (pensado para fondo oscuro) y sobre la tarjeta clara
+     quedaba casi ilegible. No se veía antes porque el tema claro existía en el
+     CSS pero no había forma de activarlo; al agregar el interruptor quedó a la
+     vista. El filtro lleva el texto a gris oscuro y el isotipo al teal profundo
+     de la paleta clara, así que sigue siendo el logo de la marca.
+     Si algún día hay una versión oscura del logotipo, reemplaza esto. */
+  :root[data-theme="light"] .logo-card img{filter:brightness(.42) saturate(1.55);}
   .login-card h1{font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;color:var(--ink);margin:0;letter-spacing:-.01em;}
   .login-subtitle{margin:6px 0 26px;font-size:12.5px;color:var(--ink-soft);}
   .login-field{display:block;text-align:left;margin-bottom:14px;}
@@ -236,19 +117,106 @@
   }
   .login-submit:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 6px 18px rgba(4,8,20,.22);}
   .login-submit:disabled{opacity:.6;cursor:default;}
+
+  /* ============================================================
+     ISOTIPOS DEL FONDO — seis nodos pequeños.
+     El isotipo mide 40x40 px, así que se usan a 20–34 px: por debajo de su
+     tamaño real, nunca ampliado. Así quedan nítidos, incluso en pantallas
+     retina, y no hace falta desenfocarlos para tapar el escalonado.
+     La lectura de "app técnica" no viene del tamaño sino de tres cosas
+     juntas: el halo que los convierte en puntos de luz, el giro lento y
+     constante (el copo tiene simetría de seis, así que girando se ve preciso
+     y mecánico) y el pulso desfasado entre unos y otros, que hace que el
+     conjunto parezca un sistema con actividad y no un adorno quieto.
+     ============================================================ */
+  .bg-nodos{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+
+  /* Dos nodos anidados a propósito: el contenedor deriva y pulsa, la imagen
+     gira. Si el giro fuera en el mismo elemento, su transform pisaría la de
+     la deriva y sólo se vería una de las dos. Deriva y pulso sí conviven en
+     el contenedor porque tocan propiedades distintas (transform y opacity). */
+  .nodo{
+    position:absolute;opacity:var(--nodo-op);
+    animation:nodoDeriva var(--deriva) ease-in-out infinite,
+              nodoPulso  var(--pulso)  ease-in-out infinite;
+  }
+  .nodo img{
+    display:block;width:100%;height:auto;
+    filter:drop-shadow(0 0 7px var(--nodo-glow));
+    animation:nodoGiro var(--giro) linear infinite;
+  }
+
+  /* Posiciones repartidas por los bordes: la tarjeta ocupa el centro y los
+     nodos no deben pasar por detrás del formulario. Duraciones todas
+     distintas y sin múltiplos comunes, para que no se sincronicen nunca. */
+  .nodo-1{width:30px;top:14%;left:12%; --deriva:23s; --pulso:7s;  --giro:64s;}
+  .nodo-2{width:24px;top:27%;right:13%;--deriva:19s; --pulso:9s;  --giro:48s;}
+  .nodo-3{width:34px;bottom:17%;left:19%;--deriva:27s;--pulso:11s;--giro:78s;}
+  .nodo-4{width:26px;bottom:12%;right:17%;--deriva:21s;--pulso:8s;--giro:56s;}
+  .nodo-5{width:20px;top:49%;left:5%;  --deriva:17s; --pulso:6s;  --giro:40s;}
+  .nodo-6{width:28px;top:63%;right:7%; --deriva:25s; --pulso:10s; --giro:70s;}
+
+  .nodo-2 img,.nodo-4 img,.nodo-6 img{animation-direction:reverse;}
+
+  @keyframes nodoGiro{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  @keyframes nodoDeriva{
+    0%,100%{transform:translate3d(0,0,0);}
+    50%    {transform:translate3d(12px,-16px,0);}
+  }
+  /* El pulso arranca y termina en 1 (la opacidad base la fija --nodo-op) y
+     baja a la mitad en el medio: respira, no titila. */
+  @keyframes nodoPulso{
+    0%,100%{opacity:var(--nodo-op);}
+    50%    {opacity:calc(var(--nodo-op) * .45);}
+  }
+
+  /* En pantallas chicas la tarjeta ocupa casi todo el ancho: se dejan sólo
+     los nodos de las esquinas para que no queden detrás del formulario. */
+  @media (max-width:560px){
+    .nodo-5,.nodo-6{display:none;}
+    .nodo-1{left:7%;} .nodo-3{left:10%;}
+  }
+
+  /* Quien pidió menos movimiento ve los mismos nodos, quietos. */
+  @media (prefers-reduced-motion:reduce){
+    .nodo,.nodo img{animation:none !important;}
+  }
+
+  /* ============================================================
+     SWITCH DÍA / NOCHE — mismo componente que el header del panel, para que
+     no haya dos interruptores distintos en el mismo producto.
+     ============================================================ */
+  .theme-switch{
+    position:relative;display:flex;background:var(--surface-alt);border:1px solid var(--line);
+    border-radius:var(--radius-pill);padding:3px;gap:2px;width:96px;margin:0 auto 18px;
+  }
+  .theme-switch::before{
+    content:"";position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:calc(100% - 6px);
+    background:linear-gradient(135deg,var(--navy),#1B3FA8);border-radius:var(--radius-pill);
+    transition:transform .22s var(--ease);box-shadow:var(--shadow-sm);
+  }
+  :root[data-theme="light"] .theme-switch::before{background:linear-gradient(135deg,var(--teal-deep),var(--teal));}
+  .theme-switch:has([data-theme-btn="light"].active)::before{transform:translateX(100%);}
+  .theme-switch button{
+    position:relative;z-index:1;flex:1;background:transparent;border:none;color:var(--ink-dim);
+    padding:6px 0;border-radius:var(--radius-pill);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:color .15s var(--ease);
+  }
+  .theme-switch button svg{width:15px;height:15px;}
+  .theme-switch button.active{color:#fff;}
+  :root[data-theme="light"] .theme-switch button.active{color:#06241d;}
 </style>
 </head>
 <body>
-  <!-- Fondo decorativo. aria-hidden porque no aporta nada a quien usa lector
-       de pantalla, y los <img> van con alt vacío por la misma razón. -->
-  <div class="bg-fx" aria-hidden="true">
-    <div class="bg-grid"></div>
-    <div class="halo halo-teal"></div>
-    <div class="halo halo-navy"></div>
-    <div class="copo copo-1"><img src="isotipo.png" alt=""></div>
-    <div class="copo copo-2"><img src="isotipo.png" alt=""></div>
-    <div class="copo copo-3"><img src="isotipo.png" alt=""></div>
-    <div class="copo copo-4"><img src="isotipo.png" alt=""></div>
+  <!-- Nodos del fondo: decorativos, así que aria-hidden y alt vacío. -->
+  <div class="bg-nodos" aria-hidden="true">
+    <div class="nodo nodo-1"><img src="isotipo.png" alt=""></div>
+    <div class="nodo nodo-2"><img src="isotipo.png" alt=""></div>
+    <div class="nodo nodo-3"><img src="isotipo.png" alt=""></div>
+    <div class="nodo nodo-4"><img src="isotipo.png" alt=""></div>
+    <div class="nodo nodo-5"><img src="isotipo.png" alt=""></div>
+    <div class="nodo nodo-6"><img src="isotipo.png" alt=""></div>
   </div>
 
   <div class="login-card">
@@ -267,6 +235,14 @@
       <p class="login-error" id="login-error" hidden></p>
       <button type="submit" class="login-submit" id="login-submit">Ingresar</button>
     </form>
+    <div class="theme-switch" id="theme-switch">
+      <button type="button" data-theme-btn="dark" onclick="applyTheme('dark')" title="Modo oscuro" aria-label="Modo oscuro">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button type="button" data-theme-btn="light" onclick="applyTheme('light')" title="Modo claro" aria-label="Modo claro">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+    </div>
   </div>
 <script>
 const SUPABASE_URL = 'https://tfzanbbdvzullwlauxia.supabase.co';
@@ -285,6 +261,19 @@ const DOMINIO_USUARIOS = 'friopacking.pe';
 function correoDesdeUsuario(entrada){
   const v = String(entrada || '').trim().toLowerCase();
   return v.includes('@') ? v : v + '@' + DOMINIO_USUARIOS;
+}
+
+/* Misma clave y mismos valores que applyTheme() en index.html, así el tema
+   viaja entre el login y el panel. El estado inicial ya lo dejó puesto el
+   script del <head>; acá sólo se marca el botón activo y se responde al clic. */
+const THEME_KEY = 'panelOportunidadesTheme';
+
+function applyTheme(tema){
+  document.documentElement.setAttribute('data-theme', tema);
+  try{ localStorage.setItem(THEME_KEY, tema); }catch(e){}
+  document.querySelectorAll('[data-theme-btn]').forEach(function(b){
+    b.classList.toggle('active', b.dataset.themeBtn === tema);
+  });
 }
 
 function mostrarError(mensaje){
@@ -313,6 +302,11 @@ async function handleLoginSubmit(ev){
 document.getElementById('login-form').addEventListener('submit', handleLoginSubmit);
 
 window.addEventListener('DOMContentLoaded', function(){
+  /* El <head> ya dejó puesto el tema, pero los botones todavía no existían,
+     así que acá se marca el activo. Va antes del chequeo de supabase-js: si
+     el CDN no cargó, el interruptor tiene que seguir funcionando igual. */
+  applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+
   if(typeof supabase === 'undefined'){
     mostrarError('No se pudo conectar con el servidor. Revisa tu conexión a internet y recargá la página.');
     return;
