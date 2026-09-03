@@ -2355,7 +2355,7 @@
 
         <p class="form-section-title">📊 B. Segmentación comercial</p>
         <div class="form-grid">
-          <label>Probabilidad de cierre (%)<input type="number" id="m-prob-cierre" min="0" max="100" step="1" placeholder="0-100"></label>
+          <label>Probabilidad de cierre (%)<select id="m-prob-cierre"><option value="">— Sin dato —</option><option value="0">0%</option><option value="10">10%</option><option value="20">20%</option><option value="40">40%</option><option value="60">60%</option><option value="80">80%</option><option value="100">100%</option></select></label>
           <label>Mes de cierre<input type="month" id="m-mes-cierre"></label>
           <label>Cliente: AGRO / NO AGRO<select id="m-segmento-cliente"><option value="">— Sin clasificar —</option><option value="agro">AGRO</option><option value="no_agro">NO AGRO</option></select></label>
           <label>Duración del proyecto (meses)<input type="number" id="m-duracion-proyecto" min="0" step="1" placeholder="0"></label>
@@ -2477,12 +2477,14 @@ const METRADOS = [
   {value:'piero_ananca', label:'Piero Añanca'},
   {value:'tiffany_ollero', label:'Tiffany Ollero'},
   {value:'diego_morales', label:'Diego Morales'},
+  {value:'lizeth_arevalo', label:'Lizeth Arévalo'},
 ];
 const ARQUITECTOS = [
   {value:'jesus_chavez', label:'Jesús Chávez'},
   {value:'piero_ananca', label:'Piero Añanca'},
   {value:'tiffany_ollero', label:'Tiffany Ollero'},
   {value:'diego_morales', label:'Diego Morales'},
+  {value:'lizeth_arevalo', label:'Lizeth Arévalo'},
 ];
 const KAMS = [
   {value:'hugo_escobar', label:'Hugo Escobar'},
@@ -2904,6 +2906,28 @@ function formatMesCierre(v){
 function formatProbabilidadCierre(v){
   return (v===null || v===undefined || v==='') ? '—' : v + '%';
 }
+/* Opciones fijas del campo "Probabilidad de cierre" (antes era un número
+   libre de 0 a 100). Los datos ya cargados pueden traer un valor fuera de
+   esta lista, así que setProbabilidadCierreSelect() le agrega una opción al
+   vuelo: el valor viejo se sigue viendo y no se pierde si se guarda la ficha
+   sin tocar el campo. La agrupación en rangos del filtro (probabilidadBucketKey)
+   no cambia: sigue funcionando igual con estos valores. */
+const PROBABILIDADES_CIERRE = [0, 10, 20, 40, 60, 80, 100];
+function setProbabilidadCierreSelect(v){
+  const sel = document.getElementById('m-prob-cierre');
+  const previa = sel.querySelector('option[data-fuera-de-lista]');
+  if(previa) previa.remove();
+  const n = (v===null || v===undefined || v==='') ? null : Number(v);
+  if(n===null || !Number.isFinite(n)){ sel.value = ''; return; }
+  if(PROBABILIDADES_CIERRE.indexOf(n) === -1){
+    const opt = document.createElement('option');
+    opt.value = String(n);
+    opt.textContent = n + '% (valor anterior)';
+    opt.setAttribute('data-fuera-de-lista', '');
+    sel.appendChild(opt);
+  }
+  sel.value = String(n);
+}
 /* Bucket del filtro "Prob. de cierre" — probabilidadCierre es un % libre (no un
    catálogo fijo como Etapa/Prioridad), así que se agrupa en rangos de 25 puntos
    para poder filtrarlo con el mismo componente msel que el resto de filtros. */
@@ -3054,6 +3078,12 @@ let puedeEditar = false;
    un ReferenceError y el panel no llegaba a pintarse ni a conectar con Supabase.
    Ver avisarSoloLectura(), al final del script. */
 let avisoSoloLecturaMostrado = false;
+/* puedeEditar arranca en false porque el perfil todavía no llegó, no porque el
+   rol sea visor. Sin esta bandera, el persistLocal() del arranque disparaba el
+   aviso "tu rol es visor" a todo el mundo — admins incluidos — antes de que
+   cargarPerfilUsuario() tuviera la respuesta de Supabase. El aviso solo sale
+   cuando el rol ya está confirmado. */
+let rolConfirmado = false;
 let supabaseSyncTimer = null;
 /* Escrituras propias en vuelo: mientras haya alguna, un refresco por Realtime
    traería un estado a medio subir, así que se posterga. */
@@ -5633,7 +5663,7 @@ function openAddModal(){
   document.getElementById('m-proyecto').value = '';
   document.getElementById('m-refrigerante').value = '';
   document.getElementById('m-importe').value = '';
-  document.getElementById('m-prob-cierre').value = '';
+  setProbabilidadCierreSelect(null);
   document.getElementById('m-mes-cierre').value = '';
   document.getElementById('m-segmento-cliente').value = '';
   document.getElementById('m-duracion-proyecto').value = '';
@@ -5676,7 +5706,7 @@ function openEditModal(id){
   document.getElementById('m-refrigerante-otro').classList.toggle('hidden', o.refrigerante!=='otro');
   document.getElementById('m-importe').value = o.importe || 0;
   document.getElementById('m-margen-comercial').value = (o.margenComercial===null || o.margenComercial===undefined) ? '' : o.margenComercial;
-  document.getElementById('m-prob-cierre').value = (o.probabilidadCierre===null || o.probabilidadCierre===undefined) ? '' : o.probabilidadCierre;
+  setProbabilidadCierreSelect(o.probabilidadCierre);
   document.getElementById('m-mes-cierre').value = o.mesCierre || '';
   document.getElementById('m-segmento-cliente').value = o.segmentoCliente || '';
   document.getElementById('m-duracion-proyecto').value = (o.duracionProyecto===null || o.duracionProyecto===undefined) ? '' : o.duracionProyecto;
@@ -6611,6 +6641,9 @@ function aplicarPermisosDeRol(){
    arriba, junto a puedeEditar, porque el arranque puede llegar acá antes de esta
    línea (ver el comentario allá). */
 function avisarSoloLectura(){
+  /* Todavía no sabemos el rol: callar. Si de verdad es visor, el aviso sale en
+     el próximo intento de editar, ya con el perfil cargado. */
+  if(!rolConfirmado) return;
   if(avisoSoloLecturaMostrado) return;
   avisoSoloLecturaMostrado = true;
   showToast('Tu rol es visor: podés consultar el panel, pero no modificarlo. Pedile a un admin que te cambie el rol si necesitás editar.', 'warn');
@@ -6629,6 +6662,7 @@ async function cargarPerfilUsuario(session){
     console.warn('La cuenta ' + session.user.email + ' no tiene rol asignado en la tabla `usuario`. El panel queda en solo lectura hasta que un admin la vincule (ver supabase/12_roles_permisos.sql).');
   }
   puedeEditar = ROLES_QUE_EDITAN.indexOf(usuarioActual.rol) !== -1;
+  rolConfirmado = true;
   document.getElementById('user-badge-name').textContent = usuarioActual.nombre;
   document.getElementById('user-badge-role').textContent = usuarioActual.rol || 'sin rol';
   document.getElementById('user-badge').hidden = false;
