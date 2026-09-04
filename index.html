@@ -423,19 +423,30 @@
      escritura aunque alguien llame a la API por su cuenta.
      Va con !important porque varios de estos botones llevan display inline
      puesto por JS (ver setDetailView), que si no le ganaría a esta regla. */
+  /* La barra de acciones del header es entera de escritura o de export sobre
+     datos editables (importar, informe, Excel, restaurar, usuarios) más el
+     indicador de sincronización, que en solo lectura nunca tiene nada que
+     informar: se esconde el bloque completo en vez de botón por botón. */
+  body.solo-lectura .header-actions{display:none !important;}
   body.solo-lectura .btn-add,
-  body.solo-lectura .btn-toolbar.btn-import,
-  body.solo-lectura .btn-toolbar.btn-restore,
   body.solo-lectura .btn-delete,
   body.solo-lectura .ent-remove-btn,
   body.solo-lectura .ent-toggle-btn,
   body.solo-lectura #m-delete-btn,
   body.solo-lectura .modal-footer-right .btn-primary{display:none !important;}
-  /* En solo lectura la ficha se abre igual (sirve para consultar el detalle),
-     pero sus campos no se pueden tocar y "Cancelar" pasa a ser "Cerrar". */
-  body.solo-lectura .modal-box input,
-  body.solo-lectura .modal-box select,
-  body.solo-lectura .modal-box textarea{pointer-events:none;background:var(--surface-alt);opacity:.75;}
+  /* La ficha completa es la pantalla de edición: en solo lectura no se abre
+     (antes se abría con los campos grisados, que se leía como una ficha rota).
+     El nombre del cliente en Detalle deja de ser un botón y se ve como texto
+     normal, y desaparece "Abrir ficha completa" del panel lateral. Para
+     consultar sigue estando el drawer de Revisión semanal, que es de lectura. */
+  body.solo-lectura td.col-cliente .cliente-link{
+    cursor:default;pointer-events:none;border-bottom:none;
+  }
+  body.solo-lectura #rs-drawer-edit-btn{display:none !important;}
+  /* Las tarjetas de Revisión semanal no se arrastran en solo lectura (el
+     bloqueo real está en los dragstart; esto solo evita el cursor de agarre). */
+  body.solo-lectura .rs-card[draggable="true"],
+  body.solo-lectura .cal-card[draggable="true"]{cursor:default;}
   .readonly-badge{
     display:none;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
     background:var(--surface-alt);border:1px solid var(--line);
@@ -4252,6 +4263,11 @@ function renderRSLista(entries){
    columna, solo el orden automático por plazo/importe/ID.
    ============================================================ */
 function rsCardDragStart(ev, id){
+  /* Frenar acá y no en persistLocal(): el arrastre ya había movido la card de
+     columna y reescrito o.prioridadTablero en memoria, así que el visor veía el
+     cambio aplicado en pantalla aunque no se guardara nada. preventDefault() en
+     el dragstart cancela el arrastre antes de que empiece. */
+  if(!puedeEditar){ ev.preventDefault(); avisarSoloLectura(); return; }
   rsDragOrdenId = id;
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', String(id));
@@ -4277,6 +4293,7 @@ function rsColumnDrop(ev, nuevoOrden){
   const id = rsDragOrdenId;
   rsDragOrdenId = null;
   if(id===null) return;
+  if(!puedeEditar){ avisarSoloLectura(); return; }
   const o = oportunidades.find(item=>item.id===id);
   if(!o || Number(o.prioridadTablero)===nuevoOrden) return;
   o.prioridadTablero = nuevoOrden;
@@ -4362,6 +4379,10 @@ function renderRSCalendario(filters){
    vencidos — así, arrastrados a un día activo, también actualizan su fecha.
    ============================================================ */
 function calCardDragStart(ev, oppId, entId){
+  /* Mismo motivo que en rsCardDragStart: soltar la card en otro día cambiaba
+     e.fechaEntrega en memoria y el calendario se repintaba con la fecha nueva,
+     aunque persistLocal() después no guardara nada. */
+  if(!puedeEditar){ ev.preventDefault(); avisarSoloLectura(); return; }
   rsDragEnt = {oppId, entId};
   ev.dataTransfer.effectAllowed = 'move';
   ev.dataTransfer.setData('text/plain', oppId+':'+entId);
@@ -4387,6 +4408,7 @@ function calDayDrop(ev, nuevaFecha){
   const drag = rsDragEnt;
   rsDragEnt = null;
   if(!drag) return;
+  if(!puedeEditar){ avisarSoloLectura(); return; }
   const o = oportunidades.find(x=>x.id===drag.oppId);
   if(!o) return;
   const e = o.entregables.find(x=>x.id===drag.entId);
@@ -5655,6 +5677,7 @@ function releaseFocusTrap(modalEl){
 }
 
 function openAddModal(){
+  if(!puedeEditar){ avisarSoloLectura(); return; }
   lastFocusedElement = document.activeElement;
   editingOppId = null;
   document.getElementById('modal-title').textContent = 'Agregar oportunidad';
@@ -5693,6 +5716,11 @@ function openAddModal(){
 }
 
 function openEditModal(id){
+  /* La ficha es la pantalla de edición: el visor no la abre. El CSS ya
+     desactiva el nombre del cliente en Detalle y esconde "Abrir ficha
+     completa", pero el guard va igual acá, que es por donde pasan las tres
+     entradas a la ficha. */
+  if(!puedeEditar){ avisarSoloLectura(); return; }
   const o = oportunidades.find(x=>x.id===id);
   if(!o) return;
   lastFocusedElement = document.activeElement;
