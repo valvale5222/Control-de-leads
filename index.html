@@ -1471,6 +1471,42 @@
   .rs-card.pri-2{border-left-color:var(--warn);}
   .rs-card.pri-3{border-left-color:var(--ok);}
   .rs-card.pri-4{border-left-color:var(--violet);}
+  /* PULSO DE ATENCIÓN — solo Prioridad 1 y 2 del tablero de Revisión semanal.
+     Vive en un ::after propio y no en el box-shadow de la card, porque ese ya lo
+     reescriben :hover, .expanded y .dragging: una animación sobre esa misma
+     propiedad ganaría siempre y rompería los tres estados. Así el halo late por
+     encima sin tocarlos, y con pointer-events:none tampoco interfiere con el
+     clic, el acordeón ni el arrastre. Solo cambia la opacidad del anillo: la
+     card no se mueve y el texto no parpadea.
+     El color sale de --p1/--p2, que ya se redefinen por tema (claro/oscuro), así
+     que el halo acompaña al tema sin reglas aparte. P1 late un poco más fuerte y
+     más rápido que P2; P3 y P4 no laten. */
+  .rs-card.pri-1::after,
+  .rs-card.pri-2::after{
+    content:'';position:absolute;inset:-1px;border-radius:inherit;
+    pointer-events:none;opacity:0;
+  }
+  .rs-card.pri-1::after{
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--p1) 58%, transparent),
+               0 0 15px 2px color-mix(in srgb, var(--p1) 40%, transparent);
+    animation:rsPrioridadPulso 2.4s var(--ease) infinite;
+  }
+  .rs-card.pri-2::after{
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--p2) 44%, transparent),
+               0 0 12px 2px color-mix(in srgb, var(--p2) 26%, transparent);
+    animation:rsPrioridadPulso 3.2s var(--ease) infinite;
+  }
+  @keyframes rsPrioridadPulso{
+    0%,100%{opacity:0;}
+    50%{opacity:1;}
+  }
+  /* Mientras se arrastra, el halo estorba a la silueta de la card: se apaga. */
+  .rs-card.dragging::after{animation:none;opacity:0;}
+  /* Sin movimiento: el anillo queda fijo y tenue, así P1 y P2 conservan su
+     énfasis visual sin latir. */
+  @media (prefers-reduced-motion:reduce){
+    .rs-card.pri-1::after,.rs-card.pri-2::after{animation:none;opacity:.5;}
+  }
   @media (max-width:767px){
     .rs-card-compact .rs-head-line1 .cliente-link{white-space:normal;overflow:visible;text-overflow:clip;}
   }
@@ -1521,6 +1557,33 @@
   .cal-card.is-atiempo{border-left-color:var(--ok);}
   .cal-card[draggable="true"]{cursor:grab;}
   .cal-card.dragging{opacity:.5;cursor:grabbing;transform:scale(.97) rotate(-.6deg);box-shadow:var(--shadow-md);}
+  /* PULSO DE ATENCIÓN en el calendario — mismo latido y mismos colores que en el
+     tablero de Prioridades (ver .rs-card.pri-1/.pri-2), con una diferencia de
+     forma: .cal-card tiene overflow:hidden, que recortaría un halo hacia afuera.
+     Por eso acá el anillo va hacia adentro (box-shadow inset), que además evita
+     que el resplandor invada las cards vecinas en una grilla tan apretada.
+     No toca border-left-color, así que is-vencido / is-proximo / is-atiempo
+     conservan su franja lateral intacta. */
+  .cal-card.pri-1,.cal-card.pri-2{position:relative;}
+  .cal-card.pri-1::after,
+  .cal-card.pri-2::after{
+    content:'';position:absolute;inset:0;border-radius:inherit;
+    pointer-events:none;opacity:0;
+  }
+  .cal-card.pri-1::after{
+    box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--p1) 62%, transparent),
+               inset 0 0 12px 0 color-mix(in srgb, var(--p1) 34%, transparent);
+    animation:rsPrioridadPulso 2.4s var(--ease) infinite;
+  }
+  .cal-card.pri-2::after{
+    box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--p2) 48%, transparent),
+               inset 0 0 10px 0 color-mix(in srgb, var(--p2) 22%, transparent);
+    animation:rsPrioridadPulso 3.2s var(--ease) infinite;
+  }
+  .cal-card.dragging::after{animation:none;opacity:0;}
+  @media (prefers-reduced-motion:reduce){
+    .cal-card.pri-1::after,.cal-card.pri-2::after{animation:none;opacity:.5;}
+  }
   .cal-card-row1{font-size:11.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cal-card-row2{font-size:10.5px;font-weight:600;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cal-day-empty{font-size:11px;color:var(--ink-dim);text-align:center;padding:14px 0;}
@@ -1834,6 +1897,8 @@
     #rs-list{display:flex !important;}
     #rs-calendar{display:none !important;}
     .rs-card{max-height:none !important;}
+    /* El halo de P1/P2 es una señal de pantalla; en papel solo ensuciaría. */
+    .rs-card.pri-1::after,.rs-card.pri-2::after{display:none !important;}
     .rs-card .rs-acc-body{max-height:none !important;display:block !important;}
     .table-scroll{overflow:visible;}
     /* En papel no hace falta truncar (no hay límite de ancho de pantalla ni scroll) —
@@ -2468,8 +2533,9 @@ function refrigeranteDisplay(o){
   if(o.refrigerante==='otro') return o.refrigeranteOtro || 'Otro';
   return REFRIGERANTE_LABEL[o.refrigerante] || '';
 }
+/* Ancho mínimo de cada día hábil del Gantt. renderGantt() lo estira para llenar
+   el ancho visible y usa este valor solo como piso (ver dayW). */
 const DAY_WIDTH = 17;
-const MIN_DAYS_VISIBLE = 92;
 
 const PRESUPUESTADORES = [
   {value:'elver_leon', label:'Elver León'},
@@ -2547,8 +2613,14 @@ function ensureNuevosCampos(o){
   if(o.valorNoFrioOOCC===undefined) o.valorNoFrioOOCC = 0;
   if(o.valorNoFrioEEMM===undefined) o.valorNoFrioEEMM = 0;
   if(o.duracionProyecto===undefined) o.duracionProyecto = null;
-  if(o.estadoOperativo===undefined) o.estadoOperativo = 'pendiente_interno';
+  /* estadoOperativo no se conserva tal como venga guardado: es un derivado de la
+     etapa y se recalcula en CADA carga (localStorage, respaldo HTML o semilla),
+     igual que ya hacía la carga desde Supabase. Así, los registros que quedaron
+     marcados como Entregas por la regla vieja —completar el último entregable
+     movía la oportunidad de tabla— vuelven solos a Oportunidades al abrir el
+     panel, sin migración ni banderas. Ver sincronizarEstadoOperativo(). */
   if(o.rondaActual===undefined) o.rondaActual = 1;
+  sincronizarEstadoOperativo(o);
   /* Fecha única e informativa de la oportunidad — reemplaza fInicio/fComprometida/
      fEntregada a nivel de oportunidad. Los campos viejos se conservan en el objeto
      como respaldo interno, pero ya no se muestran, editan ni usan en cálculos. */
@@ -2565,13 +2637,27 @@ function ensureNuevosCampos(o){
     e.fechaEntrega = e.fechaEntrega || e.fComprometida || '';
     e.fechaComprometidaCliente = e.fechaComprometidaCliente || '';
     e.fechaCompletado = e.fechaCompletado || e.fEntregada || '';
-    /* "Requiere metrados" y su responsable son propios de cada entregable (solo
-       aplica cuando el área del entregable es Presupuestos), no de la oportunidad
+    /* "Requiere metrado" y su responsable son propios de cada entregable (solo
+       aplica cuando el área del entregable es Arquitectura), no de la oportunidad
        completa: una oportunidad puede tener varios entregables y cada uno decide
-       esto por su cuenta. */
+       esto por su cuenta. metradoOrigenId es el vínculo del "Metrado"
+       autogenerado con el entregable de Arquitectura que lo pidió; null en
+       cualquier otro entregable. */
     if(e.requiereMetrados===undefined) e.requiereMetrados = false;
     if(e.respMetrados===undefined) e.respMetrados = '';
     if(e.respMetradosOtro===undefined) e.respMetradosOtro = '';
+    if(e.metradoOrigenId===undefined) e.metradoOrigenId = null;
+    /* "Pendiente por enviar al cliente" y su vínculo — ver el bloque de Envío al
+       cliente. pendienteEnvioCliente vive en el entregable que hay que mandar;
+       envioOrigenId, en el entregable de Comercial que nace de marcarlo. */
+    if(e.pendienteEnvioCliente===undefined) e.pendienteEnvioCliente = false;
+    if(e.envioOrigenId===undefined) e.envioOrigenId = null;
+    /* Migración: "Requiere metrados" nació en Presupuestos e Ingeniería y ahora
+       es exclusivo de Arquitectura. Los entregables de otras áreas que lo tenían
+       marcado se limpian, así no arrastran un responsable de metrado invisible. */
+    if(e.area!=='arquitectura' && (e.requiereMetrados || e.respMetrados)){
+      e.requiereMetrados = false; e.respMetrados = ''; e.respMetradosOtro = '';
+    }
   });
   /* Prioridad del tablero (1-4) — es la que arma las columnas de Revisión semanal.
      Migración: hasta ahora esa columna se guardaba en o.ordenTrabajo; al liberar
@@ -2608,16 +2694,14 @@ function ensureNuevosCampos(o){
    Oportunidades. */
 const ETAPAS_ENTREGAS = ['analisis','negociacion','postpuesto','cerrado','perdido','cancelado'];
 
-/* Determina si el siguiente paso de una oportunidad corresponde al equipo
-   interno (Oportunidades) o si ya está en cancha del cliente / en una etapa
-   sin trabajo interno activo (Entregas). Se usa solo para corregir datos una
-   sola vez al cargar/migrar la base (datos heredados sin estadoOperativo
-   consistente) — el día a día lo controla sincronizarEstadoOperativo(). */
+/* Determina si una oportunidad va a Oportunidades o a Entregas. Se usa solo
+   para corregir datos heredados al cargar/migrar la base — el día a día lo
+   controla sincronizarEstadoOperativo(), y las dos aplican la MISMA regla:
+   manda la etapa y nada más. Antes esta función también miraba
+   responsableActual, así que una oportunidad en etapa Comercial pero con
+   responsable actual "Cliente" terminaba en Entregas contradiciendo su etapa. */
 function determinarEstadoOperativo(o){
-  if(ETAPAS_ENTREGAS.includes(o.etapa)) return 'entregado_cliente';
-  if(['comercial','arquitectura','presupuestos'].includes(o.responsableActual)) return 'pendiente_interno';
-  if(o.responsableActual === 'cliente') return 'entregado_cliente';
-  return 'pendiente_interno';
+  return ETAPAS_ENTREGAS.includes(o.etapa) ? 'entregado_cliente' : 'pendiente_interno';
 }
 function aplicarMigracionEstadoOperativo(){
   oportunidades.forEach(o=>{ o.estadoOperativo = determinarEstadoOperativo(o); });
@@ -3059,6 +3143,128 @@ function nombreMetrados(o){ return resolveNombre(METRADOS, o.respMetrados, o.res
 function nombreArquitecto(o){ return resolveNombre(ARQUITECTOS, o.arquitecto, o.arquitectoOtro); }
 function etapaLabel(v){ return catalogLabel(ETAPAS, v); }
 
+/* ---------- Metrado (lógica exclusiva de Arquitectura) ----------
+   "Requiere metrado" es un checkbox de los entregables de Arquitectura: al
+   marcarlo se crea un segundo entregable de Arquitectura llamado "Metrado" en
+   la misma oportunidad. Es un entregable normal en todo — nombre, estado,
+   próximo paso, observación y responsable propios — y por eso aparece solo en
+   Revisión semanal, Prioridades, Calendario, Carga de trabajo, Cronograma, KPIs
+   y filtros de Arquitectura, sin ningún caso especial en esas vistas.
+   El vínculo vive en metradoOrigenId (el id del entregable que lo pidió): es lo
+   que evita duplicados al volver a marcar el checkbox y lo que permite borrar
+   solo el Metrado autogenerado al desmarcarlo. Los estados son independientes:
+   completar el Metrado no completa su entregable de Arquitectura ni al revés. */
+const NOMBRE_ENTREGABLE_METRADO = 'Metrado';
+function esEntregableMetrado(e){ return !!e && e.metradoOrigenId != null; }
+/* El Metrado de un entregable dentro de una lista (o.entregables en las vistas,
+   modalEntregables en la ficha), o null si ese entregable no pidió metrado. */
+function metradoDeOrigen(lista, origen){
+  if(!origen || origen.id==null) return null;
+  return lista.find(x=> x!==origen && x.metradoOrigenId===origen.id) || null;
+}
+/* Lo que el Metrado hereda de su origen: fecha de entrega, prioridad, ronda y el
+   responsable elegido específicamente para el metrado. Nombre, estado, próximo
+   paso y observación son suyos y no se tocan nunca. */
+function sincronizarMetradoDesdeOrigen(origen, metrado){
+  if(!origen || !metrado) return;
+  metrado.area = 'arquitectura';
+  metrado.fechaEntrega = origen.fechaEntrega || '';
+  metrado.prioridad = origen.prioridad;
+  if(origen.ronda != null) metrado.ronda = origen.ronda;
+  metrado.responsable = origen.respMetrados || '';
+  metrado.responsableOtro = origen.respMetrados==='otro' ? (origen.respMetradosOtro || '') : '';
+}
+/* Cliente y oportunidad son los del registro actual porque el Metrado se guarda
+   dentro de o.entregables, igual que cualquier otro entregable. */
+function crearMetradoDesdeOrigen(origen){
+  const metrado = {
+    id: nextEntId++,
+    nombre: NOMBRE_ENTREGABLE_METRADO,
+    area: 'arquitectura',
+    responsable: '', responsableOtro: '',
+    etapa: origen.etapa,
+    prioridad: origen.prioridad,
+    fechaEntrega: '', fechaComprometidaCliente: '', fechaCompletado: '',
+    estado: 'pendiente',
+    proximoPaso: '', observacion: '',
+    ronda: origen.ronda != null ? origen.ronda : 1,
+    requiereMetrados: false, respMetrados: '', respMetradosOtro: '',
+    metradoOrigenId: origen.id,
+  };
+  sincronizarMetradoDesdeOrigen(origen, metrado);
+  return metrado;
+}
+
+/* ---------- Envío al cliente (el pendiente hijo de Comercial) ----------
+   Cuando Arquitectura o Presupuestos termina un entregable, casi nunca sale al
+   cliente en ese mismo momento: queda esperando a que Comercial lo mande. Ese
+   paso intermedio no existía y era invisible — el área ya no tenía nada que
+   hacer, pero el cliente tampoco había recibido nada.
+
+   El checkbox "Pendiente por enviar al cliente" aparece en los entregables ya
+   completados y crea un segundo entregable de área Comercial a nombre del KAM.
+   Es un entregable normal en todo, así que sale solo en Carga de trabajo,
+   Cronograma, Revisión semanal, Prioridades, Calendario, KPIs y en los filtros
+   por Área = Comercial, sin ningún caso especial en esas vistas.
+
+   El vínculo vive en envioOrigenId (el id del entregable que lo pidió), igual
+   que metradoOrigenId en el Metrado: es lo que evita duplicados al volver a
+   marcar y lo que permite borrar solo el envío al desmarcar.
+
+   Los dos gestos NO significan lo mismo y por eso hacen cosas distintas:
+     · Completar el envío   = ya se mandó. La etapa pasa a Análisis de cliente y
+                              el responsable actual a Cliente, así que la
+                              oportunidad se va a Entregas por la regla de la
+                              etapa. Queda la fecha de cuándo se envió.
+     · Desmarcar el check   = esto nunca debió existir. Se borra el envío y no se
+                              toca ni la etapa ni el responsable — si desmarcar
+                              también moviera la etapa, un error de clic
+                              reportaría como enviado algo que jamás salió. */
+const NOMBRE_ENTREGABLE_ENVIO = 'Enviar al cliente';
+function esEntregableEnvio(e){ return !!e && e.envioOrigenId != null; }
+/* El envío de un entregable dentro de una lista (o.entregables en las vistas,
+   modalEntregables en la ficha), o null si ese entregable no pidió envío. */
+function envioDeOrigen(lista, origen){
+  if(!origen || origen.id==null) return null;
+  return lista.find(x=> x!==origen && x.envioOrigenId===origen.id) || null;
+}
+/* «Enviar al cliente — "Planos de arquitectura"»: con el nombre del origen se
+   distingue cuál falta mandar cuando hay varios en la misma oportunidad. */
+function nombreEnvioDesdeOrigen(origen){
+  const base = ((origen && origen.nombre) || '').trim();
+  return base ? NOMBRE_ENTREGABLE_ENVIO + ' — «' + base + '»' : NOMBRE_ENTREGABLE_ENVIO;
+}
+/* Un día después de marcarlo: enviar es inmediato, así que nace con fecha propia
+   —aparece en Carga de trabajo y en el Cronograma— y se marca vencido si al día
+   siguiente todavía no salió. */
+function fechaEnvioPorDefecto(){
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+/* El envío nace a nombre del KAM de la oportunidad porque es quien despacha al
+   cliente; como cualquier entregable, el responsable se puede cambiar después. */
+function crearEnvioDesdeOrigen(origen, kam, kamOtro){
+  return {
+    id: nextEntId++,
+    nombre: nombreEnvioDesdeOrigen(origen),
+    area: 'comercial',
+    responsable: kam || '',
+    responsableOtro: kam==='otro' ? (kamOtro || '') : '',
+    etapa: origen.etapa,
+    prioridad: origen.prioridad,
+    fechaEntrega: fechaEnvioPorDefecto(),
+    fechaComprometidaCliente: '', fechaCompletado: '',
+    estado: 'pendiente',
+    proximoPaso: 'Enviar al cliente', observacion: '',
+    ronda: origen.ronda != null ? origen.ronda : 1,
+    requiereMetrados: false, respMetrados: '', respMetradosOtro: '',
+    metradoOrigenId: null,
+    pendienteEnvioCliente: false,
+    envioOrigenId: origen.id,
+  };
+}
+
 /* ============================================================
    ALMACENAMIENTO
    ============================================================ */
@@ -3108,9 +3314,9 @@ let realtimeCanal = null;
    sincronizando sin ellas. Lo único que queda sin persistir es ese campo. */
 const COLUMNAS_OPCIONALES = ['orden_trabajo', 'prioridad_tablero', 'duracion_proyecto', 'fecha_seguimiento'];
 /* Igual que COLUMNAS_OPCIONALES, pero para la tabla entregables: "Requiere
-   metrados" y su responsable se agregaron por entregable (ver punto 6) y esta
-   base puede no tener aún esas columnas. */
-const COLUMNAS_OPCIONALES_ENTREGABLES = ['requiere_metrados', 'resp_metrados', 'resp_metrados_otro'];
+   metrado", su responsable y el vínculo con el Metrado autogenerado se agregaron
+   por entregable y esta base puede no tener aún esas columnas. */
+const COLUMNAS_OPCIONALES_ENTREGABLES = ['requiere_metrados', 'resp_metrados', 'resp_metrados_otro', 'metrado_origen_identificador', 'pendiente_envio_cliente', 'envio_origen_identificador'];
 const columnasFaltantes = new Set();
 let avisoMigracionMostrado = false;
 
@@ -3235,12 +3441,19 @@ function entregableToRow(e, oppId){
     proximo_paso: orNull(e.proximoPaso),
     observacion: orNull(e.observacion),
     ronda: e.ronda || 1,
-    /* Solo tiene sentido cuando area==='presupuestos', pero se guarda tal cual
+    /* Solo tiene sentido cuando area==='arquitectura', pero se guarda tal cual
        para cualquier área: si el entregable cambia de área, modalEntChange ya
-       limpió estos valores antes de llegar aquí (ver punto 5). */
+       limpió estos valores antes de llegar aquí. */
     requiere_metrados: !!e.requiereMetrados,
     resp_metrados: orNull(e.respMetrados),
     resp_metrados_otro: orNull(e.respMetradosOtro),
+    /* Vínculo del "Metrado" autogenerado con el entregable de Arquitectura que
+       lo pidió; null en todos los demás entregables. */
+    metrado_origen_identificador: (e.metradoOrigenId===undefined || e.metradoOrigenId===null) ? null : e.metradoOrigenId,
+    /* Check "Pendiente por enviar al cliente" y el vínculo del entregable de
+       Comercial que nace de marcarlo (ver el bloque de Envío al cliente). */
+    pendiente_envio_cliente: !!e.pendienteEnvioCliente,
+    envio_origen_identificador: (e.envioOrigenId===undefined || e.envioOrigenId===null) ? null : e.envioOrigenId,
   };
   /* Mismo mecanismo que en oportunidadToRow: si la base todavía no tiene estas
      columnas, se omiten para no abortar el upsert completo. */
@@ -3266,6 +3479,9 @@ function rowToEntregable(r){
     requiereMetrados: !!r.requiere_metrados,
     respMetrados: r.resp_metrados || '',
     respMetradosOtro: r.resp_metrados_otro || '',
+    metradoOrigenId: (r.metrado_origen_identificador===undefined || r.metrado_origen_identificador===null) ? null : r.metrado_origen_identificador,
+    pendienteEnvioCliente: !!r.pendiente_envio_cliente,
+    envioOrigenId: (r.envio_origen_identificador===undefined || r.envio_origen_identificador===null) ? null : r.envio_origen_identificador,
   };
 }
 
@@ -3379,9 +3595,12 @@ const COLUMNA_OPCIONAL_LABEL = {
   prioridad_tablero: 'la prioridad del tablero de Revisión semanal',
   duracion_proyecto: 'la duración del proyecto (meses)',
   fecha_seguimiento: 'la fecha de seguimiento comercial',
-  requiere_metrados: 'si el entregable requiere metrados',
-  resp_metrados: 'el responsable de metrados del entregable',
-  resp_metrados_otro: 'el nombre "Otro" del responsable de metrados',
+  requiere_metrados: 'si el entregable de Arquitectura requiere metrado',
+  resp_metrados: 'el responsable del metrado',
+  resp_metrados_otro: 'el nombre "Otro" del responsable del metrado',
+  metrado_origen_identificador: 'el vínculo entre el entregable de Arquitectura y su Metrado',
+  pendiente_envio_cliente: 'si el entregable quedó pendiente por enviar al cliente',
+  envio_origen_identificador: 'el vínculo entre el entregable y su "Enviar al cliente"',
 };
 function avisarColumnasFaltantes(){
   if(avisoMigracionMostrado || !columnasFaltantes.size) return;
@@ -4310,7 +4529,12 @@ function rsColumnDrop(ev, nuevoOrden){
 function calCardHtml(o, e){
   const info = getPlazoInfo(e.fechaEntrega, e.fechaCompletado);
   const cls = info.key==='vencido' ? 'is-vencido' : (info.key==='proximo' ? 'is-proximo' : (['atiempo','antes','entregado'].includes(info.key) ? 'is-atiempo' : ''));
-  return `<div class="cal-card ${cls}" draggable="true" ondragstart="calCardDragStart(event,${o.id},${e.id})" ondragend="calCardDragEnd(event)" onclick="openRSDetailDrawer(${o.id},${e.id})">
+  /* Pulso de atención en P1 y P2, igual que en el tablero de Prioridades. Acá la
+     unidad es el entregable, así que la prioridad que late es la del entregable
+     (e.prioridad) — la misma que la card ya muestra en su segunda línea— y no la
+     del tablero de la oportunidad. Solo P1 y P2 llevan clase; P3 y P4 ninguna. */
+  const priCls = [1,2].includes(Number(e.prioridad)) ? ' pri-'+Number(e.prioridad) : '';
+  return `<div class="cal-card ${cls}${priCls}" draggable="true" ondragstart="calCardDragStart(event,${o.id},${e.id})" ondragend="calCardDragEnd(event)" onclick="openRSDetailDrawer(${o.id},${e.id})">
     <div class="cal-card-row1">#${o.id} · ${o.cliente}</div>
     <div class="cal-card-row2">P${e.prioridad} · ${AREA_CALENDAR_LABEL[e.area]}</div>
   </div>`;
@@ -4334,6 +4558,12 @@ function renderRSCalendario(filters){
   const universo = [];
   oppsFiltradas.forEach(o=>{
     o.entregables.forEach(e=>{
+      /* Solo entregables pendientes: el calendario es la agenda de lo que falta
+         entregar, no un histórico de lo entregado — mismo criterio que ya usan
+         el Cronograma y Carga de trabajo. Antes los completados seguían
+         ocupando su casilla del día, y encima de forma inconsistente: el bloque
+         "Pendientes vencidos" sí los excluía y la grilla no. */
+      if(e.estado!=='pendiente') return;
       if(filters.fArea && e.area!==filters.fArea) return;
       universo.push({o,e});
     });
@@ -4350,7 +4580,9 @@ function renderRSCalendario(filters){
     </div>`;
   }).join('');
 
-  const vencidos = universo.filter(x=> x.e.estado==='pendiente' && x.e.fechaEntrega && x.e.fechaEntrega < lunesISO);
+  /* El chequeo de estado ya lo hace el armado de `universo`, así que acá solo
+     queda la condición de fecha. */
+  const vencidos = universo.filter(x=> x.e.fechaEntrega && x.e.fechaEntrega < lunesISO);
   const finDeSemana = universo.filter(x=> x.e.fechaEntrega && x.e.fechaEntrega > viernesISO && x.e.fechaEntrega <= domingoISO);
   const sinFecha = universo.filter(x=> !x.e.fechaEntrega);
   shownCount += vencidos.length + finDeSemana.length + sinFecha.length;
@@ -4414,6 +4646,10 @@ function calDayDrop(ev, nuevaFecha){
   const e = o.entregables.find(x=>x.id===drag.entId);
   if(!e || e.fechaEntrega===nuevaFecha) return;
   e.fechaEntrega = nuevaFecha;
+  /* El Metrado autogenerado usa la fecha de entrega de su entregable de
+     Arquitectura: al mover el origen en el calendario se mueve con él. */
+  const metradoVinculado = metradoDeOrigen(o.entregables, e);
+  if(metradoVinculado) metradoVinculado.fechaEntrega = e.fechaEntrega;
 
   persistLocal();
   renderAll();
@@ -4524,26 +4760,33 @@ function requestEntregableStatusChange(oppId, entId, triggerEl){
 /* ============================================================
    FLUJO OPORTUNIDADES <-> ENTREGAS (rondas / retornos del cliente)
    ============================================================ */
+/* La etapa es lo ÚNICO que decide si una oportunidad se ve en Oportunidades o
+   en Entregas, así que completar entregables ya no la mueve de tabla: se limita
+   a reafirmar la regla de la etapa después de cualquier cambio de entregables.
+
+   Antes, al marcar el último entregable como completado, esta función mandaba
+   la oportunidad a Entregas aunque su etapa siguiera siendo Prospecto, Comercial
+   o En proceso de cotización. Eso la volvía casi imposible de encontrar: salía
+   de Oportunidades y, en Entregas, su etapa ni siquiera existe como opción del
+   filtro (ver etapaEntregasOptions), así que solo aparecía con el filtro limpio.
+   El paso a Entregas ocurre ahora únicamente al mover la etapa a Análisis de
+   cliente, Negociación, Postpuesto, Cancelado, Perdido o Vendido. */
 function finalizarRondaSiCorresponde(oppId){
   const o = oportunidades.find(x=>x.id===oppId);
-  if(!o || !o.entregables.length) return;
-  /* La etapa manda: si ya pertenece a ETAPAS_ENTREGAS, sincronizarEstadoOperativo()
-     ya la dejó en 'entregado_cliente' y los entregables pendientes no deben
-     contradecirla ni devolverla a Oportunidades. */
-  if(ETAPAS_ENTREGAS.includes(o.etapa)) return;
-  const pendientes = o.entregables.filter(e=>e.estado==='pendiente');
-  if(pendientes.length===0 && o.estadoOperativo==='pendiente_interno'){
-    o.estadoOperativo = 'entregado_cliente';
-  } else if(pendientes.length>0 && o.estadoOperativo==='entregado_cliente'){
-    o.estadoOperativo = 'pendiente_interno';
-  }
+  if(!o) return;
+  sincronizarEstadoOperativo(o);
 }
+/* Agregar un entregable pendiente a una oportunidad que ya estaba en Entregas
+   abre una ronda nueva: es el retorno del cliente con observaciones. Solo cuenta
+   la ronda — no cambia de tabla, porque eso lo decide la etapa y nada más
+   (sincronizarEstadoOperativo se ejecuta enseguida en saveModal con la etapa
+   recién elegida en la ficha). Para que vuelva a Oportunidades hay que mover la
+   etapa a Prospecto, Comercial o En proceso de cotización. */
 function reactivarOportunidadAlCrearEntregable(oppId){
   const o = oportunidades.find(x=>x.id===oppId);
   if(!o || o.estadoOperativo!=='entregado_cliente') return;
   o.rondaActual += 1;
-  o.estadoOperativo = 'pendiente_interno';
-  showToast('🔄 ' + o.rondaActual + ' · Retornó al trabajo interno', 'info');
+  showToast('🔄 Ronda ' + o.rondaActual + ' · nuevo trabajo interno registrado', 'info');
 }
 function entregarEntregable(oppId, entId){ toggleEntregableEstado(oppId, entId, true); }
 
@@ -4559,6 +4802,20 @@ function toggleEntregableEstado(oppId, entId, showConfirmationToast){
     e.estado = 'pendiente';
     e.fechaCompletado = '';
   }
+  /* Mismo salto que en la ficha (ver modalEntChange), para cuando el envío se
+     completa desde un chip de las tablas, el calendario o Revisión semanal en
+     vez de abrir la oportunidad: enviar al cliente deja la etapa en Análisis de
+     cliente y el responsable en Cliente, y apaga el check de su origen. */
+  let avisoEnvio = '';
+  if(esEntregableEnvio(e)){
+    const origen = o.entregables.find(x=>x.id===e.envioOrigenId);
+    if(origen) origen.pendienteEnvioCliente = (e.estado!=='completado');
+    if(e.estado==='completado'){
+      o.etapa = 'analisis';
+      o.responsableActual = 'cliente';
+      avisoEnvio = '📤 Enviado al cliente · pasa a Análisis de cliente y se mueve a Entregas.';
+    }
+  }
   finalizarRondaSiCorresponde(oppId);
   persistLocal();
   renderAll();
@@ -4566,7 +4823,8 @@ function toggleEntregableEstado(oppId, entId, showConfirmationToast){
      (venga de Prioridades o de Calendario), se refresca en el mismo lugar —
      mismo patrón que ya usa calDayDrop — en vez de cerrarlo. */
   if(rsDrawerOppId===oppId) openRSDetailDrawer(oppId, entId);
-  if(showConfirmationToast) showToast('Estado de «' + e.nombre + '» actualizado a ' + (e.estado==='completado'?'concluido':'pendiente') + '.', 'ok');
+  if(avisoEnvio) showToast(avisoEnvio, 'ok');
+  else if(showConfirmationToast) showToast('Estado de «' + e.nombre + '» actualizado a ' + (e.estado==='completado'?'concluido':'pendiente') + '.', 'ok');
 }
 
 /* ============================================================
@@ -4757,26 +5015,24 @@ function renderGantt(){
   const hoy = todayISO();
   areaTagEl.textContent = cronArea==='todas' ? 'Todas las áreas' : AREA_LABEL[cronArea];
 
-  const allDates = items.map(x=>x.e.fechaEntrega);
-  allDates.push(hoy);
-
-  let minD = new Date(Math.min(...allDates.map(d=>new Date(d))));
-  let maxD = new Date(Math.max(...allDates.map(d=>new Date(d))));
-  minD.setDate(minD.getDate()-3);
-  maxD.setDate(maxD.getDate()+3);
-  let totalDays = Math.round((maxD-minD)/86400000);
-  if(totalDays < MIN_DAYS_VISIBLE){
-    const extra = MIN_DAYS_VISIBLE - totalDays;
-    minD.setDate(minD.getDate() - Math.floor(extra/2));
-    maxD.setDate(maxD.getDate() + Math.ceil(extra/2));
-    totalDays = Math.round((maxD-minD)/86400000);
-  }
-  /* Escala del eje: solo días hábiles (lun-vie), cada uno su propia columna de
-     DAY_WIDTH px — los fines de semana no ocupan columna. Un entregable cuya
-     fechaEntrega real cae en sábado/domingo se ubica en el lunes siguiente (no
-     hay columna de fin de semana donde ponerlo); la fecha en sí no se toca en
-     ningún otro lado (tooltip, drawer, KPIs siguen usando fechaEntrega real). */
-  const refMondayISO = mondayOnOrBeforeISO(minD.toISOString().slice(0,10));
+  /* Ventana fija de 3 semanas — anterior, actual y siguiente — calculada desde
+     hoy en cada render. Antes el eje iba del entregable más antiguo al más
+     lejano (con un piso de 92 días), así que había que recorrer
+     meses de línea de tiempo para ubicar una fecha. Con 3 semanas la semana
+     actual queda siempre en el tercio central, entre la anterior y la siguiente.
+     Los entregables fuera de la ventana no se pintan; su cantidad se informa en
+     la barra superior para que no desaparezcan en silencio, y siguen contando en
+     los KPIs del resumen, que son de toda la cartera y no de la ventana. */
+  const semanaActual = getSemanaActual();
+  const VENTANA_SEMANAS = 3;
+  const VENTANA_DIAS_HABILES = VENTANA_SEMANAS * 5;
+  /* Escala del eje: solo días hábiles (lun-vie), cada uno su propia columna —
+     los fines de semana no ocupan columna. Un entregable cuya fechaEntrega real
+     cae en sábado/domingo se ubica en el lunes siguiente (no hay columna de fin
+     de semana donde ponerlo); la fecha en sí no se toca en ningún otro lado
+     (tooltip, drawer, KPIs siguen usando fechaEntrega real). */
+  const refMondayISO = addDaysISO(semanaActual.lunesISO, -7);   // lunes de la semana anterior
+  const ventanaFinISO = addDaysISO(semanaActual.lunesISO, 11);  // viernes de la semana siguiente
   function dayOffset(iso){
     const [y,m,d] = iso.split('-').map(Number);
     const dow = new Date(Date.UTC(y,m-1,d)).getUTCDay();
@@ -4784,52 +5040,64 @@ function renderGantt(){
     const diff = daysBetween(refMondayISO, snapped);
     return Math.floor(diff/7)*5 + (diff%7);
   }
-  function xPx(iso){ return dayOffset(iso) * DAY_WIDTH; }
+  /* Con solo 15 columnas el ancho fijo de DAY_WIDTH dejaría el Gantt como una
+     franja delgada pegada a la izquierda, así que el día se estira para llenar
+     el espacio disponible. DAY_WIDTH queda como piso: en pantallas angostas la
+     ventana vuelve a tener scroll horizontal en vez de comprimirse. */
+  const dayW = Math.max(DAY_WIDTH, Math.floor((scrollEl.clientWidth || 0) / VENTANA_DIAS_HABILES));
+  function xPx(iso){ return dayOffset(iso) * dayW; }
   const todayX = xPx(hoy);
+  /* El filtro va sobre el offset ya "snapeado", no sobre la fecha cruda: así un
+     entregable del sábado de la semana siguiente, que cae en el lunes posterior,
+     queda correctamente fuera de la ventana. */
+  const enVentana = (iso)=>{ const off = dayOffset(iso); return off >= 0 && off < VENTANA_DIAS_HABILES; };
+  const itemsVentana = items.filter(x=> enVentana(x.e.fechaEntrega));
+  const fueraDeVentana = items.length - itemsVentana.length;
 
   /* Eje temporal por día hábil: la cuadrícula y el hito conservan su columna
      diaria real (una por día hábil), pero para que el eje no se sature de
      números se muestra la etiqueta solo cada N días hábiles — N se calcula
-     dinámicamente según DAY_WIDTH para que dos números nunca queden más
+     dinámicamente según el ancho de día para que dos números nunca queden más
      cerca que AXIS_LABEL_MIN_GAP px. El lunes de cada semana conserva su
      separación algo más marcada (borde), independientemente de si ese día
      lleva número visible o no. */
   const AXIS_LABEL_MIN_GAP = 46;
-  const axisLabelStep = Math.max(1, Math.ceil(AXIS_LABEL_MIN_GAP / DAY_WIDTH));
+  const axisLabelStep = Math.max(1, Math.ceil(AXIS_LABEL_MIN_GAP / dayW));
   let axisHtml = '';
-  let dCursor = new Date(minD);
-  let lastBusinessOffset = -1;
-  for(let i=0;i<=totalDays;i++){
-    const dow = dCursor.getDay();
+  let cursorISO = refMondayISO;
+  while(cursorISO <= ventanaFinISO){
+    const [cy,cm,cd] = cursorISO.split('-').map(Number);
+    const dow = new Date(Date.UTC(cy,cm-1,cd)).getUTCDay();
     if(dow!==0 && dow!==6){
-      const iso = dCursor.getFullYear()+'-'+String(dCursor.getMonth()+1).padStart(2,'0')+'-'+String(dCursor.getDate()).padStart(2,'0');
-      const off = dayOffset(iso);
-      lastBusinessOffset = Math.max(lastBusinessOffset, off);
-      const label = off % axisLabelStep === 0 ? String(dCursor.getDate()).padStart(2,'0') : '';
-      axisHtml += `<div class="day-tick${dow===1?' week-start':''}" style="left:${off*DAY_WIDTH}px;width:${DAY_WIDTH}px;">${label}</div>`;
+      const off = dayOffset(cursorISO);
+      const label = off % axisLabelStep === 0 ? String(cd).padStart(2,'0') : '';
+      axisHtml += `<div class="day-tick${dow===1?' week-start':''}" style="left:${off*dayW}px;width:${dayW}px;">${label}</div>`;
     }
-    dCursor.setDate(dCursor.getDate()+1);
+    cursorISO = addDaysISO(cursorISO, 1);
   }
   axisEl.innerHTML = axisHtml;
   axisEl.insertAdjacentHTML('beforeend', `<div class="today-axis-badge" style="left:${todayX}px;">HOY</div>`);
 
-  const totalBusinessDays = lastBusinessOffset+1;
-  innerEl.style.width = (totalBusinessDays*DAY_WIDTH) + 'px';
+  const totalBusinessDays = VENTANA_DIAS_HABILES;
+  innerEl.style.width = (totalBusinessDays*dayW) + 'px';
   /* La cuadrícula vertical del cuerpo (background-image en CSS) queda un
      tick por día hábil, sin necesidad de fase (arranca en la columna 0). */
-  innerEl.style.backgroundSize = `${DAY_WIDTH}px 100%`;
+  innerEl.style.backgroundSize = `${dayW}px 100%`;
   innerEl.style.backgroundPosition = '0 0';
   innerEl.querySelectorAll('.week-current-tint').forEach(el=>el.remove());
-  const curWeekOffDays = dayOffset(getSemanaActual().lunesISO);
+  /* Siempre 5 (el tercio central de la ventana), pero se sigue calculando con
+     dayOffset para no duplicar la regla de la escala. */
+  const curWeekOffDays = dayOffset(semanaActual.lunesISO);
   if(curWeekOffDays >= 0 && curWeekOffDays < totalBusinessDays){
-    innerEl.insertAdjacentHTML('afterbegin', `<div class="week-current-tint" style="left:${curWeekOffDays*DAY_WIDTH}px;width:${5*DAY_WIDTH}px;"></div>`);
+    innerEl.insertAdjacentHTML('afterbegin', `<div class="week-current-tint" style="left:${curWeekOffDays*dayW}px;width:${5*dayW}px;"></div>`);
   }
 
   /* Agrupado por proyecto/oportunidad (no por responsable): cada oportunidad es
      una única fila y sus entregables visibles (según el subtab de área) se
-     ubican como hitos independientes sobre esa misma línea de tiempo. */
+     ubican como hitos independientes sobre esa misma línea de tiempo. Solo se
+     dibujan las oportunidades con algún entregable dentro de la ventana. */
   const projMap = new Map();
-  items.forEach(x=>{
+  itemsVentana.forEach(x=>{
     if(!projMap.has(x.o.id)) projMap.set(x.o.id, {o:x.o, items:[]});
     projMap.get(x.o.id).items.push(x);
   });
@@ -4861,7 +5129,7 @@ function renderGantt(){
 
     const hitos = placed.map(it=>{
       const e = it.x.e;
-      const cx = it.startDay*DAY_WIDTH;
+      const cx = it.startDay*dayW;
       const cy = it.subRow*(itemSize+itemGap) + itemGap + itemSize/2;
       const estado = ganttEstadoTemporal(e.fechaEntrega, hoy);
       const priLabel = PRIORIDAD_TABLERO_LABEL[e.prioridad] || '—';
@@ -4874,7 +5142,13 @@ function renderGantt(){
 
   labelsEl.innerHTML = labelsHtml;
   lanesEl.innerHTML = lanesHtml || '';
-  if(!projects.length){ lanesEl.innerHTML = '<p class="rs-empty-inline" style="padding:16px;display:block;">🟢 Sin entregables pendientes en esta área.</p>'; }
+  /* Se distingue "no hay nada" de "hay, pero cae fuera de estas 3 semanas": sin
+     ese matiz un Gantt vacío haría pensar que el área no tiene trabajo. */
+  if(!projects.length){
+    lanesEl.innerHTML = fueraDeVentana
+      ? `<p class="rs-empty-inline" style="padding:16px;display:block;">🗓️ Sin entregas en estas 3 semanas · ${fueraDeVentana} entregable${fueraDeVentana===1?'':'s'} pendiente${fueraDeVentana===1?'':'s'} con fecha fuera de la ventana.</p>`
+      : '<p class="rs-empty-inline" style="padding:16px;display:block;">🟢 Sin entregables pendientes en esta área.</p>';
+  }
 
   innerEl.querySelectorAll('.today-line-full').forEach(el=>el.remove());
   innerEl.insertAdjacentHTML('beforeend', `<div class="today-line-full" style="left:${todayX}px;"></div>`);
@@ -4885,11 +5159,17 @@ function renderGantt(){
     <span><span class="legend-diamond" style="background:var(--danger);"></span> Vencido</span>
     <span><span class="legend-diamond" style="background:var(--ink-dim);"></span> Planificado</span>`;
 
-  rangeEl.textContent = formatFechaCorta(minD.toISOString().slice(0,10)) + ' — ' + formatFechaCorta(maxD.toISOString().slice(0,10));
+  /* El rango de la barra superior es el de la ventana, más cuántos entregables
+     quedaron fuera: es la única señal de que el Gantt no muestra toda la
+     cartera. Los KPIs de abajo siguen contando TODO lo pendiente del área (no
+     solo la ventana), igual que antes. */
+  rangeEl.textContent = formatFechaCorta(refMondayISO) + ' — ' + formatFechaCorta(ventanaFinISO) +
+    (fueraDeVentana ? '  ·  ' + fueraDeVentana + ' fuera de la ventana' : '');
   const vencidosCron = items.filter(x=> x.e.fechaEntrega < hoy).length;
   const proximosCron = items.filter(x=> isInWeek(x.e.fechaEntrega)).length;
+  const proyectosPendientes = new Set(items.map(x=>x.o.id)).size;
   document.getElementById('gantt-summary').innerHTML = `
-    <div class="kpi-mini"><span class="kpi-mini-icon" aria-hidden="true">🗂️</span><div><div class="kpi-mini-num">${projects.length}</div><div class="kpi-mini-label">Proyectos</div></div></div>
+    <div class="kpi-mini"><span class="kpi-mini-icon" aria-hidden="true">🗂️</span><div><div class="kpi-mini-num">${proyectosPendientes}</div><div class="kpi-mini-label">Proyectos</div></div></div>
     <div class="kpi-mini"><span class="kpi-mini-icon" aria-hidden="true">📦</span><div><div class="kpi-mini-num">${items.length}</div><div class="kpi-mini-label">Entregables pendientes</div></div></div>
     <div class="kpi-mini"><span class="kpi-mini-icon" aria-hidden="true">⛔</span><div><div class="kpi-mini-num">${vencidosCron}</div><div class="kpi-mini-label">Vencidos</div></div></div>
     <div class="kpi-mini"><span class="kpi-mini-icon" aria-hidden="true">⏳</span><div><div class="kpi-mini-num">${proximosCron}</div><div class="kpi-mini-label">Próximos (semana)</div></div></div>`;
@@ -5537,45 +5817,198 @@ function initSelectors(){
 }
 
 function modalEntAdd(){
-  modalEntregables.push({id:null, nombre:'', area:'presupuestos', responsable:'', responsableOtro:'', etapa:'cotizacion', prioridad:1, fechaEntrega:'', fechaComprometidaCliente:'', fechaCompletado:'', estado:'pendiente', proximoPaso:'', observacion:'', requiereMetrados:false, respMetrados:'', respMetradosOtro:''});
+  modalEntregables.push({id:null, nombre:'', area:'presupuestos', responsable:'', responsableOtro:'', etapa:'cotizacion', prioridad:1, fechaEntrega:'', fechaComprometidaCliente:'', fechaCompletado:'', estado:'pendiente', proximoPaso:'', observacion:'', requiereMetrados:false, respMetrados:'', respMetradosOtro:'', metradoOrigenId:null, pendienteEnvioCliente:false, envioOrigenId:null});
   renderModalEntregables();
 }
-function modalEntRemove(idx){ modalEntregables.splice(idx,1); renderModalEntregables(); }
+/* Marcar "Pendiente por enviar al cliente" agrega el entregable de Comercial
+   justo debajo del que hay que mandar. Si ya tiene uno no hace nada: volver a
+   marcar nunca duplica. Toma el KAM elegido en la ficha en este momento, no el
+   guardado, porque puede haberse cambiado sin guardar todavía. */
+function modalEntAgregarEnvio(origen, idx){
+  if(envioDeOrigen(modalEntregables, origen)) return;
+  if(origen.id==null) origen.id = nextEntId++;
+  const kamSel = document.getElementById('m-kam');
+  const kamOtroInput = document.getElementById('m-kam-otro');
+  modalEntregables.splice(idx+1, 0, crearEnvioDesdeOrigen(origen, kamSel ? kamSel.value : '', kamOtroInput ? kamOtroInput.value.trim() : ''));
+}
+/* Desmarcar el check borra únicamente ese envío. A diferencia de completarlo,
+   NO toca la etapa ni el responsable actual: desmarcar significa "esto no había
+   que mandarlo", no "ya se mandó". */
+function modalEntQuitarEnvio(origen){
+  const envio = envioDeOrigen(modalEntregables, origen);
+  if(envio){
+    const i = modalEntregables.indexOf(envio);
+    if(i>=0) modalEntregables.splice(i, 1);
+  }
+  origen.pendienteEnvioCliente = false;
+}
+/* Los dos saltos automáticos de la ficha. Se escriben en los <select> visibles
+   —no en el objeto— para que quien está editando VEA cambiar Estado actual y
+   Responsable actual antes de guardar, y pueda corregirlos si su caso es otro.
+   Un cambio silencioso que se descubre días después sería peor que no tenerlo. */
+function modalAplicarSaltoEtapa(etapa, responsable){
+  const etapaSel = document.getElementById('m-etapa');
+  const respSel = document.getElementById('m-resp-actual');
+  if(etapaSel && etapa) etapaSel.value = etapa;
+  if(respSel && responsable) respSel.value = responsable;
+  /* "Requiere acción del cliente" fuerza responsable = Cliente (ver
+     toggleAccionCliente); al devolver la pelota a Comercial deja de aplicar. */
+  if(responsable && responsable!=='cliente'){
+    const flag = document.getElementById('m-flag');
+    if(flag && flag.checked){ flag.checked = false; toggleAccionCliente(); }
+  }
+}
+/* Marcar "Requiere metrado" agrega el Metrado justo debajo de su entregable de
+   Arquitectura. Si ya tiene uno no hace nada: volver a marcar nunca duplica. */
+function modalEntAgregarMetrado(origen, idx){
+  if(metradoDeOrigen(modalEntregables, origen)) return;
+  /* El vínculo apunta al id del origen, así que un entregable recién agregado
+     (todavía sin id) lo toma acá; saveModal respeta los ids ya asignados. */
+  if(origen.id==null) origen.id = nextEntId++;
+  modalEntregables.splice(idx+1, 0, crearMetradoDesdeOrigen(origen));
+}
+/* Desmarcar "Requiere metrado" —o sacar el entregable de Arquitectura— borra
+   únicamente el Metrado autogenerado de ese entregable, nada más. */
+function modalEntQuitarMetrado(origen){
+  const metrado = metradoDeOrigen(modalEntregables, origen);
+  if(metrado){
+    const i = modalEntregables.indexOf(metrado);
+    if(i>=0) modalEntregables.splice(i, 1);
+  }
+  origen.requiereMetrados = false;
+  origen.respMetrados = '';
+  origen.respMetradosOtro = '';
+}
+/* Al abrir la ficha: si un entregable de Arquitectura tiene "Requiere metrado"
+   marcado pero perdió el vínculo con su Metrado (base sin la columna
+   metrado_origen_identificador, o datos cargados por SQL/import), lo vuelve a
+   enlazar con el "Metrado" suelto de su misma ronda. Sin candidato el checkbox
+   queda desmarcado —es el estado real— y volver a marcarlo crea uno solo. */
+function modalEntReconciliarMetrados(){
+  modalEntregables.forEach(origen=>{
+    if(origen.area!=='arquitectura' || !origen.requiereMetrados || esEntregableMetrado(origen)) return;
+    if(metradoDeOrigen(modalEntregables, origen)) return;
+    const suelto = modalEntregables.find(x=> x!==origen && x.area==='arquitectura' && x.metradoOrigenId==null &&
+      x.nombre===NOMBRE_ENTREGABLE_METRADO && (x.ronda||1)===(origen.ronda||1));
+    if(suelto) suelto.metradoOrigenId = origen.id;
+    else origen.requiereMetrados = false;
+  });
+}
+function modalEntRemove(idx){
+  const item = modalEntregables[idx];
+  /* Borrar el entregable de Arquitectura se lleva su Metrado (quedaría huérfano);
+     borrar el Metrado con la ✕ equivale a desmarcar "Requiere metrado" en su
+     origen. Se resuelve antes del splice, porque después los índices cambian. */
+  if(esEntregableMetrado(item)){
+    const origen = modalEntregables.find(x=>x.id===item.metradoOrigenId);
+    if(origen){ origen.requiereMetrados = false; origen.respMetrados = ''; origen.respMetradosOtro = ''; }
+  } else {
+    const metrado = metradoDeOrigen(modalEntregables, item);
+    if(metrado){ const i = modalEntregables.indexOf(metrado); if(i>=0) modalEntregables.splice(i, 1); }
+  }
+  /* Lo mismo para el envío: borrar el entregable de origen se lleva su "Enviar
+     al cliente" (quedaría colgado de algo que ya no existe), y borrar el envío
+     con la ✕ equivale a desmarcar el check en su origen. */
+  if(esEntregableEnvio(item)){
+    const origen = modalEntregables.find(x=>x.id===item.envioOrigenId);
+    if(origen) origen.pendienteEnvioCliente = false;
+  } else {
+    const envio = envioDeOrigen(modalEntregables, item);
+    if(envio){ const i = modalEntregables.indexOf(envio); if(i>=0) modalEntregables.splice(i, 1); }
+  }
+  const pos = modalEntregables.indexOf(item);
+  if(pos>=0) modalEntregables.splice(pos, 1);
+  renderModalEntregables();
+}
 /* Actualiza el modelo en cada tecla SIN reconstruir el DOM — evita perder foco/cursor
    en los campos de texto (nombre, próximo paso, observación, "Otro"). */
 function modalEntInput(idx, field, value){
-  modalEntregables[idx][field] = value;
+  const item = modalEntregables[idx];
+  item[field] = value;
+  /* El nombre libre del responsable del metrado es un solo dato con dos cajas
+     (el select del origen y el bloque del Metrado): se copia de un lado al otro
+     sin re-render, que acá costaría el cursor. */
+  if(field==='respMetradosOtro'){
+    const metrado = metradoDeOrigen(modalEntregables, item);
+    if(metrado) sincronizarMetradoDesdeOrigen(item, metrado);
+  } else if(field==='responsableOtro' && esEntregableMetrado(item)){
+    const origen = modalEntregables.find(x=>x.id===item.metradoOrigenId);
+    if(origen) origen.respMetradosOtro = value;
+  }
 }
 function modalEntChange(idx, field, value){
   const item = modalEntregables[idx];
   const prevResponsable = item.responsable;
-  const prevRespMetrados = item.respMetrados;
   if(field==='prioridad') value = parseInt(value,10);
   item[field] = value;
   if(field==='area'){
     item.responsable=''; item.responsableOtro='';
-    /* "Requiere metrados" solo existe para el área Presupuestos e Ingeniería: al
-       salir de esa área se limpia para que no quede un responsable de metrados
-       asociado a un entregable que ya no es de Presupuestos (punto 5). */
-    if(value!=='presupuestos'){ item.requiereMetrados=false; item.respMetrados=''; item.respMetradosOtro=''; }
+    /* "Requiere metrado" solo existe para el área Arquitectura: al salir de esa
+       área se borra el Metrado autogenerado, que quedaría colgado de un
+       entregable que ya no es de Arquitectura. */
+    if(value!=='arquitectura') modalEntQuitarMetrado(item);
   }
-  if(field==='requiereMetrados' && !value){ item.respMetrados=''; item.respMetradosOtro=''; }
+  if(field==='requiereMetrados'){
+    if(value) modalEntAgregarMetrado(item, idx);
+    else modalEntQuitarMetrado(item);
+  }
+  /* Marcar el check: nace el entregable de Comercial y la pelota pasa a
+     Comercial. La etapa va a "En proceso de cotización" porque la cotización
+     existe pero todavía no salió — en el flujo normal ya está ahí y no cambia
+     nada; solo se mueve cuando venía de Prospecto o de otra etapa. */
+  if(field==='pendienteEnvioCliente'){
+    if(value){
+      modalEntAgregarEnvio(item, idx);
+      modalAplicarSaltoEtapa('cotizacion', 'comercial');
+    } else {
+      modalEntQuitarEnvio(item);
+    }
+  }
   if(field==='estado'){
     /* fechaCompletado es automática y nunca editable: se fija al completar y se
-       limpia al reabrir, sin tocar fechaEntrega ni fechaComprometidaCliente. */
+       limpia al reabrir, sin tocar fechaEntrega ni fechaComprometidaCliente.
+       El Metrado y su origen conservan cada uno su propio estado: completar uno
+       no completa al otro, así que acá no se propaga nada. */
     if(value==='completado' && !item.fechaCompletado) item.fechaCompletado = todayISO();
     if(value==='pendiente') item.fechaCompletado = '';
+    /* Completar el entregable de Comercial es el envío: el cliente ya lo tiene,
+       así que la etapa pasa a Análisis de cliente y el responsable a Cliente —y
+       con eso la oportunidad se va a Entregas por la regla de la etapa. El check
+       del origen se apaga solo: ya no está pendiente de enviar. */
+    if(esEntregableEnvio(item)){
+      const origen = modalEntregables.find(x=>x.id===item.envioOrigenId);
+      if(origen) origen.pendienteEnvioCliente = (value!=='completado');
+      if(value==='completado') modalAplicarSaltoEtapa('analisis', 'cliente');
+    } else if(value==='pendiente' && item.pendienteEnvioCliente){
+      /* Reabrir un entregable ya completado deshace su envío: si el área lo va a
+         volver a trabajar, todavía no hay nada que mandar. */
+      modalEntQuitarEnvio(item);
+    }
+  }
+  /* Fecha de entrega, prioridad y responsable del metrado bajan al Metrado
+     autogenerado (la ronda la cierra saveModal, que es donde se asigna). */
+  if(field==='fechaEntrega' || field==='prioridad' || field==='respMetrados'){
+    const metrado = metradoDeOrigen(modalEntregables, item);
+    if(metrado) sincronizarMetradoDesdeOrigen(item, metrado);
+  }
+  /* Y al revés: el responsable elegido en el bloque del propio Metrado vuelve al
+     select "Responsable del metrado" de su origen — es el mismo dato, no dos. */
+  if(field==='responsable' && esEntregableMetrado(item)){
+    const origen = modalEntregables.find(x=>x.id===item.metradoOrigenId);
+    if(origen){ origen.respMetrados = value; if(value!=='otro') origen.respMetradosOtro = ''; }
   }
   /* Se reconstruye el bloque cuando el cambio es estructural: cambia el área
      (cambian las opciones de responsable y la visibilidad de "Requiere
-     metrados"), cambia el estado (aparece/oculta el botón), el responsable o el
-     responsable de metrados entran/salen de "Otro" (aparece/oculta el input
-     libre), cambia "Requiere metrados" (aparece/oculta su responsable), o
-     cambia una fecha (los indicadores de días/margen deben refrescarse). */
+     metrado"), cambia el estado (aparece/oculta el botón), el responsable o el
+     responsable del metrado entran/salen de "Otro" (aparece/oculta el input
+     libre), cambia "Requiere metrado" (aparece/desaparece el Metrado y su
+     responsable), cambia una fecha (los indicadores de días/margen deben
+     refrescarse), o el cambio se copió al Metrado / a su origen y los dos
+     bloques tienen que mostrar lo mismo. */
   const structural = field==='area' || field==='estado' || field==='fechaEntrega' || field==='fechaComprometidaCliente' ||
-    field==='requiereMetrados' ||
-    (field==='responsable' && (value==='otro' || prevResponsable==='otro')) ||
-    (field==='respMetrados' && (value==='otro' || prevRespMetrados==='otro'));
+    field==='requiereMetrados' || field==='respMetrados' || field==='pendienteEnvioCliente' ||
+    (field==='prioridad' && !!metradoDeOrigen(modalEntregables, item)) ||
+    (field==='responsable' && (value==='otro' || prevResponsable==='otro' || esEntregableMetrado(item)));
   if(structural) renderModalEntregables();
 }
 function modalEntToggleEstado(idx){
@@ -5583,6 +6016,19 @@ function modalEntToggleEstado(idx){
 }
 function entregableItemHtml(item, idx){
   const respOptions = getResponsableOptionsForArea(item.area);
+  /* El Metrado autogenerado se edita como cualquier entregable (estado, próximo
+     paso, observación y su propio responsable), pero su área queda fija en
+     Arquitectura —lo que lo define es el vínculo con su origen— y no puede pedir
+     un metrado propio. */
+  const esMetrado = esEntregableMetrado(item);
+  const origenDelMetrado = esMetrado ? modalEntregables.find(x=>x.id===item.metradoOrigenId) : null;
+  const puedePedirMetrado = item.area==='arquitectura' && !esMetrado;
+  /* El check de envío solo tiene sentido en un entregable ya terminado —antes no
+     hay nada que mandar— y el propio entregable de Comercial no puede pedir un
+     envío de sí mismo. Se cierra completándolo, no desmarcando nada. */
+  const esEnvio = esEntregableEnvio(item);
+  const origenDelEnvio = esEnvio ? modalEntregables.find(x=>x.id===item.envioOrigenId) : null;
+  const puedePedirEnvio = item.estado==='completado' && !esEnvio;
   const diasLabel = diasParaEntregaLabel(item.fechaEntrega);
   const margenLabel = margenClienteLabel(item.fechaEntrega, item.fechaComprometidaCliente);
   const margenAlerta = margenClienteEsAlerta(item.fechaEntrega, item.fechaComprometidaCliente);
@@ -5593,17 +6039,21 @@ function entregableItemHtml(item, idx){
         <button type="button" class="ent-remove-btn" onclick="modalEntRemove(${idx})" title="Eliminar entregable">✕</button>
       </div>
       <div class="entregable-grid">
-        <label>Área<select onchange="modalEntChange(${idx},'area',this.value)">${AREAS.map(a=>`<option value="${a.value}" ${a.value===item.area?'selected':''}>${a.label}</option>`).join('')}</select></label>
+        ${esMetrado ? `<div class="entregable-indicadores" style="grid-column:1/-1;font-size:11px;color:var(--ink-soft);">📐 Metrado generado por «${escAttr(origenDelMetrado ? (origenDelMetrado.nombre || 'Entregable') : 'su entregable de Arquitectura')}» · hereda su fecha de entrega, prioridad y ronda; el estado es independiente.</div>` : ''}
+        ${esEnvio ? `<div class="entregable-indicadores" style="grid-column:1/-1;font-size:11px;color:var(--ink-soft);">📤 Envío pendiente de «${escAttr(origenDelEnvio ? (origenDelEnvio.nombre || 'Entregable') : 'su entregable de origen')}» · al marcarlo como completado, el Estado actual pasa a Análisis de cliente y el Responsable actual a Cliente.</div>` : ''}
+        <label>Área<select ${esMetrado?'disabled':''} onchange="modalEntChange(${idx},'area',this.value)">${AREAS.map(a=>`<option value="${a.value}" ${a.value===item.area?'selected':''}>${a.label}</option>`).join('')}</select></label>
         <label>Responsable<select onchange="modalEntChange(${idx},'responsable',this.value)">
           <option value="">— Seleccionar —</option>${respOptions.map(o=>`<option value="${o.value}" ${o.value===item.responsable?'selected':''}>${o.label}</option>`).join('')}<option value="otro" ${item.responsable==='otro'?'selected':''}>Otro</option>
         </select></label>
         ${item.responsable==='otro' ? `<label>Nombre (Otro)<input type="text" value="${escAttr(item.responsableOtro)}" oninput="modalEntInput(${idx},'responsableOtro',this.value)"></label>` : '<div></div>'}
         <label>Etapa<select onchange="modalEntChange(${idx},'etapa',this.value)">${ETAPAS.map(e=>`<option value="${e.value}" ${e.value===item.etapa?'selected':''}>${e.label}</option>`).join('')}</select></label>
-        ${item.area==='presupuestos' ? `<label class="checkbox-label full" style="grid-column:1/-1;"><input type="checkbox" ${item.requiereMetrados?'checked':''} onchange="modalEntChange(${idx},'requiereMetrados',this.checked)"> Requiere metrados</label>` : ''}
-        ${(item.area==='presupuestos' && item.requiereMetrados) ? `<label>Responsable de metrados<select onchange="modalEntChange(${idx},'respMetrados',this.value)">
+        ${puedePedirMetrado ? `<label class="checkbox-label full" style="grid-column:1/-1;"><input type="checkbox" ${item.requiereMetrados?'checked':''} onchange="modalEntChange(${idx},'requiereMetrados',this.checked)"> Requiere metrado</label>` : ''}
+        ${(puedePedirMetrado && item.requiereMetrados) ? `<label>Responsable del metrado<select onchange="modalEntChange(${idx},'respMetrados',this.value)">
           <option value="">— Seleccionar —</option>${ARQUITECTOS.map(o=>`<option value="${o.value}" ${o.value===item.respMetrados?'selected':''}>${o.label}</option>`).join('')}<option value="otro" ${item.respMetrados==='otro'?'selected':''}>Otro</option>
         </select></label>` : ''}
-        ${(item.area==='presupuestos' && item.requiereMetrados && item.respMetrados==='otro') ? `<label>Nombre (Otro)<input type="text" value="${escAttr(item.respMetradosOtro)}" oninput="modalEntInput(${idx},'respMetradosOtro',this.value)"></label>` : ''}
+        ${(puedePedirMetrado && item.requiereMetrados && item.respMetrados==='otro') ? `<label>Nombre (Otro)<input type="text" value="${escAttr(item.respMetradosOtro)}" oninput="modalEntInput(${idx},'respMetradosOtro',this.value)"></label>` : ''}
+        ${puedePedirEnvio ? `<label class="checkbox-label full" style="grid-column:1/-1;"><input type="checkbox" ${item.pendienteEnvioCliente?'checked':''} onchange="modalEntChange(${idx},'pendienteEnvioCliente',this.checked)"> 📤 Pendiente por enviar al cliente</label>` : ''}
+        ${(puedePedirEnvio && item.pendienteEnvioCliente) ? `<div class="entregable-indicadores" style="grid-column:1/-1;font-size:11px;color:var(--ink-soft);">Se creó el entregable «${escAttr(nombreEnvioDesdeOrigen(item))}» para Comercial, con entrega mañana. Desmarcar acá lo borra; marcarlo como completado significa que ya se envió.</div>` : ''}
         <label>Prioridad<select onchange="modalEntChange(${idx},'prioridad',this.value)"><option value="1" ${item.prioridad===1?'selected':''}>P1</option><option value="2" ${item.prioridad===2?'selected':''}>P2</option><option value="3" ${item.prioridad===3?'selected':''}>P3</option><option value="4" ${item.prioridad===4?'selected':''}>P4</option></select></label>
         <label>Fecha de entrega<input type="date" value="${item.fechaEntrega||''}" onchange="modalEntChange(${idx},'fechaEntrega',this.value)"></label>
         <label>Fecha comprometida con el cliente<input type="date" value="${item.fechaComprometidaCliente||''}" onchange="modalEntChange(${idx},'fechaComprometidaCliente',this.value)"></label>
@@ -5755,6 +6205,7 @@ function openEditModal(id){
   document.getElementById('m-desc-pendiente-wrap').style.display = o.accionPendienteCliente ? 'flex' : 'none';
   document.getElementById('m-delete-btn').classList.remove('hidden');
   modalEntregables = JSON.parse(JSON.stringify(o.entregables));
+  modalEntReconciliarMetrados();
   renderModalEntregables();
   const overlay = document.getElementById('modal-overlay');
   overlay.classList.remove('hidden');
@@ -5833,6 +6284,21 @@ function saveModal(){
   }
   const rondaVigente = oExisting ? oExisting.rondaActual : 1;
   const finalEntregables = modalEntregables.map(item=>({...item, id: item.id || nextEntId++, nombre: item.nombre.trim() || 'Entregable', ronda: item.ronda!=null ? item.ronda : rondaVigente}));
+  /* El Metrado va siempre en la misma ronda que el entregable de Arquitectura
+     que lo pidió: si el origen recién tomó la ronda vigente, el Metrado la toma
+     con él y los dos caen en el mismo grupo de rondas. */
+  finalEntregables.forEach(item=>{
+    if(!esEntregableMetrado(item)) return;
+    const origen = finalEntregables.find(x=>x.id===item.metradoOrigenId);
+    if(origen) item.ronda = origen.ronda;
+  });
+  /* Y el "Enviar al cliente" va en la ronda del entregable que lo pidió, por lo
+     mismo: es el cierre de esa ronda, no el arranque de una nueva. */
+  finalEntregables.forEach(item=>{
+    if(!esEntregableEnvio(item)) return;
+    const origen = finalEntregables.find(x=>x.id===item.envioOrigenId);
+    if(origen) item.ronda = origen.ronda;
+  });
 
   const probRaw = document.getElementById('m-prob-cierre').value;
   let probabilidadCierre = probRaw === '' ? null : parseFloat(probRaw);
@@ -6381,7 +6847,7 @@ document.getElementById('import-modal-overlay').addEventListener('click', (e)=>{
    ============================================================ */
 function esc(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r\n/g,'\\n').replace(/\n/g,'\\n').replace(/\r/g,'\\n'); }
 function serializeEntregable(e){
-  return `{id:${e.id}, nombre:'${esc(e.nombre)}', area:'${e.area}', responsable:'${e.responsable}', responsableOtro:'${esc(e.responsableOtro)}', etapa:'${e.etapa}', prioridad:${e.prioridad}, fechaEntrega:'${e.fechaEntrega||''}', fechaComprometidaCliente:'${e.fechaComprometidaCliente||''}', fechaCompletado:'${e.fechaCompletado||''}', estado:'${e.estado}', proximoPaso:'${esc(e.proximoPaso)}', observacion:'${esc(e.observacion)}', ronda:${e.ronda||1}, requiereMetrados:${!!e.requiereMetrados}, respMetrados:'${e.respMetrados||''}', respMetradosOtro:'${esc(e.respMetradosOtro)}'}`;
+  return `{id:${e.id}, nombre:'${esc(e.nombre)}', area:'${e.area}', responsable:'${e.responsable}', responsableOtro:'${esc(e.responsableOtro)}', etapa:'${e.etapa}', prioridad:${e.prioridad}, fechaEntrega:'${e.fechaEntrega||''}', fechaComprometidaCliente:'${e.fechaComprometidaCliente||''}', fechaCompletado:'${e.fechaCompletado||''}', estado:'${e.estado}', proximoPaso:'${esc(e.proximoPaso)}', observacion:'${esc(e.observacion)}', ronda:${e.ronda||1}, requiereMetrados:${!!e.requiereMetrados}, respMetrados:'${e.respMetrados||''}', respMetradosOtro:'${esc(e.respMetradosOtro)}', metradoOrigenId:${(e.metradoOrigenId===undefined||e.metradoOrigenId===null)?'null':e.metradoOrigenId}, pendienteEnvioCliente:${!!e.pendienteEnvioCliente}, envioOrigenId:${(e.envioOrigenId===undefined||e.envioOrigenId===null)?'null':e.envioOrigenId}}`;
 }
 function serializeOportunidad(o){
   return `{id:${o.id}, cliente:'${esc(o.cliente)}', proyecto:'${esc(o.proyecto)}', tipoSistema:'${esc(o.tipoSistema)}', refrigerante:'${o.refrigerante}', refrigeranteOtro:'${esc(o.refrigeranteOtro)}', importe:${o.importe}, margenComercial:${(o.margenComercial===null||o.margenComercial===undefined)?'null':o.margenComercial}, probabilidadCierre:${(o.probabilidadCierre===null||o.probabilidadCierre===undefined)?'null':o.probabilidadCierre}, mesCierre:'${o.mesCierre||''}', segmentoCliente:'${o.segmentoCliente||''}', duracionProyecto:${(o.duracionProyecto===null||o.duracionProyecto===undefined)?'null':o.duracionProyecto}, valorNoFrioOOCC:${o.valorNoFrioOOCC||0}, valorNoFrioEEMM:${o.valorNoFrioEEMM||0}, prioridad:${(o.prioridad===null||o.prioridad===undefined)?'null':o.prioridad}, etapa:'${o.etapa}', responsableActual:'${o.responsableActual}', presupuestador:'${o.presupuestador||''}', presupuestadorOtro:'${esc(o.presupuestadorOtro)}', requiereMetrados:${!!o.requiereMetrados}, respMetrados:'${o.respMetrados||''}', respMetradosOtro:'${esc(o.respMetradosOtro)}', arquitecto:'${o.arquitecto||''}', arquitectoOtro:'${esc(o.arquitectoOtro)}', kam:'${o.kam||''}', kamOtro:'${esc(o.kamOtro)}', fechaInicio:'${o.fechaInicio||''}', fechaSeguimiento:'${o.fechaSeguimiento||''}', proximoPaso:'${esc(o.proximoPaso)}', accionPendienteCliente:${o.accionPendienteCliente}, descripcionPendiente:'${esc(o.descripcionPendiente)}', estadoOperativo:'${o.estadoOperativo||'pendiente_interno'}', rondaActual:${o.rondaActual||1},
@@ -6612,6 +7078,17 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     renderKPIs();
     hideGlobalTooltip();
   });
+});
+/* El ancho de día del Gantt se calcula contra el ancho visible (ver renderGantt),
+   así que al cambiar el tamaño de la ventana hay que recalcularlo. Solo si el
+   cronograma está a la vista: en cualquier otra pestaña el contenedor mide 0 y
+   el render se haría con una escala inservible que se pisaría igual al volver. */
+let ganttResizeTimer = null;
+window.addEventListener('resize', ()=>{
+  const panel = document.getElementById('cronograma');
+  if(!panel || !panel.classList.contains('active')) return;
+  clearTimeout(ganttResizeTimer);
+  ganttResizeTimer = setTimeout(renderGantt, 150);
 });
 
 /* ---------- Init ---------- */
