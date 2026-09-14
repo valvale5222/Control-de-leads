@@ -1228,6 +1228,9 @@
   .equipo-select:focus{background:var(--surface);border-color:var(--teal);box-shadow:var(--ring);}
   .equipo-select option{background:var(--surface);color:var(--ink);}
   .equipo-select.sin-asignar{color:var(--ink-dim);font-style:italic;font-weight:500;}
+  /* Heredado del responsable del entregable del área: se distingue del dato
+     propio (más tenue, en cursiva) sin llegar a leerse como un hueco. */
+  .equipo-select.heredado{color:var(--ink-soft);font-style:italic;font-weight:500;}
   /* Rol visor: el select queda como etiqueta de lectura, sin hover ni cursor. */
   .equipo-select:disabled{cursor:default;opacity:1;}
   .equipo-select:disabled:hover{background:transparent;border-color:transparent;}
@@ -5149,23 +5152,72 @@ function toggleCargaExpand(barEl){
    o.ordenTrabajo) y guarda por el mismo portón (persistLocal → Supabase), así
    que cualquier cambio hecho acá aparece en la ficha, en Detalle, en Revisión
    semanal y en el Excel sin ninguna sincronización aparte.
+
+   Arquitecto y Presupuestador son campos heredados que la ficha ya no pide, así
+   que muchas oportunidades los tienen vacíos: cuando falta el dato propio, la
+   card muestra el responsable del entregable de esa área (ver
+   equipoRolHeredado). Es solo de lectura — elegir a alguien lo fija.
    ============================================================ */
 let cargaVista = 'carga';
 /* Filtro de KAM de la subvista: '' = todos, EQUIPO_SIN_KAM = los que no tienen
-   KAM cargado, y cualquier otro valor es el NOMBRE visible del KAM (mismo
-   criterio que el filtro de KAM de Detalle > Entregas, que también compara
-   contra nombreKAM(o) y no contra el value del catálogo). */
+   KAM por ningún lado, y cualquier otro valor es el NOMBRE visible del KAM
+   (compara contra nombres y no contra el value del catálogo, igual que el filtro
+   de KAM de Detalle > Entregas; acá el nombre lo resuelve equipoNombreRol, que
+   además contempla el heredado). */
 let equipoKamFiltro = '';
 const EQUIPO_SIN_KAM = '__sin_kam__';
 
 /* La tríada, declarada una sola vez: cada rol dice qué campo de la oportunidad
-   edita, dónde vive su nombre libre de "Otro" y de qué catálogo existente salen
-   sus opciones. No se crea ningún listado de personas nuevo. */
+   edita, dónde vive su nombre libre de "Otro", de qué catálogo existente salen
+   sus opciones y de qué área saca su respaldo heredado. No se crea ningún
+   listado de personas nuevo. */
 const EQUIPO_ROLES = [
-  {key:'kam',            label:'KAM',            campo:'kam',            campoOtro:'kamOtro',            catalogo:KAMS},
-  {key:'arquitecto',     label:'Arquitecto',     campo:'arquitecto',     campoOtro:'arquitectoOtro',     catalogo:ARQUITECTOS},
-  {key:'presupuestador', label:'Presupuestador', campo:'presupuestador', campoOtro:'presupuestadorOtro', catalogo:PRESUPUESTADORES},
+  {key:'kam',            label:'KAM',            campo:'kam',            campoOtro:'kamOtro',            catalogo:KAMS,             area:'comercial'},
+  {key:'arquitecto',     label:'Arquitecto',     campo:'arquitecto',     campoOtro:'arquitectoOtro',     catalogo:ARQUITECTOS,      area:'arquitectura'},
+  {key:'presupuestador', label:'Presupuestador', campo:'presupuestador', campoOtro:'presupuestadorOtro', catalogo:PRESUPUESTADORES, area:'presupuestos'},
 ];
+const EQUIPO_ROL_KAM = EQUIPO_ROLES[0];
+
+/* Respaldo heredado de un rol. o.arquitecto y o.presupuestador son campos de
+   resumen heredados del panel legado: la ficha ya no los pide (solo pide el
+   KAM), así que toda oportunidad creada o importada después nace con los dos
+   vacíos y la card saldría con dos "Sin asignar" aunque haya gente trabajando
+   en ella. El dato que sí está al día es el responsable de cada entregable
+   —el mismo que usan Detalle, Carga laboral y los filtros—, así que cuando el
+   campo de la oportunidad está vacío, la card muestra el responsable del
+   entregable de esa área.
+
+   Es solo para mostrar: NO escribe nada. En cuanto se elige a alguien en el
+   selector, el valor queda fijado en la oportunidad y deja de heredarse. */
+function equipoRolHeredado(o, rol){
+  const delArea = o.entregables.filter(e => e.area === rol.area && nombreResponsableEntregable(e));
+  if(!delArea.length) return '';
+  /* Manda el trabajo vivo: si hay entregables pendientes en el área, el nombre
+     sale de ellos; los completados solo se miran cuando no queda ninguno. */
+  const pendientes = delArea.filter(e => e.estado === 'pendiente');
+  let pool = pendientes.length ? pendientes : delArea;
+  /* Dentro de Presupuestos e Ingeniería, un "Metrado" es otro trabajo y su
+     responsable sale del catálogo de Metrados, no del de Presupuestadores: se
+     prefiere un entregable normal del área y el Metrado queda de respaldo. */
+  const sinMetrados = pool.filter(e => !esEntregableMetrado(e));
+  if(sinMetrados.length) pool = sinMetrados;
+  const elegido = pool.slice().sort((a,b)=>{
+    const fa = a.fechaEntrega || '9999-12-31';
+    const fb = b.fechaEntrega || '9999-12-31';
+    if(fa !== fb) return fa < fb ? -1 : 1;
+    return a.id - b.id;
+  })[0];
+  return nombreResponsableEntregable(elegido);
+}
+
+/* Nombre que la card muestra para un rol: el guardado en la oportunidad si lo
+   hay y, si no, el heredado. Es también el criterio del filtro de KAM, para que
+   filtrar por una persona traiga exactamente las cards donde esa persona se ve
+   —por dato propio o heredado— y "Sin asignar" signifique que no hay nadie por
+   ningún lado. */
+function equipoNombreRol(o, rol){
+  return resolveNombre(rol.catalogo, o[rol.campo], o[rol.campoOtro]) || equipoRolHeredado(o, rol);
+}
 
 function setCargaVista(vista){
   cargaVista = vista;
@@ -5213,16 +5265,25 @@ function equipoRolSelectHtml(o, rol){
   /* Un valor que no está en el catálogo ("otro" con su nombre libre, o el
      "no_requiere" heredado de Arquitectura) se conserva como una opción más:
      abrir el selector nunca debe borrar en silencio lo que ya estaba cargado. */
-  const heredada = (actual && !enCatalogo)
+  const fueraDeCatalogo = (actual && !enCatalogo)
     ? `<option value="${escAttr(actual)}" selected>${resolveNombre(rol.catalogo, actual, o[rol.campoOtro]) || 'Otro'}</option>`
     : '';
   const opciones = rol.catalogo
     .map(c => `<option value="${c.value}"${c.value===actual ? ' selected' : ''}>${c.label}</option>`)
     .join('');
-  return `<select class="equipo-select${actual ? '' : ' sin-asignar'}"${puedeEditar ? '' : ' disabled'}
+  /* Sin valor propio, la opción vacía deja de decir "Sin asignar" y muestra el
+     heredado con "↪" delante: sigue siendo la opción de valor "" (no hay nada
+     guardado), pero la card enseña quién está trabajando en esa área en vez de
+     un hueco. Elegir cualquier nombre de la lista lo fija en la oportunidad. */
+  const heredado = actual ? '' : equipoRolHeredado(o, rol);
+  const estado = actual ? '' : (heredado ? ' heredado' : ' sin-asignar');
+  const titulo = heredado
+    ? ` title="Heredado del responsable del entregable de ${escAttr(AREA_LABEL[rol.area])}. La oportunidad no tiene ${rol.label} propio: elegí a alguien para fijarlo."`
+    : '';
+  return `<select class="equipo-select${estado}"${puedeEditar ? '' : ' disabled'}${titulo}
     aria-label="${rol.label} de la oportunidad ${o.id}"
     onchange="actualizarResponsableEquipo(${o.id},'${rol.key}',this.value)">
-    <option value=""${actual ? '' : ' selected'}>Sin asignar</option>${heredada}${opciones}
+    <option value=""${actual ? '' : ' selected'}>${heredado ? '↪ ' + heredado : 'Sin asignar'}</option>${fueraDeCatalogo}${opciones}
   </select>`;
 }
 
@@ -5266,13 +5327,15 @@ function equipoCardHtml(o){
 }
 
 /* Opciones del filtro: se derivan de los MISMOS proyectos de la semana que arman
-   las cards (nombreKAM de cada oportunidad), nunca de una lista aparte, así el
-   desplegable no puede ofrecer un KAM que esta semana no tiene proyectos. */
+   las cards y con el MISMO criterio de nombre (equipoNombreRol: el KAM propio
+   o, si no hay, el heredado del entregable de Comercial), nunca de una lista
+   aparte. Así el desplegable no puede ofrecer un KAM que esta semana no tiene
+   proyectos, ni esconder uno que las cards sí están mostrando. */
 function renderEquipoKamOptions(proyectos){
   const sel = document.getElementById('equipo-f-kam');
   if(!sel) return;
-  const nombres = distinct(proyectos.map(o => nombreKAM(o)));
-  const haySinKam = proyectos.some(o => !nombreKAM(o));
+  const nombres = distinct(proyectos.map(o => equipoNombreRol(o, EQUIPO_ROL_KAM)));
+  const haySinKam = proyectos.some(o => !equipoNombreRol(o, EQUIPO_ROL_KAM));
   /* Si el KAM elegido dejó de tener proyectos en la semana, el filtro vuelve
      solo a "Todos los KAM" en vez de dejar la vista vacía sin explicación. */
   equipoKamFiltro = equipoKamFiltro === EQUIPO_SIN_KAM
@@ -5292,7 +5355,7 @@ function renderEquipoGrid(){
   const todos = proyectosDeLaSemana();
   const visibles = todos.filter(o=>{
     if(!equipoKamFiltro) return true;
-    const nombre = nombreKAM(o);
+    const nombre = equipoNombreRol(o, EQUIPO_ROL_KAM);
     return equipoKamFiltro === EQUIPO_SIN_KAM ? !nombre : nombre === equipoKamFiltro;
   });
   const cuenta = document.getElementById('equipo-count');
