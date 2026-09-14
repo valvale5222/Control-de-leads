@@ -1185,12 +1185,41 @@
     transition:color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease);
   }
   .equipo-proyecto:hover,.equipo-proyecto:focus-visible{color:var(--teal);border-bottom-color:var(--teal);outline:none;}
+  /* Fila de metadatos bajo el nombre: fecha editable, marca de vencido y área
+     que hoy tiene la pelota. Envuelve cuando no entra en una línea. */
+  .equipo-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;}
   .equipo-fecha{
-    display:inline-flex;align-items:center;gap:5px;
+    display:inline-flex;align-items:center;gap:3px;
     font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
   }
   .equipo-fecha.vencido{color:var(--danger);font-weight:700;}
   .equipo-fecha.proximo{color:var(--warn);font-weight:700;}
+  /* Igual que los selectores de la tríada: se lee como texto y solo se muestra
+     como control al pasar por encima o enfocarlo. El padding de input[type=date]
+     es global y va con !important, así que acá hay que pisarlo igual para que la
+     fecha no ocupe media card. */
+  .equipo-fecha-input{
+    background:transparent;border:1px solid transparent;border-radius:6px;color:inherit;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:inherit;
+    padding-left:4px !important;padding-right:20px !important;
+    padding-top:2px;padding-bottom:2px;outline:none;cursor:pointer;width:auto;
+    transition:background-color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease);
+  }
+  .equipo-fecha-input::-webkit-calendar-picker-indicator{right:3px;width:13px;height:13px;opacity:.5;}
+  .equipo-fecha-input:hover{background:var(--surface);border-color:var(--line);}
+  .equipo-fecha-input:hover::-webkit-calendar-picker-indicator{opacity:.9;}
+  .equipo-fecha-input:focus{background:var(--surface);border-color:var(--teal);box-shadow:var(--ring);}
+  .equipo-fecha-input:disabled{cursor:default;opacity:1;}
+  .equipo-fecha-input:disabled:hover{background:transparent;border-color:transparent;}
+  .equipo-plazo-tag{
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--danger);background:var(--danger-bg);
+    padding:2px 6px;border-radius:var(--radius-pill);white-space:nowrap;
+  }
+  /* Área responsable: mismo punto de color y mismas etiquetas que la columna
+     "Área" de Detalle (.dot-label/.dot-area-*), en tamaño de card. */
+  .equipo-area{font-size:10.5px;color:var(--ink-soft);}
+  .equipo-area .dot-mark{margin-right:4px;}
 
   /* Zona principal — la tríada. Tres bloques compactos en una fila que, cuando
      el ancho no alcanza, pasan a una columna sin cortar los nombres. */
@@ -1228,6 +1257,21 @@
   .equipo-select:focus{background:var(--surface);border-color:var(--teal);box-shadow:var(--ring);}
   .equipo-select option{background:var(--surface);color:var(--ink);}
   .equipo-select.sin-asignar{color:var(--ink-dim);font-style:italic;font-weight:500;}
+  /* Los demás responsables del área (una oportunidad puede pasar por dos
+     arquitectos o dos presupuestadores). Van debajo del selector, más chicos y
+     apagados, porque son contexto: el responsable "oficial" es el de arriba. */
+  .equipo-rol-otros{display:flex;flex-direction:column;gap:1px;margin-top:1px;}
+  .equipo-otro{
+    display:flex;align-items:center;gap:4px;font-size:10px;line-height:1.3;
+    color:var(--ink-dim);min-width:0;
+  }
+  .equipo-otro::before{
+    content:"";flex:0 0 auto;width:4px;height:4px;border-radius:50%;
+    border:1px solid var(--ink-dim);
+  }
+  /* Relleno = todavía tiene un entregable pendiente; hueco = ya entregó lo suyo. */
+  .equipo-otro.activo{color:var(--ink-soft);}
+  .equipo-otro.activo::before{background:var(--ink-soft);border-color:var(--ink-soft);}
   /* Heredado del responsable del entregable del área: se distingue del dato
      propio (más tenue, en cursiva) sin llegar a leerse como un hueco. */
   .equipo-select.heredado{color:var(--ink-soft);font-style:italic;font-weight:500;}
@@ -1245,6 +1289,8 @@
   :root[data-theme="light"] .equipo-select:hover{background:#FFFFFF;}
   :root[data-theme="light"] .equipo-select:focus{background:#FFFFFF;}
   :root[data-theme="light"] .equipo-num-input{background:#F2F5F8;}
+  :root[data-theme="light"] .equipo-fecha-input:hover,
+  :root[data-theme="light"] .equipo-fecha-input:focus{background:#FFFFFF;}
 
   /* TABLE GENERAL */
   .table-scroll{
@@ -2600,6 +2646,16 @@
           <label>Margen Comercial (%)<input type="number" id="m-margen-comercial" min="0" max="100" step="0.01" placeholder="0-100"></label>
           <label>Ejecutivo comercial / KAM<select id="m-kam" onchange="wireOtro('m-kam','m-kam-otro')"></select></label>
           <input type="text" id="m-kam-otro" class="otro-input hidden" placeholder="Nombre del KAM">
+          <!-- Arquitecto y Presupuestador de la oportunidad. Venían del panel
+               legado y se habían quedado sin campo en la ficha: seguían en el
+               modelo y en Supabase, pero solo se podían mirar (Excel) o
+               adivinar. Son los MISMOS o.arquitecto / o.presupuestador que
+               edita la card de Equipo de trabajo — editar en cualquiera de los
+               dos lados es editar el mismo dato. -->
+          <label>Arquitecto<select id="m-arquitecto" onchange="wireOtro('m-arquitecto','m-arquitecto-otro')"></select></label>
+          <input type="text" id="m-arquitecto-otro" class="otro-input hidden" placeholder="Nombre del arquitecto">
+          <label>Presupuestador<select id="m-presupuestador" onchange="wireOtro('m-presupuestador','m-presupuestador-otro')"></select></label>
+          <input type="text" id="m-presupuestador-otro" class="otro-input hidden" placeholder="Nombre del presupuestador">
           <label>Prioridad del tablero<select id="m-prioridad-tablero"><option value="1">1 · Crítico</option><option value="2">2 · Importante</option><option value="3">3 · Programado</option><option value="4">4 · En proceso</option></select></label>
           <label>Estado actual<select id="m-etapa"></select></label>
           <label>Responsable actual<select id="m-resp-actual"><option value="comercial">Comercial</option><option value="arquitectura">Arquitectura</option><option value="presupuestos">Presupuestos e Ingeniería</option><option value="cliente">Cliente</option></select></label>
@@ -5219,6 +5275,41 @@ function equipoNombreRol(o, rol){
   return resolveNombre(rol.catalogo, o[rol.campo], o[rol.campoOtro]) || equipoRolHeredado(o, rol);
 }
 
+/* Todas las personas que tienen o tuvieron un entregable del área de este rol.
+   Una oportunidad puede pasar por dos arquitectos o dos presupuestadores (un
+   entregable por ronda, o dos frentes en paralelo) y el campo de la oportunidad
+   guarda uno solo: sin esto, el segundo quedaba invisible en esta vista.
+   `activo` = todavía tiene un entregable pendiente; si no, ya entregó lo suyo.
+   Orden: primero los activos y, dentro de cada grupo, alfabético. */
+function equipoPersonasDeArea(o, rol){
+  const porNombre = new Map();
+  o.entregables.filter(e => e.area === rol.area).forEach(e=>{
+    const nombre = nombreResponsableEntregable(e);
+    if(!nombre) return;
+    const previo = porNombre.get(nombre) || {nombre, activo:false};
+    if(e.estado === 'pendiente') previo.activo = true;
+    porNombre.set(nombre, previo);
+  });
+  return [...porNombre.values()].sort((a,b)=>{
+    if(a.activo !== b.activo) return a.activo ? -1 : 1;
+    return a.nombre.localeCompare(b.nombre, 'es');
+  });
+}
+
+/* Los demás responsables del área, los que no son el nombre que ya muestra el
+   selector. Se listan debajo para que "dos arquitectos" o "dos presupuestadores"
+   se vean sin tener que abrir la ficha. Es solo lectura: quién es EL arquitecto
+   de la oportunidad se decide en el selector de arriba. */
+function equipoRolOtrosHtml(o, rol, nombreMostrado){
+  const otros = equipoPersonasDeArea(o, rol).filter(p => p.nombre !== nombreMostrado);
+  if(!otros.length) return '';
+  const tip = 'También en ' + AREA_LABEL[rol.area] + ':\n'
+    + otros.map(p => '· ' + p.nombre + (p.activo ? ' — con entregable pendiente' : ' — ya entregó lo suyo')).join('\n');
+  return `<span class="equipo-rol-otros" title="${escAttr(tip)}">${
+    otros.map(p=>`<span class="equipo-otro ${p.activo ? 'activo' : 'pasado'}">${p.nombre}</span>`).join('')
+  }</span>`;
+}
+
 function setCargaVista(vista){
   cargaVista = vista;
   document.querySelectorAll('[data-subtabs="carga-vista"] .subtab-btn')
@@ -5299,10 +5390,22 @@ function equipoCardHtml(o){
     : info.fechaEntrega ? '' : 'plazo-sinfecha';
   const fechaCls = plazo.key==='vencido' ? ' vencido' : plazo.key==='proximo' ? ' proximo' : '';
   const numero = esOrdenTrabajoValido(o.ordenTrabajo) ? Number(o.ordenTrabajo) : 1;
-  const triada = EQUIPO_ROLES.map(rol=>`<div class="equipo-rol rol-${rol.key}">
+  const triada = EQUIPO_ROLES.map(rol=>{
+    const nombreMostrado = equipoNombreRol(o, rol);
+    return `<div class="equipo-rol rol-${rol.key}">
         <span class="equipo-rol-label">${rol.label}</span>
         ${equipoRolSelectHtml(o, rol)}
-      </div>`).join('');
+        ${equipoRolOtrosHtml(o, rol, nombreMostrado)}
+      </div>`;
+  }).join('');
+  /* Área que hoy tiene la pelota — es o.responsableActual, el mismo campo y las
+     mismas etiquetas/colores que la columna "Área" de Detalle (.dot-area-*).
+     Incluye 'cliente', que no es un área interna pero sí dice dónde está
+     parada la oportunidad. */
+  const areaActual = o.responsableActual
+    ? `<span class="dot-label dot-area-${o.responsableActual} equipo-area" title="Área responsable ahora mismo">
+        <span class="dot-mark"></span>${o.responsableActual==='cliente' ? 'Pendiente del cliente' : RESP_ACTUAL_LABEL[o.responsableActual]}</span>`
+    : '';
   return `<article class="equipo-card ${plazoCls}">
     <div class="equipo-card-top">
       <div class="equipo-ident">
@@ -5320,10 +5423,57 @@ function equipoCardHtml(o){
     <div class="equipo-linea">
       <button type="button" class="equipo-proyecto" onclick="openRSDetailDrawer(${o.id})"
         title="Ver el detalle de la oportunidad">${o.proyecto || '(sin nombre)'}</button>
-      <span class="equipo-fecha${fechaCls}">📅 ${formatFechaCorta(info.fechaEntrega)}${plazo.key==='vencido' ? ' · Vencido' : ''}</span>
+      <div class="equipo-meta">
+        <label class="equipo-fecha${fechaCls}" title="Fecha de entrega del entregable «${escAttr(info.entregable ? info.entregable.nombre : '')}». Cambiarla acá es lo mismo que cambiarla en la ficha o arrastrar la tarjeta en el Calendario.">
+          <span aria-hidden="true">📅</span>
+          <input type="date" class="equipo-fecha-input" value="${info.fechaEntrega || ''}"${puedeEditar ? '' : ' disabled'}
+            aria-label="Fecha de entrega de la oportunidad ${o.id}"
+            onchange="actualizarFechaEquipo(${o.id},${info.entregable ? info.entregable.id : 'null'},this)">
+        </label>
+        ${plazo.key==='vencido' ? '<span class="equipo-plazo-tag">Vencido</span>' : ''}
+        ${areaActual}
+      </div>
     </div>
     <div class="equipo-triada">${triada}</div>
   </article>`;
+}
+
+/* Cambiar la fecha desde la card edita la fecha de entrega del entregable
+   pendiente principal — el mismo campo, el mismo entregable y el mismo efecto
+   que arrastrar su tarjeta entre días del Calendario (ver calDayDrop), Metrado
+   vinculado incluido. No hay fecha propia de la oportunidad que tocar. */
+function actualizarFechaEquipo(oppId, entId, input){
+  const o = oportunidades.find(x => x.id === oppId);
+  const e = o && entId != null ? o.entregables.find(x => x.id === entId) : null;
+  if(!o || !e) return;
+  const anterior = e.fechaEntrega || '';
+  if(!puedeEditar){ input.value = anterior; avisarSoloLectura(); return; }
+
+  const nueva = input.value;
+  /* Vaciar la fecha sacaría al entregable de la semana, del Calendario y del
+     Cronograma sin que nadie lo haya reprogramado: se revierte. Para dejarlo sin
+     fecha está la ficha, que es donde se decide eso a conciencia. */
+  if(!nueva){
+    input.value = anterior;
+    showToast('La fecha de entrega no puede quedar vacía. Para sacarle la fecha, usá la ficha.', 'warn');
+    return;
+  }
+  if(nueva === anterior) return;
+
+  e.fechaEntrega = nueva;
+  /* El Metrado autogenerado usa la fecha de su entregable de Arquitectura: si se
+     mueve el origen, se mueve con él (misma regla que el Calendario). */
+  const metradoVinculado = metradoDeOrigen(o.entregables, e);
+  if(metradoVinculado) metradoVinculado.fechaEntrega = e.fechaEntrega;
+
+  persistLocal();
+  renderAll();
+  if(rsDrawerOppId === o.id) openRSDetailDrawer(o.id, e.id);
+  /* Si la nueva fecha empuja al proyecto fuera de la semana, su card desaparece
+     de esta vista: se avisa para que no parezca que se perdió el cambio. */
+  if(!entregablesDeLaSemanaActual(o).length){
+    showToast('#' + o.id + ' · ' + o.cliente + ' sale de la semana en curso: su próxima entrega quedó para el ' + formatFechaCorta(nueva) + '.', 'info');
+  }
 }
 
 /* Opciones del filtro: se derivan de los MISMOS proyectos de la semana que arman
@@ -6303,6 +6453,16 @@ function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 function initSelectors(){
   document.getElementById('m-etapa').innerHTML = optionsHtml(ETAPAS);
   document.getElementById('m-kam').innerHTML = optionsHtml(KAMS, '<option value="otro">Otro</option>');
+  /* Arquitecto y Presupuestador sí admiten quedar vacíos (hay oportunidades que
+     todavía no pasaron por esas áreas), a diferencia del KAM, que siempre tiene
+     dueño comercial. "No requiere Arquitectura" es un valor heredado que ya
+     existe en la base y resolveNombre() sabe mostrar: se ofrece para no perderlo
+     ni obligar a inventar un arquitecto donde no hace falta. */
+  const sinAsignar = '<option value="">— Sin asignar —</option>';
+  document.getElementById('m-arquitecto').innerHTML = sinAsignar +
+    optionsHtml(ARQUITECTOS, '<option value="no_requiere">No requiere Arquitectura</option><option value="otro">Otro</option>');
+  document.getElementById('m-presupuestador').innerHTML = sinAsignar +
+    optionsHtml(PRESUPUESTADORES, '<option value="otro">Otro</option>');
 }
 
 function modalEntAdd(){
@@ -6633,6 +6793,13 @@ function openAddModal(){
   document.getElementById('m-nofrio-eemm').value = '';
   document.getElementById('m-kam').value = KAMS[0].value;
   document.getElementById('m-kam-otro').value=''; document.getElementById('m-kam-otro').classList.add('hidden');
+  /* Arquitecto y Presupuestador arrancan vacíos a propósito: una oportunidad
+     nueva todavía no pasó por esas áreas, y poner al primero del catálogo (lo
+     que hace la importación de Excel) inventa un responsable que nadie eligió. */
+  document.getElementById('m-arquitecto').value = '';
+  document.getElementById('m-arquitecto-otro').value=''; document.getElementById('m-arquitecto-otro').classList.add('hidden');
+  document.getElementById('m-presupuestador').value = '';
+  document.getElementById('m-presupuestador-otro').value=''; document.getElementById('m-presupuestador-otro').classList.add('hidden');
   /* Programado es la columna por defecto del tablero para una oportunidad nueva. */
   document.getElementById('m-prioridad-tablero').value = '3';
   document.getElementById('m-etapa').value = 'prospecto';
@@ -6682,6 +6849,12 @@ function openEditModal(id){
   document.getElementById('m-kam').value = o.kam || '';
   document.getElementById('m-kam-otro').value = o.kamOtro || '';
   document.getElementById('m-kam-otro').classList.toggle('hidden', o.kam!=='otro');
+  document.getElementById('m-arquitecto').value = o.arquitecto || '';
+  document.getElementById('m-arquitecto-otro').value = o.arquitectoOtro || '';
+  document.getElementById('m-arquitecto-otro').classList.toggle('hidden', o.arquitecto!=='otro');
+  document.getElementById('m-presupuestador').value = o.presupuestador || '';
+  document.getElementById('m-presupuestador-otro').value = o.presupuestadorOtro || '';
+  document.getElementById('m-presupuestador-otro').classList.toggle('hidden', o.presupuestador!=='otro');
   /* Misma fuente que el tablero y que el drag & drop: los tres editan o.prioridadTablero. */
   document.getElementById('m-prioridad-tablero').value = String([1,2,3,4].includes(Number(o.prioridadTablero)) ? Number(o.prioridadTablero) : 3);
   document.getElementById('m-etapa').value = o.etapa;
@@ -6808,6 +6981,17 @@ function saveModal(){
     valorNoFrioEEMM: Math.max(0, parseFloat(document.getElementById('m-nofrio-eemm').value) || 0),
     kam: document.getElementById('m-kam').value,
     kamOtro: document.getElementById('m-kam-otro').value.trim(),
+    /* Estos dos volvieron a la ficha después de haber quedado solo en el modelo:
+       hasta ahora saveModal() no los escribía y Object.assign los dejaba como
+       estaban, así que una oportunidad nueva nacía sin arquitecto ni
+       presupuestador y no había forma de cargarlos desde acá. Son los mismos
+       campos que edita la card de Equipo de trabajo. El nombre libre de "Otro"
+       solo se guarda mientras el valor sea 'otro', igual que en el resto de la
+       ficha, para no dejar nombres huérfanos. */
+    arquitecto: document.getElementById('m-arquitecto').value,
+    arquitectoOtro: document.getElementById('m-arquitecto').value==='otro' ? document.getElementById('m-arquitecto-otro').value.trim() : '',
+    presupuestador: document.getElementById('m-presupuestador').value,
+    presupuestadorOtro: document.getElementById('m-presupuestador').value==='otro' ? document.getElementById('m-presupuestador-otro').value.trim() : '',
     /* Columna del tablero de Revisión semanal: se fija igual desde aquí que
        arrastrando la card, porque ambas escriben este mismo campo. */
     prioridadTablero: (()=>{ const v = parseInt(document.getElementById('m-prioridad-tablero').value,10); return [1,2,3,4].includes(v) ? v : 3; })(),
