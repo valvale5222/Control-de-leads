@@ -2173,7 +2173,7 @@
           <span class="btn-emoji" aria-hidden="true">👤</span>
           <span class="tt">Gestión de usuarios</span>
         </a>
-        <span id="sync-indicator" class="sync-indicator"><span class="sync-dot ok" id="sync-dot"></span><span class="tt" id="sync-tt">Sin cambios locales</span></span>
+        <span id="sync-indicator" class="sync-indicator"><span class="sync-dot pending" id="sync-dot"></span><span class="tt" id="sync-tt">Conectando con la nube…</span></span>
       </div>
         <button type="button" class="kpi-toggle" id="kpi-toggle" onclick="toggleKpis()" aria-expanded="true" aria-controls="kpis-collapse">
           <span class="kpi-toggle-emoji" aria-hidden="true">📊</span>
@@ -2371,7 +2371,7 @@
 
     <!-- Subvista "Equipo de trabajo": una card por PROYECTO con trabajo en la
          semana en curso, con su tríada KAM + Arquitecto + Presupuestador.
-         Encabezado, filtro de KAM y grid los pinta renderEquipo(). -->
+         Encabezado, filtros y grid los pinta renderEquipo(). -->
     <div class="workload-shell" id="carga-vista-equipo" hidden>
       <div class="equipo-header">
         <div class="equipo-header-left">
@@ -2382,6 +2382,14 @@
           <span class="equipo-filtro-label">KAM</span>
           <select id="equipo-f-kam" onchange="setEquipoKam(this.value)" aria-label="Filtrar por KAM">
             <option value="">Todos los KAM</option>
+          </select>
+          <span class="equipo-filtro-label">Responsable</span>
+          <select id="equipo-f-resp" onchange="setEquipoResp(this.value)" aria-label="Filtrar por responsable del entregable de la semana">
+            <option value="">Todos los responsables</option>
+          </select>
+          <span class="equipo-filtro-label">Área</span>
+          <select id="equipo-f-area" onchange="setEquipoArea(this.value)" aria-label="Filtrar por área responsable del entregable de la semana">
+            <option value="">Todas las áreas</option>
           </select>
           <span class="equipo-count" id="equipo-count"></span>
         </div>
@@ -3541,6 +3549,18 @@ let supabaseSyncTimer = null;
 let escriturasEnCurso = 0;
 let realtimeRefrescoPendiente = false;
 let realtimeCanal = null;
+/* Estado real de la sincronización con Supabase, que es lo que le importa al
+   usuario: si lo que acaba de cargar ya está en la nube o se quedó solo en este
+   navegador. Antes el semáforo del header miraba htmlBackupAt (el respaldo en
+   archivo .html, anterior a Supabase), que se reinicia en cada recarga: el punto
+   salía naranja SIEMPRE al abrir el panel, incluso justo después de una carga
+   exitosa desde la nube, y avisaba de un respaldo que ya nadie usa.
+     'inicial'      — todavía no hubo ni carga ni guardado contra Supabase.
+     'sincronizando'— hay una escritura en vuelo.
+     'ok'           — la última operación contra Supabase terminó bien.
+     'error'        — la última falló; los cambios están solo en este equipo. */
+let estadoNube = 'inicial';
+let detalleErrorNube = '';
 /* Columnas que pueden no existir todavía en la base (proyectos que no corrieron
    la última migración de supabase/). Enviar una columna inexistente hace que la
    base rechace TODO el upsert (PGRST204) y ningún cambio suba a la nube; para no
@@ -3739,6 +3759,9 @@ async function cargarDesdeSupabase(opts){
          aborta sin pisar el estado local. */
       console.warn('Supabase devolvió 0 oportunidades pero hay ' + oportunidades.length + ' localmente. No se sobrescribe el estado local — revisa las políticas RLS en Supabase.');
       if(subirCorrecciones) showToast('Supabase respondió sin datos (revisa las políticas RLS). Se mantiene la copia local.', 'warn');
+      estadoNube = 'error';
+      detalleErrorNube = 'la nube respondió sin datos (revisa las políticas RLS)';
+      updateSyncIndicator();
       return;
     }
     /* Detecta contra el esquema real qué columnas opcionales existen. Un select '*'
@@ -3777,11 +3800,19 @@ async function cargarDesdeSupabase(opts){
        base para que el resto de sesiones/reportes la vean. En un refresco por
        Realtime no, porque volver a subir lo que acabamos de bajar dispararía
        otro evento y con él un ciclo infinito entre sesiones abiertas. */
+    /* La lectura salió bien: el panel ya está mostrando lo que hay en la nube.
+       Si persistLocal dispara una subida, sincronizarConSupabase pisará esto con
+       'sincronizando' y después con su propio resultado. */
+    estadoNube = 'ok';
+    detalleErrorNube = '';
     persistLocal(subirCorrecciones ? undefined : {skipSupabase:true});
     renderAll();
     updateSyncIndicator();
   }catch(e){
+    estadoNube = 'error';
+    detalleErrorNube = (e && (e.message || e.code)) ? String(e.message || e.code) : 'no se pudo leer la nube';
     console.error('No se pudo cargar desde Supabase, se mantienen los datos locales.', e);
+    updateSyncIndicator();
   }
 }
 
@@ -3889,6 +3920,8 @@ function columnaRechazada(e){
 async function sincronizarConSupabase(){
   if(!db) return;
   escriturasEnCurso++;
+  estadoNube = 'sincronizando';
+  updateSyncIndicator();
   try{
     /* Red de seguridad por si la detección al cargar no alcanzó (tabla vacía, o
        una columna se quitó después): se deja de enviar la columna que la base
@@ -3908,7 +3941,11 @@ async function sincronizarConSupabase(){
         throw e;
       }
     }
+    estadoNube = 'ok';
+    detalleErrorNube = '';
   }catch(e){
+    estadoNube = 'error';
+    detalleErrorNube = (e && (e.message || e.code)) ? String(e.message || e.code) : 'error desconocido';
     console.error('No se pudo sincronizar con Supabase.', e);
     /* El mensaje antes culpaba siempre a la conexión, pero la causa habitual es
        que la base rechaza la escritura (columna faltante, RLS, constraint). Se
@@ -3923,6 +3960,7 @@ async function sincronizarConSupabase(){
     }
   }finally{
     escriturasEnCurso--;
+    updateSyncIndicator();
     if(escriturasEnCurso === 0) atenderRefrescoPendiente();
   }
 }
@@ -3979,14 +4017,26 @@ function restaurarCambios(){
   renderAll();
   flashSaveButton('✓ Cambio restaurado');
 }
-let htmlBackupAt = null;
+/* Semáforo del header. Refleja el estado de Supabase —la única fuente de verdad
+   del panel— y no el del respaldo en archivo .html, que es anterior a la nube y
+   ya no se usa: htmlBackupAt se reinicia en cada recarga, así que el punto salía
+   naranja al abrir el panel aunque todo estuviera guardado. */
 function updateSyncIndicator(){
   const dot = document.getElementById('sync-dot');
   const tt = document.getElementById('sync-tt');
   if(!dot || !tt) return;
-  let cls = 'ok', label = '🟢 Excel actualizado';
-  if(lastImportError){ cls = 'error'; label = '🔴 Error de importación'; }
-  else if(lastSavedAt && (!htmlBackupAt || new Date(lastSavedAt) > new Date(htmlBackupAt))){ cls = 'pending'; label = '🟠 Cambios locales sin respaldo'; }
+  let cls, label;
+  if(lastImportError){
+    cls = 'error'; label = '🔴 Error de importación';
+  } else if(estadoNube === 'sincronizando' || escriturasEnCurso > 0){
+    cls = 'pending'; label = '🟠 Guardando en la nube…';
+  } else if(estadoNube === 'error'){
+    cls = 'error'; label = '🔴 No se guardó en la nube' + (detalleErrorNube ? ' (' + detalleErrorNube + ')' : '') + ' — los cambios están solo en este equipo';
+  } else if(estadoNube === 'ok'){
+    cls = 'ok'; label = '🟢 Guardado en la nube';
+  } else {
+    cls = 'pending'; label = '🟠 Conectando con la nube…';
+  }
   dot.className = 'sync-dot ' + cls;
   const when = lastSavedAt ? new Date(lastSavedAt).toLocaleString('es-PE',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '—';
   tt.textContent = label + ' · Últ. cambio: ' + when;
@@ -5222,6 +5272,19 @@ let cargaVista = 'carga';
    además contempla el heredado). */
 let equipoKamFiltro = '';
 const EQUIPO_SIN_KAM = '__sin_kam__';
+/* Filtros de responsable y de área. A diferencia del de KAM —que mira un dato
+   de la OPORTUNIDAD, uno solo por card— estos dos miran los ENTREGABLES
+   pendientes de la semana, y un mismo proyecto puede tener varios: dos personas
+   de Arquitectura, o trabajo simultáneo de Arquitectura y Presupuestos. Por eso
+   el criterio es "alguno coincide" y no "el responsable es": filtrar por una
+   persona muestra el proyecto completo en el que está trabajando, sin ocultar a
+   los demás que aparecen en la misma card.
+     '' = sin filtro; EQUIPO_SIN_RESP = proyectos con algún entregable de la
+   semana sin responsable asignado; cualquier otro valor es el NOMBRE visible
+   que resuelve nombreResponsableEntregable, igual que el resto del panel. */
+let equipoRespFiltro = '';
+let equipoAreaFiltro = '';
+const EQUIPO_SIN_RESP = '__sin_resp__';
 
 /* La tríada, declarada una sola vez: cada rol dice qué campo de la oportunidad
    edita, dónde vive su nombre libre de "Otro", de qué catálogo existente salen
@@ -5345,6 +5408,33 @@ function proyectosDeLaSemana(){
       if(fa !== fb) return fa < fb ? -1 : 1;
       return a.id - b.id;
     });
+}
+
+/* Personas y áreas con trabajo en la semana dentro de UN proyecto. Devuelven
+   listas, no un valor único, justamente porque una card puede tener varios
+   entregables pendientes: es lo que hace que los dos filtros nuevos sean "¿hay
+   alguno que coincida?" en vez de "¿el responsable es?". */
+function equipoResponsablesDeLaSemana(o){
+  return distinct(entregablesDeLaSemanaActual(o).map(nombreResponsableEntregable));
+}
+function equipoAreasDeLaSemana(o){
+  return distinct(entregablesDeLaSemanaActual(o).map(e => e.area));
+}
+function equipoCoincideResp(o){
+  if(!equipoRespFiltro) return true;
+  if(equipoRespFiltro === EQUIPO_SIN_RESP){
+    return entregablesDeLaSemanaActual(o).some(e => !nombreResponsableEntregable(e));
+  }
+  return equipoResponsablesDeLaSemana(o).includes(equipoRespFiltro);
+}
+function equipoCoincideArea(o){
+  if(!equipoAreaFiltro) return true;
+  return equipoAreasDeLaSemana(o).includes(equipoAreaFiltro);
+}
+function equipoCoincideKam(o){
+  if(!equipoKamFiltro) return true;
+  const nombre = equipoNombreRol(o, EQUIPO_ROL_KAM);
+  return equipoKamFiltro === EQUIPO_SIN_KAM ? !nombre : nombre === equipoKamFiltro;
 }
 
 /* Selector de un rol dentro de la card. Se dibuja como texto (ver CSS) y solo
@@ -5497,17 +5587,49 @@ function renderEquipoKamOptions(proyectos){
   sel.value = equipoKamFiltro;
 }
 
+/* Mismo criterio que el filtro de KAM, aplicado a los entregables de la semana:
+   las opciones salen de los proyectos que las cards están mostrando, así que el
+   desplegable nunca ofrece a alguien que esta semana no tiene trabajo. Las
+   opciones se derivan SIEMPRE de todos los proyectos de la semana y no de los ya
+   filtrados: si se derivaran de los filtrados, elegir un área vaciaría la lista
+   de responsables y los filtros se bloquearían entre sí. */
+function renderEquipoRespOptions(proyectos){
+  const sel = document.getElementById('equipo-f-resp');
+  if(!sel) return;
+  const nombres = distinct(proyectos.flatMap(equipoResponsablesDeLaSemana));
+  const haySinResp = proyectos.some(o => entregablesDeLaSemanaActual(o).some(e => !nombreResponsableEntregable(e)));
+  equipoRespFiltro = equipoRespFiltro === EQUIPO_SIN_RESP
+    ? (haySinResp ? EQUIPO_SIN_RESP : '')
+    : (nombres.includes(equipoRespFiltro) ? equipoRespFiltro : '');
+  sel.innerHTML = '<option value="">Todos los responsables</option>'
+    + (haySinResp ? `<option value="${EQUIPO_SIN_RESP}">Sin asignar</option>` : '')
+    + nombres.map(n => `<option value="${escAttr(n)}">${n}</option>`).join('');
+  sel.value = equipoRespFiltro;
+}
+
+/* Se recorre AREAS y no las áreas encontradas para que el orden del desplegable
+   sea siempre el mismo del panel (Comercial → Arquitectura → Presupuestos) en
+   vez del alfabético que devolvería distinct(). */
+function renderEquipoAreaOptions(proyectos){
+  const sel = document.getElementById('equipo-f-area');
+  if(!sel) return;
+  const presentes = new Set(proyectos.flatMap(equipoAreasDeLaSemana));
+  const areas = AREAS.filter(a => presentes.has(a.value));
+  if(!areas.some(a => a.value === equipoAreaFiltro)) equipoAreaFiltro = '';
+  sel.innerHTML = '<option value="">Todas las áreas</option>'
+    + areas.map(a => `<option value="${a.value}">${a.label}</option>`).join('');
+  sel.value = equipoAreaFiltro;
+}
+
 /* Solo las cards: lo llama el filtro para no reconstruir el <select> mientras
    está en uso. renderEquipo() hace esto y además refresca encabezado y opciones. */
 function renderEquipoGrid(){
   const grid = document.getElementById('equipo-grid');
   if(!grid) return;
   const todos = proyectosDeLaSemana();
-  const visibles = todos.filter(o=>{
-    if(!equipoKamFiltro) return true;
-    const nombre = equipoNombreRol(o, EQUIPO_ROL_KAM);
-    return equipoKamFiltro === EQUIPO_SIN_KAM ? !nombre : nombre === equipoKamFiltro;
-  });
+  /* Los tres filtros se acumulan (y lógico): KAM del proyecto, persona con
+     trabajo esta semana y área con trabajo esta semana. */
+  const visibles = todos.filter(o => equipoCoincideKam(o) && equipoCoincideResp(o) && equipoCoincideArea(o));
   const cuenta = document.getElementById('equipo-count');
   if(cuenta){
     cuenta.textContent = visibles.length === todos.length
@@ -5516,7 +5638,7 @@ function renderEquipoGrid(){
   }
   grid.innerHTML = visibles.map(equipoCardHtml).join('') || `<div class="equipo-empty">${
     todos.length
-      ? 'Ningún proyecto de esta semana tiene ese KAM asignado.'
+      ? 'Ningún proyecto de esta semana coincide con los filtros elegidos.'
       : '🟢 Sin proyectos con entregables pendientes en la semana en curso.'
   }</div>`;
 }
@@ -5530,12 +5652,25 @@ function renderEquipo(){
     rango.textContent = 'Semana del ' + formatFechaCorta(lunesISO) + ' al ' + formatFechaCorta(domingoISO)
       + ' · un proyecto por card, aunque tenga varios entregables';
   }
-  renderEquipoKamOptions(proyectosDeLaSemana());
+  const proyectos = proyectosDeLaSemana();
+  renderEquipoKamOptions(proyectos);
+  renderEquipoRespOptions(proyectos);
+  renderEquipoAreaOptions(proyectos);
   renderEquipoGrid();
 }
 
 function setEquipoKam(valor){
   equipoKamFiltro = valor || '';
+  renderEquipoGrid();
+}
+
+function setEquipoResp(valor){
+  equipoRespFiltro = valor || '';
+  renderEquipoGrid();
+}
+
+function setEquipoArea(valor){
+  equipoAreaFiltro = valor || '';
   renderEquipoGrid();
 }
 
@@ -7568,7 +7703,6 @@ async function guardarCambios(){
       await writable.write(buildUpdatedHtml());
       await writable.close();
       persistLocal();
-      htmlBackupAt = new Date().toISOString();
       updateSyncIndicator();
       flashSaveButton('✓ Archivo actualizado');
       return;
@@ -7579,7 +7713,6 @@ async function guardarCambios(){
       showToast('No se pudo escribir directamente sobre el archivo. Se descargó una copia actualizada — reemplaza el archivo anterior con esta.', 'error');
       descargarCopia();
       persistLocal();
-      htmlBackupAt = new Date().toISOString();
       updateSyncIndicator();
       return;
     }
@@ -7587,7 +7720,6 @@ async function guardarCambios(){
   showToast('Tu navegador no permite sobrescribir el archivo directamente. Se descargó una copia actualizada — reemplaza el archivo anterior con esta.', 'info');
   descargarCopia();
   persistLocal();
-  htmlBackupAt = new Date().toISOString();
   updateSyncIndicator();
 }
 
@@ -7866,6 +7998,11 @@ async function handleLogout(){
 window.addEventListener('DOMContentLoaded', function(){
   if(typeof supabase === 'undefined'){
     console.error('No se pudo cargar la librería de Supabase (sin conexión a internet o CDN bloqueado).');
+    /* db se queda en null: nada de lo que se edite va a subir. El semáforo tiene
+       que decirlo, si no el panel aparenta funcionar y los cambios se pierden. */
+    estadoNube = 'error';
+    detalleErrorNube = 'no se pudo cargar la librería de Supabase';
+    updateSyncIndicator();
     return;
   }
   db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
