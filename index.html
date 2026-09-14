@@ -1095,6 +1095,154 @@
   :root[data-theme="light"] .hito-cliente{font-weight:700;}
   :root[data-theme="light"] .hito-sub{font-size:10.5px;}
 
+
+  /* ============================================================
+     EQUIPO DE TRABAJO — subvista de "Carga de trabajo". La unidad es el
+     PROYECTO (una card por oportunidad con trabajo en la semana en curso), no
+     la persona: enseña la tríada KAM + Arquitecto + Presupuestador que lo
+     sostiene. No tiene datos propios — lee y escribe los mismos campos de la
+     oportunidad que la ficha y el resto de las vistas.
+     ============================================================ */
+  /* Selector Carga laboral / Equipo de trabajo — misma píldora que los subtabs
+     de área, en su propia línea por encima del contenedor de la subvista. */
+  .carga-vista-toggle{margin-bottom:14px;}
+
+  .equipo-header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    flex-wrap:wrap;margin-bottom:14px;
+  }
+  .equipo-header-left{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .equipo-header-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13.5px;color:var(--ink);}
+  .equipo-header-sub{font-size:11px;color:var(--ink-dim);}
+  /* Filtro de KAM: un único control, así que va suelto junto al encabezado en
+     vez de dentro de una barra .filters completa (que para una sola opción se
+     ve como un cajón vacío). Hereda el mismo alto, radio y foco que los
+     selects de las barras de filtros para no desentonar. */
+  /* En pantallas angostas el bloque baja a su propia línea y puede repartirse
+     en dos: por eso puede encogerse (flex 1 1 auto) en vez de desbordar. */
+  .equipo-filtro{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:1 1 auto;flex-wrap:wrap;min-width:0;}
+  .equipo-filtro-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-dim);white-space:nowrap;}
+  .equipo-filtro select{
+    background:var(--surface);border:1px solid var(--line);color:var(--ink);
+    font-family:'Inter',sans-serif;font-size:12px;padding:7px 11px;border-radius:var(--radius-sm);
+    outline:none;cursor:pointer;max-width:230px;min-width:0;flex:0 1 auto;
+    transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease);
+  }
+  .equipo-filtro select:focus{border-color:var(--teal);box-shadow:var(--ring);}
+  .equipo-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-dim);white-space:nowrap;}
+
+  /* Grid responsive: 1 columna en móvil, 2 en pantallas medianas y 3 en
+     escritorio ancho. Los cortes no son arbitrarios — son los anchos a partir
+     de los cuales la card sigue siendo lo bastante ancha para que la tríada
+     entre en sus tres bloques sin apretarlos (ver .equipo-triada). */
+  .equipo-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:10px;}
+  @media (min-width:760px){ .equipo-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (min-width:1260px){ .equipo-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
+
+  .equipo-card{
+    display:flex;flex-direction:column;gap:10px;
+    background:var(--card-surface);border:1px solid var(--glass-border);
+    border-left:3px solid var(--teal);border-radius:var(--radius-md);
+    padding:12px 13px;box-shadow:var(--shadow-xs);min-width:0;
+    transition:background-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease),transform var(--dur-2) var(--ease);
+  }
+  .equipo-card:hover{background:var(--card-surface-hover);box-shadow:var(--shadow-sm);transform:translateY(-1px);}
+  @media (prefers-reduced-motion:reduce){ .equipo-card{transition:none;} .equipo-card:hover{transform:none;} }
+  /* El filo izquierdo repite el semáforo de plazo que ya usan las demás vistas
+     (vencido / próximo / a tiempo), calculado con getPlazoInfo. */
+  .equipo-card.plazo-vencido{border-left-color:var(--danger);}
+  .equipo-card.plazo-proximo{border-left-color:var(--warn);}
+  .equipo-card.plazo-sinfecha{border-left-color:var(--line);}
+
+  /* Fila 1 — ID · Cliente a la izquierda, número editable a la derecha */
+  .equipo-card-top{display:flex;align-items:flex-start;gap:10px;}
+  .equipo-ident{display:flex;align-items:baseline;gap:7px;min-width:0;flex:1 1 auto;}
+  .equipo-id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-dim);flex:0 0 auto;}
+  .equipo-cliente{
+    font-weight:700;font-size:12.5px;color:var(--ink);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
+  }
+  /* Caja del número (o.ordenTrabajo): discreta, del tamaño de un badge. */
+  .equipo-num{display:flex;align-items:center;gap:5px;flex:0 0 auto;}
+  .equipo-num-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-dim);}
+  .equipo-num-input{
+    width:44px;height:26px;padding:2px 4px;border:1px solid var(--line);border-radius:7px;
+    background:var(--surface-alt);color:var(--ink);text-align:center;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:700;outline:none;
+    appearance:textfield;-moz-appearance:textfield;
+    transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease);
+  }
+  .equipo-num-input::-webkit-inner-spin-button,
+  .equipo-num-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+  .equipo-num-input:focus{border-color:var(--teal);box-shadow:var(--ring);}
+  .equipo-num-input:disabled{opacity:.65;cursor:default;}
+
+  /* Fila 2 — nombre del proyecto (abre el drawer) + fecha de entrega */
+  .equipo-proyecto{
+    display:block;width:100%;text-align:left;background:none;border:none;padding:0;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;line-height:1.35;color:var(--ink);
+    cursor:pointer;border-bottom:1px dotted transparent;
+    transition:color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease);
+  }
+  .equipo-proyecto:hover,.equipo-proyecto:focus-visible{color:var(--teal);border-bottom-color:var(--teal);outline:none;}
+  .equipo-fecha{
+    display:inline-flex;align-items:center;gap:5px;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);
+  }
+  .equipo-fecha.vencido{color:var(--danger);font-weight:700;}
+  .equipo-fecha.proximo{color:var(--warn);font-weight:700;}
+
+  /* Zona principal — la tríada. Tres bloques compactos en una fila que, cuando
+     el ancho no alcanza, pasan a una columna sin cortar los nombres. */
+  .equipo-triada{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+    padding-top:9px;border-top:1px solid var(--line);
+  }
+  /* Bajo ~440px la card ya no da para tres columnas sin apretar "Presupuestador":
+     los tres bloques se apilan y siguen leyéndose completos. */
+  @media (max-width:440px){ .equipo-triada{grid-template-columns:1fr;} }
+  .equipo-rol{
+    display:flex;flex-direction:column;gap:3px;min-width:0;
+    background:var(--surface-alt);border-radius:8px;padding:7px 8px;
+  }
+  /* El ellipsis es una red de seguridad: la etiqueta más larga
+     ("Presupuestador") entra en todos los anchos previstos, pero si alguna vez
+     no entrara, se recorta en vez de ensanchar la columna y desbordar la card. */
+  .equipo-rol-label{
+    font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;
+    color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .equipo-rol.rol-kam .equipo-rol-label{color:var(--info);}
+  .equipo-rol.rol-arquitecto .equipo-rol-label{color:var(--violet);}
+  .equipo-rol.rol-presupuestador .equipo-rol-label{color:var(--ok);}
+  /* El select se ve como texto hasta que se lo toca: la tríada tiene que
+     leerse como información, no como un formulario de tres campos. */
+  .equipo-select{
+    width:100%;min-width:0;background:transparent;border:1px solid transparent;border-radius:6px;
+    color:var(--ink);font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;
+    padding:2px 3px;margin-left:-3px;cursor:pointer;outline:none;
+    text-overflow:ellipsis;
+    transition:background-color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease);
+  }
+  .equipo-select:hover{background:var(--surface);border-color:var(--line);}
+  .equipo-select:focus{background:var(--surface);border-color:var(--teal);box-shadow:var(--ring);}
+  .equipo-select option{background:var(--surface);color:var(--ink);}
+  .equipo-select.sin-asignar{color:var(--ink-dim);font-style:italic;font-weight:500;}
+  /* Rol visor: el select queda como etiqueta de lectura, sin hover ni cursor. */
+  .equipo-select:disabled{cursor:default;opacity:1;}
+  .equipo-select:disabled:hover{background:transparent;border-color:transparent;}
+  .equipo-empty{grid-column:1/-1;padding:22px;text-align:center;color:var(--ink-soft);font-size:12.5px;}
+  /* Nombre del proyecto y fecha, apilados: la fecha no debe quedar pegada al
+     nombre cuando éste ocupa dos líneas. */
+  .equipo-linea{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;}
+
+  /* Tema claro — misma corrección que en los paneles de Carga de trabajo: los
+     bloques internos pasan a nácar en vez del gris del tema oscuro. */
+  :root[data-theme="light"] .equipo-rol{background:#F2F5F8;}
+  :root[data-theme="light"] .equipo-select:hover{background:#FFFFFF;}
+  :root[data-theme="light"] .equipo-select:focus{background:#FFFFFF;}
+  :root[data-theme="light"] .equipo-num-input{background:#F2F5F8;}
+
   /* TABLE GENERAL */
   .table-scroll{
     overflow-x:auto;border-radius:var(--radius-lg);
@@ -2138,7 +2286,14 @@
   <!-- ============ TAB 02 — CARGA DE TRABAJO ============ -->
   <div class="tab-panel" id="carga">
     <h2 class="print-only-title">02 · Carga de trabajo</h2>
-    <div class="workload-shell">
+    <!-- Selector de subvista: "Carga laboral" es la vista de siempre (carga por
+         responsable); "Equipo de trabajo" es la lectura por proyecto de la
+         semana en curso. Las dos leen las MISMAS oportunidades y entregables. -->
+    <div class="subtabs carga-vista-toggle" data-subtabs="carga-vista">
+      <button class="subtab-btn active" data-vista="carga" onclick="setCargaVista('carga')">👥 Carga laboral</button>
+      <button class="subtab-btn" data-vista="equipo" onclick="setCargaVista('equipo')">🤝 Equipo de trabajo</button>
+    </div>
+    <div class="workload-shell" id="carga-vista-carga">
       <div class="workload-header">
         <span class="workload-header-title">👥 Carga por responsable</span>
         <div class="subtabs" data-subtabs="carga">
@@ -2163,6 +2318,26 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Subvista "Equipo de trabajo": una card por PROYECTO con trabajo en la
+         semana en curso, con su tríada KAM + Arquitecto + Presupuestador.
+         Encabezado, filtro de KAM y grid los pinta renderEquipo(). -->
+    <div class="workload-shell" id="carga-vista-equipo" hidden>
+      <div class="equipo-header">
+        <div class="equipo-header-left">
+          <span class="equipo-header-title">🤝 Equipo de trabajo de la semana</span>
+          <span class="equipo-header-sub" id="equipo-rango">—</span>
+        </div>
+        <div class="equipo-filtro">
+          <span class="equipo-filtro-label">KAM</span>
+          <select id="equipo-f-kam" onchange="setEquipoKam(this.value)" aria-label="Filtrar por KAM">
+            <option value="">Todos los KAM</option>
+          </select>
+          <span class="equipo-count" id="equipo-count"></span>
+        </div>
+      </div>
+      <div class="equipo-grid" id="equipo-grid"></div>
     </div>
   </div>
 
@@ -3772,6 +3947,7 @@ function renderAll(){
   populateFilterOptions();
   renderRevisionSemanal();
   renderCarga();
+  renderEquipo();
   renderGantt();
   renderDetalle();
   renderDetalleEntregas();
@@ -4961,6 +5137,256 @@ function toggleCargaExpand(barEl){
   renderCarga();
 }
 
+
+/* ============================================================
+   02-b: EQUIPO DE TRABAJO — segunda subvista de "Carga de trabajo".
+   Donde "Carga laboral" agrupa por PERSONA, ésta agrupa por PROYECTO: una card
+   por oportunidad con trabajo en la semana en curso, con la tríada
+   KAM + Arquitecto + Presupuestador que la sostiene.
+
+   No tiene datos propios. Lee las mismas `oportunidades` y sus `entregables`,
+   escribe los mismos campos (o.kam, o.arquitecto, o.presupuestador,
+   o.ordenTrabajo) y guarda por el mismo portón (persistLocal → Supabase), así
+   que cualquier cambio hecho acá aparece en la ficha, en Detalle, en Revisión
+   semanal y en el Excel sin ninguna sincronización aparte.
+   ============================================================ */
+let cargaVista = 'carga';
+/* Filtro de KAM de la subvista: '' = todos, EQUIPO_SIN_KAM = los que no tienen
+   KAM cargado, y cualquier otro valor es el NOMBRE visible del KAM (mismo
+   criterio que el filtro de KAM de Detalle > Entregas, que también compara
+   contra nombreKAM(o) y no contra el value del catálogo). */
+let equipoKamFiltro = '';
+const EQUIPO_SIN_KAM = '__sin_kam__';
+
+/* La tríada, declarada una sola vez: cada rol dice qué campo de la oportunidad
+   edita, dónde vive su nombre libre de "Otro" y de qué catálogo existente salen
+   sus opciones. No se crea ningún listado de personas nuevo. */
+const EQUIPO_ROLES = [
+  {key:'kam',            label:'KAM',            campo:'kam',            campoOtro:'kamOtro',            catalogo:KAMS},
+  {key:'arquitecto',     label:'Arquitecto',     campo:'arquitecto',     campoOtro:'arquitectoOtro',     catalogo:ARQUITECTOS},
+  {key:'presupuestador', label:'Presupuestador', campo:'presupuestador', campoOtro:'presupuestadorOtro', catalogo:PRESUPUESTADORES},
+];
+
+function setCargaVista(vista){
+  cargaVista = vista;
+  document.querySelectorAll('[data-subtabs="carga-vista"] .subtab-btn')
+    .forEach(b=>b.classList.toggle('active', b.dataset.vista===vista));
+  document.getElementById('carga-vista-carga').hidden = vista !== 'carga';
+  document.getElementById('carga-vista-equipo').hidden = vista !== 'equipo';
+  /* Se repinta solo la subvista que queda a la vista; la otra conserva su HTML
+     y vuelve al frente tal como estaba. */
+  if(vista === 'equipo') renderEquipo(); else renderCarga();
+  hideGlobalTooltip();
+}
+
+/* Criterio semanal — el MISMO que Revisión semanal (ver
+   getEntregablesRelevantesSemana): entregables todavía pendientes con fecha de
+   entrega hasta el domingo de la semana, lo que incluye los vencidos que se
+   siguen trabajando. La diferencia es que acá la semana es siempre la actual
+   (getSemanaActual), sin el desplazamiento del calendario de Revisión semanal. */
+function entregablesDeLaSemanaActual(o){
+  const {domingoISO} = getSemanaActual();
+  return o.entregables.filter(e => e.estado==='pendiente' && e.fechaEntrega && e.fechaEntrega <= domingoISO);
+}
+/* Proyectos de la semana: UNA entrada por oportunidad aunque tenga varios
+   entregables dentro de la semana — la unidad de esta vista es el proyecto, no
+   el entregable, así que el filtro se aplica sobre oportunidades y no puede
+   duplicar cards. Orden: primero lo que vence antes (sin fecha, al final) y a
+   igualdad de fecha, por ID. */
+function proyectosDeLaSemana(){
+  return oportunidades
+    .filter(o => entregablesDeLaSemanaActual(o).length > 0)
+    .sort((a,b)=>{
+      const fa = getRSCardInfo(a).fechaEntrega || '9999-12-31';
+      const fb = getRSCardInfo(b).fechaEntrega || '9999-12-31';
+      if(fa !== fb) return fa < fb ? -1 : 1;
+      return a.id - b.id;
+    });
+}
+
+/* Selector de un rol dentro de la card. Se dibuja como texto (ver CSS) y solo
+   se comporta como control al enfocarlo, para que la tríada se lea como
+   información y no como un formulario de tres campos. */
+function equipoRolSelectHtml(o, rol){
+  const actual = o[rol.campo] || '';
+  const enCatalogo = rol.catalogo.some(c => c.value === actual);
+  /* Un valor que no está en el catálogo ("otro" con su nombre libre, o el
+     "no_requiere" heredado de Arquitectura) se conserva como una opción más:
+     abrir el selector nunca debe borrar en silencio lo que ya estaba cargado. */
+  const heredada = (actual && !enCatalogo)
+    ? `<option value="${escAttr(actual)}" selected>${resolveNombre(rol.catalogo, actual, o[rol.campoOtro]) || 'Otro'}</option>`
+    : '';
+  const opciones = rol.catalogo
+    .map(c => `<option value="${c.value}"${c.value===actual ? ' selected' : ''}>${c.label}</option>`)
+    .join('');
+  return `<select class="equipo-select${actual ? '' : ' sin-asignar'}"${puedeEditar ? '' : ' disabled'}
+    aria-label="${rol.label} de la oportunidad ${o.id}"
+    onchange="actualizarResponsableEquipo(${o.id},'${rol.key}',this.value)">
+    <option value=""${actual ? '' : ' selected'}>Sin asignar</option>${heredada}${opciones}
+  </select>`;
+}
+
+function equipoCardHtml(o){
+  /* Fecha de entrega: la que está guardada en la ficha de la oportunidad, en su
+     entregable pendiente principal (getRSCardInfo → getPrimaryPendingDeliverable),
+     exactamente la misma que muestra la card de Revisión semanal. Acá no se
+     calcula ni se deriva ninguna fecha nueva. */
+  const info = getRSCardInfo(o);
+  const plazo = getPlazoInfo(info.fechaEntrega, '');
+  const plazoCls = plazo.key==='vencido' ? 'plazo-vencido'
+    : plazo.key==='proximo' ? 'plazo-proximo'
+    : info.fechaEntrega ? '' : 'plazo-sinfecha';
+  const fechaCls = plazo.key==='vencido' ? ' vencido' : plazo.key==='proximo' ? ' proximo' : '';
+  const numero = esOrdenTrabajoValido(o.ordenTrabajo) ? Number(o.ordenTrabajo) : 1;
+  const triada = EQUIPO_ROLES.map(rol=>`<div class="equipo-rol rol-${rol.key}">
+        <span class="equipo-rol-label">${rol.label}</span>
+        ${equipoRolSelectHtml(o, rol)}
+      </div>`).join('');
+  return `<article class="equipo-card ${plazoCls}">
+    <div class="equipo-card-top">
+      <div class="equipo-ident">
+        <span class="equipo-id">#${o.id}</span>
+        <span class="equipo-cliente" title="${escAttr(o.cliente)}">${o.cliente || '(sin cliente)'}</span>
+      </div>
+      <label class="equipo-num" title="Orden de trabajo: el mismo entero de la columna «Orden de trabajo» de Detalle > Oportunidades.">
+        <span class="equipo-num-label">N°</span>
+        <input type="number" class="equipo-num-input" inputmode="numeric" step="1" min="1" max="${ORDEN_TRABAJO_MAX}"
+          value="${numero}"${puedeEditar ? '' : ' disabled'}
+          aria-label="Orden de trabajo de la oportunidad ${o.id}"
+          onkeydown="equipoNumKeydown(event)" onchange="actualizarNumeroEquipo(${o.id},this)">
+      </label>
+    </div>
+    <div class="equipo-linea">
+      <button type="button" class="equipo-proyecto" onclick="openRSDetailDrawer(${o.id})"
+        title="Ver el detalle de la oportunidad">${o.proyecto || '(sin nombre)'}</button>
+      <span class="equipo-fecha${fechaCls}">📅 ${formatFechaCorta(info.fechaEntrega)}${plazo.key==='vencido' ? ' · Vencido' : ''}</span>
+    </div>
+    <div class="equipo-triada">${triada}</div>
+  </article>`;
+}
+
+/* Opciones del filtro: se derivan de los MISMOS proyectos de la semana que arman
+   las cards (nombreKAM de cada oportunidad), nunca de una lista aparte, así el
+   desplegable no puede ofrecer un KAM que esta semana no tiene proyectos. */
+function renderEquipoKamOptions(proyectos){
+  const sel = document.getElementById('equipo-f-kam');
+  if(!sel) return;
+  const nombres = distinct(proyectos.map(o => nombreKAM(o)));
+  const haySinKam = proyectos.some(o => !nombreKAM(o));
+  /* Si el KAM elegido dejó de tener proyectos en la semana, el filtro vuelve
+     solo a "Todos los KAM" en vez de dejar la vista vacía sin explicación. */
+  equipoKamFiltro = equipoKamFiltro === EQUIPO_SIN_KAM
+    ? (haySinKam ? EQUIPO_SIN_KAM : '')
+    : (nombres.includes(equipoKamFiltro) ? equipoKamFiltro : '');
+  sel.innerHTML = '<option value="">Todos los KAM</option>'
+    + (haySinKam ? `<option value="${EQUIPO_SIN_KAM}">Sin asignar</option>` : '')
+    + nombres.map(n => `<option value="${escAttr(n)}">${n}</option>`).join('');
+  sel.value = equipoKamFiltro;
+}
+
+/* Solo las cards: lo llama el filtro para no reconstruir el <select> mientras
+   está en uso. renderEquipo() hace esto y además refresca encabezado y opciones. */
+function renderEquipoGrid(){
+  const grid = document.getElementById('equipo-grid');
+  if(!grid) return;
+  const todos = proyectosDeLaSemana();
+  const visibles = todos.filter(o=>{
+    if(!equipoKamFiltro) return true;
+    const nombre = nombreKAM(o);
+    return equipoKamFiltro === EQUIPO_SIN_KAM ? !nombre : nombre === equipoKamFiltro;
+  });
+  const cuenta = document.getElementById('equipo-count');
+  if(cuenta){
+    cuenta.textContent = visibles.length === todos.length
+      ? todos.length + (todos.length===1 ? ' proyecto' : ' proyectos')
+      : visibles.length + ' de ' + todos.length;
+  }
+  grid.innerHTML = visibles.map(equipoCardHtml).join('') || `<div class="equipo-empty">${
+    todos.length
+      ? 'Ningún proyecto de esta semana tiene ese KAM asignado.'
+      : '🟢 Sin proyectos con entregables pendientes en la semana en curso.'
+  }</div>`;
+}
+
+function renderEquipo(){
+  const grid = document.getElementById('equipo-grid');
+  if(!grid) return;
+  const {lunesISO, domingoISO} = getSemanaActual();
+  const rango = document.getElementById('equipo-rango');
+  if(rango){
+    rango.textContent = 'Semana del ' + formatFechaCorta(lunesISO) + ' al ' + formatFechaCorta(domingoISO)
+      + ' · un proyecto por card, aunque tenga varios entregables';
+  }
+  renderEquipoKamOptions(proyectosDeLaSemana());
+  renderEquipoGrid();
+}
+
+function setEquipoKam(valor){
+  equipoKamFiltro = valor || '';
+  renderEquipoGrid();
+}
+
+/* Cambiar una persona desde la card edita el registro real de la oportunidad
+   (los mismos o.kam / o.arquitecto / o.presupuestador que lee la ficha) y
+   guarda por persistLocal(), que es el portón único hacia localStorage y
+   Supabase. renderAll() después, para que el cambio se vea de inmediato acá y
+   en todas las demás vistas que muestran esos nombres. */
+function actualizarResponsableEquipo(id, rolKey, valor){
+  const o = oportunidades.find(x => x.id === id);
+  const rol = EQUIPO_ROLES.find(r => r.key === rolKey);
+  if(!o || !rol) return;
+  /* El visor tiene el <select> deshabilitado, pero el guard va igual: es el
+     mismo criterio que el resto de las ediciones del panel (ver persistLocal). */
+  if(!puedeEditar){ avisarSoloLectura(); renderEquipo(); return; }
+  if((o[rol.campo] || '') === valor) return;
+  o[rol.campo] = valor;
+  /* El nombre libre de "Otro" solo tiene sentido mientras el valor sea 'otro':
+     al elegir a alguien del catálogo (o dejarlo sin asignar) se limpia para que
+     la ficha no vuelva a mostrar un nombre huérfano. */
+  if(valor !== 'otro') o[rol.campoOtro] = '';
+  persistLocal();
+  renderAll();
+}
+
+/* Teclas que no tienen sentido en un entero: el campo acepta 1..ORDEN_TRABAJO_MAX
+   y nada más. El separador decimal se bloquea acá y, si igual llega un valor con
+   decimales (pegado, o escrito en un navegador que lo permita), lo rechaza la
+   validación de actualizarNumeroEquipo. */
+function equipoNumKeydown(ev){
+  if(['.', ',', 'e', 'E', '+', '-'].includes(ev.key)) ev.preventDefault();
+}
+
+/* Número editable de la card = o.ordenTrabajo, el MISMO entero manual que la
+   columna "Orden de trabajo" de Detalle > Oportunidades y la misma columna
+   orden_trabajo de Supabase (ver oportunidadToRow). No se crea un campo nuevo:
+   editarlo acá y editarlo allá es editar el mismo dato, con la misma validación
+   (esOrdenTrabajoValido: entero de 1 a ORDEN_TRABAJO_MAX, sin decimales).
+   A propósito NO llama a renderEquipo(): eso reconstruiría la card y el input
+   perdería el foco en medio de la edición — igual que actualizarOrdenTrabajo()
+   evita repintar su tabla. */
+function actualizarNumeroEquipo(id, input){
+  const o = oportunidades.find(x => x.id === id);
+  if(!o) return;
+  const anterior = esOrdenTrabajoValido(o.ordenTrabajo) ? Number(o.ordenTrabajo) : 1;
+  if(!puedeEditar){ input.value = anterior; avisarSoloLectura(); return; }
+
+  const crudo = String(input.value).trim();
+  const valor = Number(crudo);
+  if(crudo === '' || !esOrdenTrabajoValido(valor)){
+    input.value = anterior;
+    showToast('El N° debe ser un número entero desde 1 hasta ' + ORDEN_TRABAJO_MAX + '.', 'warn');
+    return;
+  }
+  input.value = valor;
+  if(valor === anterior) return;
+
+  o.ordenTrabajo = valor;
+  persistLocal();
+  /* La misma cifra vive en la tabla de Oportunidades: se repinta para que las
+     dos vistas no queden discrepando hasta el próximo render completo. */
+  renderDetalle();
+  renderKPIs();
+}
 /* ============================================================
    03: CRONOGRAMA (gantt por días, por área)
    ============================================================ */
@@ -7139,6 +7565,12 @@ const ROLES_QUE_EDITAN = ['admin', 'editor'];
 function aplicarPermisosDeRol(){
   document.body.classList.toggle('solo-lectura', !puedeEditar);
   document.getElementById('btn-usuarios').style.display = (usuarioActual && usuarioActual.rol === 'admin') ? '' : 'none';
+  /* Equipo de trabajo es la única vista cuyos controles de edición viven dentro
+     del HTML que ya se pintó (los <select> de la tríada y el N° llevan el
+     atributo `disabled` según el rol). El primer render ocurre antes de que
+     llegue el perfil, así que se repinta una vez que el rol está confirmado; el
+     resto del panel le alcanza con la clase `solo-lectura` del CSS. */
+  renderEquipo();
 }
 
 /* Se avisa una sola vez por sesión: el visor puede intentar arrastrar tarjetas
