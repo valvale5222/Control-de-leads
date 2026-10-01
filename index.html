@@ -2186,6 +2186,7 @@
   .rst-titulo{font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:700;color:var(--ok);}
   .rst-tarea{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .rst-meta{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rst-nota{font-size:11px;color:var(--ink-dim);margin-top:2px;}
   @keyframes rstEntra{from{opacity:0;transform:translate(14px,-6px) scale(.98);}to{opacity:1;transform:none;}}
   @keyframes rstSale{to{opacity:0;transform:translateX(18px);}}
   @keyframes rstGlow{
@@ -3773,6 +3774,20 @@ const FRASES = [
   'Ordenar la carga de trabajo también es avanzar.',
 ];
 
+/* Recupera la fecha cliente de un proyecto antiguo desde sus tareas: la más
+   próxima entre las abiertas; si no hay, la más próxima de la ronda vigente;
+   si tampoco, la más reciente que haya registrado. Solo para migrar. */
+function fechaClienteDesdeTareas(o){
+  const ents = (o.entregables || []).filter(e=>e && e.fechaComprometidaCliente);
+  if(!ents.length) return '';
+  const ronda = o.rondaActual || 1;
+  const abiertas = ents.filter(e=>e.estado==='pendiente').map(e=>e.fechaComprometidaCliente).sort();
+  if(abiertas.length) return abiertas[0];
+  const deRonda = ents.filter(e=>(e.ronda||1)===ronda).map(e=>e.fechaComprometidaCliente).sort();
+  if(deRonda.length) return deRonda[0];
+  const todas = ents.map(e=>e.fechaComprometidaCliente).sort();
+  return todas[todas.length-1];
+}
 /* Segmentación comercial — normaliza oportunidades antiguas (localStorage, respaldo
    HTML o datos semilla) que fueron creadas antes de agregar estos 5 campos. */
 function ensureNuevosCampos(o){
@@ -3811,6 +3826,11 @@ function ensureNuevosCampos(o){
   /* Secuencia semanal de Revisión semanal: lunes de la semana y posición #N.
      Vacío = nunca planificado (entra al final de la semana en curso). */
   if(typeof o.semanaRev!=='string') o.semanaRev = '';
+  /* Fecha cliente maestra del proyecto. Si todavía no existe (registro
+     anterior o base sin la columna), se recupera de forma segura desde las
+     fechas que ya tenían sus tareas; después manda siempre este campo. Las
+     fechas de las tareas no se borran (quedan como antecedente). */
+  if(typeof o.fechaComprometidaCliente!=='string') o.fechaComprometidaCliente = fechaClienteDesdeTareas(o);
   if(!esOrdenTrabajoValido(o.secSemana)) o.secSemana = null;
   o.entregables.forEach(e=>{
     if(e.ronda===undefined) e.ronda = 1;
@@ -4413,14 +4433,6 @@ function nombreEnvioDesdeOrigen(origen){
   const base = ((origen && origen.nombre) || '').trim();
   return base ? NOMBRE_ENTREGABLE_ENVIO + ' — «' + base + '»' : NOMBRE_ENTREGABLE_ENVIO;
 }
-/* Un día después de marcarlo: enviar es inmediato, así que nace con fecha propia
-   —aparece en Carga de trabajo y en el Cronograma— y se marca vencido si al día
-   siguiente todavía no salió. */
-function fechaEnvioPorDefecto(){
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
 /* El envío nace a nombre del KAM de la oportunidad porque es quien despacha al
    cliente; como cualquier entregable, el responsable se puede cambiar después. */
 function crearEnvioDesdeOrigen(origen, kam, kamOtro){
@@ -4432,9 +4444,11 @@ function crearEnvioDesdeOrigen(origen, kam, kamOtro){
     responsableOtro: kam==='otro' ? (kamOtro || '') : '',
     etapa: origen.etapa,
     prioridad: origen.prioridad,
-    fechaEntrega: fechaEnvioPorDefecto(),
+    /* Nace el mismo día en que se completa la tarea técnica: aparece hoy en
+       Revisión semanal, Calendario y Carga, y queda vencido si no sale hoy. */
+    fechaEntrega: todayISO(),
     fechaComprometidaCliente: '', fechaCompletado: '',
-    estado: 'pendiente',
+    estado: 'pendiente', estadoTarea: 'por_iniciar', bloqueoOrigen: '', bloqueoDetalle: '',
     proximoPaso: 'Enviar al cliente', observacion: '',
     ronda: origen.ronda != null ? origen.ronda : 1,
     requiereMetrados: false, respMetrados: '', respMetradosOtro: '',
@@ -4442,6 +4456,60 @@ function crearEnvioDesdeOrigen(origen, kam, kamOtro){
     pendienteEnvioCliente: false,
     envioOrigenId: origen.id,
   };
+}
+
+/* ============================================================
+   CAMBIO DE ESTADO DE UNA TAREA — regla de negocio ÚNICA
+   Todas las superficies (drawer, chips de Detalle/Calendario, ficha completa)
+   terminan acá, sobre la lista de tareas que estén editando: o.entregables en
+   las vistas, modalEntregables en el borrador de la ficha. Así completar una
+   tarea da exactamente el mismo resultado venga de donde venga.
+     · La tarea se conserva siempre (completar NO la elimina) y aplicarEstadoTarea
+       registra fechaCompletado.
+     · Arquitectura/Presupuestos → Completada: si su envío no existe todavía, se
+       crea «Enviar al cliente — «tarea»» en Comercial para el KAM, con fecha
+       interna de hoy, en la misma ronda y enlazado por envioOrigenId. Sin
+       duplicados: si ya existe, no se crea otro.
+     · Reabrir una tarea técnica cuyo envío todavía no salió deshace ese envío
+       pendiente (mismo criterio que ya tenía la ficha), así recompletarla no
+       acumula envíos. Un envío ya completado no se toca nunca.
+     · «Enviar al cliente» → Completada: apaga pendienteEnvioCliente de su origen
+       y avisa con enviado=true para que quien llama pase la oportunidad a
+       Análisis de cliente (en el borrador de la ficha lo resuelve la etapa
+       automática al guardar).
+   ctx = {kam, kamOtro, ronda}. Devuelve {completada, nuevoEnvio, enviado}.
+   ============================================================ */
+function contextoNegocioDe(o){
+  return {kam:o.kam, kamOtro:o.kamOtro, ronda:o.rondaActual || 1};
+}
+function cambiarEstadoTarea(lista, e, valor, ctx){
+  const res = {completada:false, nuevoEnvio:null, enviado:false};
+  if(!e || !ESTADO_TAREA_LABEL[valor]) return res;
+  const estadoPrevio = e.estado;
+  const tareaPrevia = e.estadoTarea;
+  aplicarEstadoTarea(e, valor);
+  res.completada = tareaPrevia!=='completado' && e.estadoTarea==='completado';
+  if(esEntregableEnvio(e)){
+    const origen = lista.find(x=>x.id===e.envioOrigenId);
+    if(origen) origen.pendienteEnvioCliente = (e.estado!=='completado');
+    res.enviado = res.completada;
+    return res;
+  }
+  if(res.completada && esAreaTecnica(e.area) && !envioDeOrigen(lista, e)){
+    const envio = crearEnvioDesdeOrigen(e, ctx && ctx.kam, ctx && ctx.kamOtro);
+    envio.ronda = e.ronda != null ? e.ronda : ((ctx && ctx.ronda) || 1);
+    lista.push(envio);
+    e.pendienteEnvioCliente = true;
+    res.nuevoEnvio = envio;
+  } else if(estadoPrevio!=='pendiente' && e.estado==='pendiente' && e.pendienteEnvioCliente){
+    const envio = envioDeOrigen(lista, e);
+    if(envio && envio.estado==='pendiente'){
+      const i = lista.indexOf(envio);
+      if(i>=0) lista.splice(i, 1);
+      e.pendienteEnvioCliente = false;
+    }
+  }
+  return res;
 }
 
 /* ============================================================
@@ -4503,7 +4571,7 @@ let detalleErrorNube = '';
    base rechace TODO el upsert (PGRST204) y ningún cambio suba a la nube; para no
    perder los datos por una columna, se detectan las que faltan y se sigue
    sincronizando sin ellas. Lo único que queda sin persistir es ese campo. */
-const COLUMNAS_OPCIONALES = ['orden_trabajo', 'prioridad_tablero', 'duracion_proyecto', 'fecha_seguimiento', 'contacto', 'zona', 'region', 'sector', 'apoyos', 'semana_revision', 'secuencia_semana'];
+const COLUMNAS_OPCIONALES = ['orden_trabajo', 'prioridad_tablero', 'duracion_proyecto', 'fecha_seguimiento', 'contacto', 'zona', 'region', 'sector', 'apoyos', 'semana_revision', 'secuencia_semana', 'fecha_comprometida_cliente'];
 /* Igual que COLUMNAS_OPCIONALES, pero para la tabla entregables: "Requiere
    metrado", su responsable y el vínculo con el Metrado autogenerado se agregaron
    por entregable y esta base puede no tener aún esas columnas. */
@@ -4571,6 +4639,9 @@ function oportunidadToRow(o){
     sector: orNull(o.sector),
     apoyos: Array.isArray(o.apoyos) ? o.apoyos.map(a=>({area:a.area, responsable:a.responsable})) : [],
     /* Secuencia semanal de Revisión semanal (ver supabase/18_secuencia_semanal.sql). */
+    /* Fecha comprometida con el cliente: dato maestro del PROYECTO (ver
+       supabase/19_fecha_cliente_proyecto.sql). Las tareas ya no la determinan. */
+    fecha_comprometida_cliente: orNull(o.fechaComprometidaCliente),
     semana_revision: orNull(o.semanaRev),
     secuencia_semana: esOrdenTrabajoValido(o.secSemana) ? Number(o.secSemana) : null,
   };
@@ -4627,6 +4698,10 @@ function rowToOportunidad(r){
     region: r.region || '',
     sector: r.sector || '',
     apoyos: Array.isArray(r.apoyos) ? r.apoyos : [],
+    /* undefined = la base todavía no tiene la columna: ensureNuevosCampos la
+       recupera de las tareas. Con la columna, manda siempre lo guardado. */
+    fechaComprometidaCliente: Object.prototype.hasOwnProperty.call(r, 'fecha_comprometida_cliente')
+      ? (r.fecha_comprometida_cliente ? String(r.fecha_comprometida_cliente).slice(0,10) : '') : undefined,
     semanaRev: r.semana_revision ? String(r.semana_revision).slice(0,10) : '',
     secSemana: esOrdenTrabajoValido(r.secuencia_semana) ? Number(r.secuencia_semana) : null,
     entregables: [],
@@ -4771,6 +4846,17 @@ async function cargarDesdeSupabase(opts){
         if(p){ o.semanaRev = p.semanaRev || ''; o.secSemana = p.secSemana==null ? null : p.secSemana; }
       });
     }
+    /* Igual con la fecha cliente maestra si falta su columna (19 sin correr). */
+    if(columnasFaltantes.has('fecha_comprometida_cliente')){
+      const previas = new Map(oportunidades.map(o=>[o.id, o]));
+      nuevas.forEach(o=>{
+        const p = previas.get(o.id);
+        if(p && typeof p.fechaComprometidaCliente==='string') o.fechaComprometidaCliente = p.fechaComprometidaCliente;
+      });
+    }
+    /* Foto de lo que hay en la nube: contra ella se calcula qué subir (solo los
+       registros y columnas que cambiaron, ver subirCambios). */
+    tomarBaseNube(oppRes.data, entRes.data || []);
     oportunidades = nuevas;
     oportunidades.forEach(ensureNuevosCampos);
     oportunidades.forEach(o=>{
@@ -4869,42 +4955,120 @@ const COLUMNA_OPCIONAL_LABEL = {
   bloqueo_detalle: 'el detalle del bloqueo de las tareas',
   semana_revision: 'la semana de la secuencia semanal',
   secuencia_semana: 'la secuencia semanal (#1…#N)',
+  fecha_comprometida_cliente: 'la fecha comprometida con el cliente del proyecto',
 };
 function avisarColumnasFaltantes(){
   if(avisoMigracionMostrado || !columnasFaltantes.size) return;
   avisoMigracionMostrado = true;
   const faltan = [...columnasFaltantes];
   const nombres = faltan.map(c=>COLUMNA_OPCIONAL_LABEL[c] || c).join(' y ');
-  console.warn('La base no tiene la(s) columna(s): ' + faltan.join(', ') + '. Se sincroniza todo lo demás; corre la migración pendiente de supabase/ (05_fix_orden_trabajo.sql, 15/16 o 17_ficha_equipo_historial.sql) para persistirlas.');
-  showToast('Todo se guarda en la nube salvo ' + nombres + ': falta correr la migración pendiente de supabase/ (p. ej. 17_ficha_equipo_historial.sql o 18_secuencia_semanal.sql).', 'warn');
+  console.warn('La base no tiene la(s) columna(s): ' + faltan.join(', ') + '. Se sincroniza todo lo demás; corre la migración pendiente de supabase/ (05_fix_orden_trabajo.sql, 15/16, 17, 18 o 19) para persistirlas.');
+  showToast('Todo se guarda en la nube salvo ' + nombres + ': falta correr la migración pendiente de supabase/ (p. ej. 17_ficha_equipo_historial.sql, 18_secuencia_semanal.sql o 19_fecha_cliente_proyecto.sql).', 'warn');
 }
 
-/* Sube el estado completo (snapshot) a Supabase: upsert de todo lo que
-   existe localmente + borrado de lo que ya no exista (oportunidades o
-   entregables eliminados). Se llama después de cada persistLocal(). */
-async function subirSnapshot(){
-  const oppRows = oportunidades.map(oportunidadToRow);
-  if(oppRows.length){
-    const { error } = await db.from('oportunidades').upsert(oppRows, {onConflict:'Identificador'});
-    if(error) throw error;
-    const ids = oppRows.map(r=>r.Identificador);
-    const { error: delErr } = await db.from('oportunidades').delete().not('Identificador','in',`(${ids.join(',')})`);
-    if(delErr) throw delErr;
-  } else {
-    const { error: delAllErr } = await db.from('oportunidades').delete().neq('Identificador', -1);
-    if(delAllErr) throw delAllErr;
+/* ---------- Escritura por cambios (no snapshot) ----------
+   Antes cada guardado subía TODAS las oportunidades y entregables y borraba de
+   la nube lo que no estuviera en la copia local: una sesión con datos viejos
+   podía pisar o borrar lo que otra acababa de guardar.
+   Ahora se compara contra la última foto conocida de la nube (nubeBase, que
+   se toma al leer de Supabase —carga inicial y Realtime— y se actualiza con
+   cada escritura que sale bien) y se sube solo lo que cambió:
+     · registro nuevo           → upsert de la fila completa;
+     · registro existente       → update SOLO de las columnas que cambiaron, así
+                                  dos personas que tocan campos distintos del
+                                  mismo registro no se pisan;
+     · registro que esta sesión
+       eliminó                  → delete explícito de ese Identificador.
+   Nunca se borra algo que esta sesión no conocía: lo que otra sesión creó
+   después de la última lectura no está en la foto y no se toca. */
+let nubeBase = null;   // {opp: Map(id→fila), ent: Map(id→fila)} o null si aún no se leyó la nube
+function tomarBaseNube(oppRows, entRows){
+  nubeBase = {
+    opp: new Map((oppRows || []).map(r=>[r.Identificador, Object.assign({}, r)])),
+    ent: new Map((entRows || []).map(r=>[r.Identificador, Object.assign({}, r)])),
+  };
+}
+/* Comparación tolerante a formato: '' / null / undefined son lo mismo, los
+   números y fechas se comparan como texto y los jsonb con claves ordenadas. */
+function valorNube(v){
+  if(v===undefined || v===null || v==='') return '∅';
+  if(typeof v==='object'){
+    const orden = x => Array.isArray(x) ? x.map(orden)
+      : (x && typeof x==='object' ? Object.keys(x).sort().reduce((acc,k)=>{ acc[k] = orden(x[k]); return acc; }, {}) : x);
+    return JSON.stringify(orden(v));
   }
+  return String(v);
+}
+function columnasCambiadas(fila, base){
+  const cambios = {};
+  Object.keys(fila).forEach(k=>{
+    if(k==='Identificador') return;
+    if(valorNube(fila[k])!==valorNube(base[k])) cambios[k] = fila[k];
+  });
+  return cambios;
+}
+/* Updates por fila en lotes chicos en paralelo: una edición normal son 1-3 filas;
+   la primera sincronización tras una migración puede ser más. */
+async function enLotesNube(items, fn, tam){
+  tam = tam || 8;
+  for(let i = 0; i < items.length; i += tam) await Promise.all(items.slice(i, i + tam).map(fn));
+}
+async function subirCambios(){
+  /* Sin foto de la nube todavía (la carga inicial no respondió) no se escribe:
+     sin saber qué hay allá, cualquier escritura podría pisar datos ajenos. La
+     copia local queda guardada y lo pendiente sube en el próximo guardado. */
+  if(!nubeBase) return;
+  const oppActual = new Map(oportunidades.map(o=>[o.id, oportunidadToRow(o)]));
+  const entActual = new Map();
+  oportunidades.forEach(o=>o.entregables.forEach(e=>entActual.set(e.id, entregableToRow(e, o.id))));
 
-  const entRows = oportunidades.flatMap(o => o.entregables.map(e => entregableToRow(e, o.id)));
-  if(entRows.length){
-    const { error: entError } = await db.from('entregables').upsert(entRows, {onConflict:'Identificador'});
-    if(entError) throw entError;
-    const entIds = entRows.map(r=>r.Identificador);
-    const { error: delEntErr } = await db.from('entregables').delete().not('Identificador','in',`(${entIds.join(',')})`);
-    if(delEntErr) throw delEntErr;
-  } else {
-    const { error: delAllEntErr } = await db.from('entregables').delete().neq('Identificador', -1);
-    if(delAllEntErr) throw delAllEntErr;
+  const oppNuevas = [], oppCambios = [], entNuevas = [], entCambios = [];
+  oppActual.forEach((fila, id)=>{
+    const base = nubeBase.opp.get(id);
+    if(!base){ oppNuevas.push(fila); return; }
+    const c = columnasCambiadas(fila, base);
+    if(Object.keys(c).length) oppCambios.push([id, c]);
+  });
+  entActual.forEach((fila, id)=>{
+    const base = nubeBase.ent.get(id);
+    if(!base){ entNuevas.push(fila); return; }
+    const c = columnasCambiadas(fila, base);
+    if(Object.keys(c).length) entCambios.push([id, c]);
+  });
+  const oppBorradas = [...nubeBase.opp.keys()].filter(id=>!oppActual.has(id));
+  const entBorradas = [...nubeBase.ent.keys()].filter(id=>!entActual.has(id));
+
+  /* Orden: primero la oportunidad (los entregables la referencian), después
+     sus entregables; al borrar, al revés. */
+  if(oppNuevas.length){
+    const { error } = await db.from('oportunidades').upsert(oppNuevas, {onConflict:'Identificador'});
+    if(error) throw error;
+    oppNuevas.forEach(f=>nubeBase.opp.set(f.Identificador, Object.assign({}, f)));
+  }
+  await enLotesNube(oppCambios, async ([id, c])=>{
+    const { error } = await db.from('oportunidades').update(c).eq('Identificador', id);
+    if(error) throw error;
+    Object.assign(nubeBase.opp.get(id), c);
+  });
+  if(entNuevas.length){
+    const { error } = await db.from('entregables').upsert(entNuevas, {onConflict:'Identificador'});
+    if(error) throw error;
+    entNuevas.forEach(f=>nubeBase.ent.set(f.Identificador, Object.assign({}, f)));
+  }
+  await enLotesNube(entCambios, async ([id, c])=>{
+    const { error } = await db.from('entregables').update(c).eq('Identificador', id);
+    if(error) throw error;
+    Object.assign(nubeBase.ent.get(id), c);
+  });
+  if(entBorradas.length){
+    const { error } = await db.from('entregables').delete().in('Identificador', entBorradas);
+    if(error) throw error;
+    entBorradas.forEach(id=>nubeBase.ent.delete(id));
+  }
+  if(oppBorradas.length){
+    const { error } = await db.from('oportunidades').delete().in('Identificador', oppBorradas);
+    if(error) throw error;
+    oppBorradas.forEach(id=>nubeBase.opp.delete(id));
   }
 }
 
@@ -4932,7 +5096,7 @@ async function sincronizarConSupabase(){
        El bucle cubre el caso de que falte más de una. */
     for(let intento = 0; ; intento++){
       try{
-        await subirSnapshot();
+        await subirCambios();
         await subirHistorialPendiente();
         break;
       }catch(e){
@@ -5081,6 +5245,7 @@ function fotoHistorial(o){
     kam:o.kam||'', kamOtro:o.kamOtro||'', arquitecto:o.arquitecto||'', arquitectoOtro:o.arquitectoOtro||'',
     presupuestador:o.presupuestador||'', presupuestadorOtro:o.presupuestadorOtro||'',
     prioridad:[1,2,3,4].includes(Number(o.prioridadTablero)) ? Number(o.prioridadTablero) : 3,
+    fechaCliente:o.fechaComprometidaCliente||'',
     apoyos:(o.apoyos||[]).map(a=>a.area+'|'+a.responsable),
     tareas,
   };
@@ -5206,6 +5371,10 @@ function procesarCambiosOportunidades(){
 
     if(antes && base.etapa !== ahora.etapa) ev('comercial', 'Cambio de etapa', '', etapaLabelDisplay(base.etapa), etapaLabelDisplay(ahora.etapa));
     if(ahora.ronda > base.ronda) ev('sistema', 'Nueva ronda', 'Ronda ' + ahora.ronda + ' · retorno del cliente', 'Ronda ' + base.ronda, 'Ronda ' + ahora.ronda);
+    if(antes && (base.fechaCliente||'') !== ahora.fechaCliente){
+      ev('comercial', (base.fechaCliente && ahora.fechaCliente) ? 'Reprogramación (fecha cliente)' : 'Cambio de fecha cliente', 'Proyecto',
+        formatFechaCorta(base.fechaCliente), formatFechaCorta(ahora.fechaCliente));
+    }
     if(antes && base.importe !== ahora.importe) ev('comercial', 'Cambio de importe', 'Ronda ' + ahora.ronda, formatMoneda(base.importe), formatMoneda(ahora.importe));
     if(antes && base.prioridad !== ahora.prioridad) ev('comercial', 'Cambio de prioridad', '', PRIORIDAD_TABLERO_LABEL[base.prioridad], PRIORIDAD_TABLERO_LABEL[ahora.prioridad]);
     if(antes && base.margen !== ahora.margen) ev('comercial', 'Cambio de margen', 'Ronda ' + ahora.ronda,
@@ -6049,28 +6218,20 @@ function rsTareaEstado(e){
   if(e.fechaEntrega < hoy) return 'vencida';
   return daysBetween(hoy, e.fechaEntrega) <= 2 ? 'proxima' : '';
 }
-/* Fecha cliente (maestra) del proyecto = el compromiso más cercano entre las
-   tareas de la ronda vigente y las abiertas (fechaComprometidaCliente). Incluye
-   las ya completadas de la ronda para que la fecha no se pierda al completar
-   una tarea ni al cambiar el área activa. Solo se lee: ningún movimiento del
-   tablero ni del calendario la modifica. */
-function rsTareasDeLaRonda(o){
-  const ronda = o.rondaActual || 1;
-  return o.entregables.filter(e=>e.estado!=='cancelado' && (e.estado==='pendiente' || (e.ronda||1)===ronda));
-}
+/* Fecha cliente del proyecto: dato maestro de la oportunidad
+   (o.fechaComprometidaCliente). Prioridades y el drawer la leen de acá, el
+   calendario solo la consulta y el drawer es el único que la edita desde
+   Revisión semanal. Las tareas no la determinan. */
 function rsFechaCliente(o){
-  const f = rsTareasDeLaRonda(o).filter(e=>e.fechaComprometidaCliente).map(e=>e.fechaComprometidaCliente).sort();
-  return f[0] || '';
+  return (o && o.fechaComprometidaCliente) || '';
 }
-/* Ninguna fecha interna puede quedar después de la fecha cliente: si pasa, se
-   impide el cambio con un aviso breve (la fecha cliente no se toca). */
-function rsFechaInternaPermitida(o, fecha){
+/* Fecha interna posterior a la fecha cliente = RIESGO, no error: el cambio se
+   guarda siempre y solo se avisa. Nunca se corrige ninguna de las dos fechas. */
+function rsAvisarRiesgoFecha(o, fecha){
   const fc = rsFechaCliente(o);
   if(fc && fecha && fecha > fc){
-    showToast('La fecha interna no puede ser posterior a la fecha cliente (' + formatFechaCorta(fc) + ').', 'warn');
-    return false;
+    showToast('Riesgo: última entrega interna ' + formatFechaCorta(fecha) + ' > compromiso cliente ' + formatFechaCorta(fc), 'warn');
   }
-  return true;
 }
 function rsUltimaEntregaInterna(o){
   const f = o.entregables.filter(e=>e.estado==='pendiente' && e.fechaEntrega).map(e=>e.fechaEntrega).sort();
@@ -6557,7 +6718,6 @@ function calDayDrop(ev, nuevaFecha){
   if(!o) return;
   const e = o.entregables.find(x=>x.id===drag.entId);
   if(!e || e.estado!=='pendiente' || e.fechaEntrega===nuevaFecha) return;
-  if(!rsFechaInternaPermitida(o, nuevaFecha)) return;
   e.fechaEntrega = nuevaFecha;
   /* El Metrado autogenerado usa la fecha de entrega de su entregable de
      Arquitectura: al mover el origen en el calendario se mueve con él. */
@@ -6567,6 +6727,7 @@ function calDayDrop(ev, nuevaFecha){
   persistLocal();
   renderAll();
   if(rsDrawerOppId===o.id) openRSDetailDrawer(o.id, e.id);
+  rsAvisarRiesgoFecha(o, nuevaFecha);
 }
 
 /* ---------- Panel lateral de detalle (edición rápida) ----------
@@ -6654,7 +6815,7 @@ function openRSDetailDrawer(id, entId){
     </div>
     <div class="rsd-grid">
       <div class="rsd-f"><span class="rsd-k">KAM</span><b>${escAttr(nombreKAM(o) || '—')}</b></div>
-      <label class="rsd-f"><span class="rsd-k">Fecha cliente</span><input type="date" class="rsd-fc${riesgo ? ' is-danger' : ''}" value="${fc}" onchange="rsDrawerFechaCliente(${o.id},this.value)"${ro || !tareas.length ? ' disabled' : ''}></label>
+      <label class="rsd-f"><span class="rsd-k">Fecha cliente</span><input type="date" class="rsd-fc${riesgo ? ' is-danger' : ''}" value="${fc}" onchange="rsDrawerFechaCliente(${o.id},this.value)"${ro ? ' disabled' : ''}></label>
       <div class="rsd-f"><span class="rsd-k">Última entrega interna</span><b class="${riesgo ? 'is-danger' : ''}">${ue ? formatFechaCorta(ue) : '—'}</b></div>
       <div class="rsd-f"><span class="rsd-k">Área activa</span><b>${areas.length ? areas.join(', ') : '—'}</b></div>
     </div>
@@ -6706,7 +6867,8 @@ function rsToastCompletada(o, e, num){
   el.innerHTML = '<span class="rst-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>'
     + '<div class="rst-txt"><b class="rst-titulo">Tarea completada</b>'
     + '<span class="rst-tarea">' + escAttr(e.nombre || 'Tarea') + '</span>'
-    + '<span class="rst-meta">' + escAttr(o.cliente) + ' · ID ' + o.id + (num ? ' · #' + num + ' semana' : '') + '</span></div>';
+    + '<span class="rst-meta">' + escAttr(o.cliente) + ' · ID ' + o.id + (num ? ' · #' + num + ' semana' : '') + '</span>'
+    + '<span class="rst-nota">Queda registrada como completada; no se elimina.</span></div>';
   stack.appendChild(el);
   setTimeout(()=>{ el.classList.add('is-saliendo'); }, 4200);
   setTimeout(()=>{ el.remove(); }, 4700);
@@ -6722,6 +6884,7 @@ function rsDrawerTarea(oppId, entId, campo, valor){
   const e = o && o.entregables.find(x=>x.id===entId);
   if(!e) return;
   let aviso = '';
+  let avisoRiesgo = '';
   if(campo==='area'){
     if(!AREA_LABEL[valor] || e.area===valor) return;
     e.area = valor;
@@ -6737,8 +6900,8 @@ function rsDrawerTarea(oppId, entId, campo, valor){
     }
   } else if(campo==='fecha'){
     /* Solo la fecha interna; el Metrado vinculado se mueve con su origen. */
-    if(!rsFechaInternaPermitida(o, valor)){ openRSDetailDrawer(oppId); return; }
     e.fechaEntrega = valor;
+    avisoRiesgo = valor;
     const metrado = metradoDeOrigen(o.entregables, e);
     if(metrado) metrado.fechaEntrega = e.fechaEntrega;
   } else if(campo==='estado'){
@@ -6751,22 +6914,12 @@ function rsDrawerTarea(oppId, entId, campo, valor){
       requestEntregableStatusChange(oppId, entId, null);
       return;
     }
-    aplicarEstadoTarea(e, valor);
-    /* Mismo salto que toggleEntregableEstado: completar el envío al cliente
-       deja la etapa en Análisis de cliente y apaga el pendiente de su origen. */
-    if(esEntregableEnvio(e)){
-      const origen = o.entregables.find(x=>x.id===e.envioOrigenId);
-      if(origen) origen.pendienteEnvioCliente = (e.estado!=='completado');
-      if(e.estado==='completado'){
-        o.etapa = 'analisis';
-        o.responsableActual = 'cliente';
-        aviso = '📤 Enviado al cliente · pasa a Análisis de cliente y se mueve a Entregas.';
-      }
-    }
+    cambiarEstadoTarea(o.entregables, e, valor, contextoNegocioDe(o));
     finalizarRondaSiCorresponde(oppId);
   } else return;
   rsDrawerRefrescar(oppId);
   if(aviso) showToast(aviso, 'ok');
+  if(avisoRiesgo) rsAvisarRiesgoFecha(o, avisoRiesgo);
 }
 /* Fecha cliente del proyecto: se escribe en las tareas abiertas (de ahí la lee
    rsFechaCliente). Es la única forma de cambiarla desde Revisión semanal. */
@@ -6774,11 +6927,8 @@ function rsDrawerFechaCliente(oppId, valor){
   if(!puedeEditar){ avisarSoloLectura(); openRSDetailDrawer(oppId); return; }
   const o = oportunidades.find(x=>x.id===oppId);
   if(!o) return;
-  /* Se escribe en las mismas tareas de las que la lee rsFechaCliente (ronda
-     vigente + abiertas), así queda como fecha maestra del proyecto. */
-  const tareas = rsTareasDeLaRonda(o);
-  if(!tareas.length) return;
-  tareas.forEach(e=>{ e.fechaComprometidaCliente = valor || ''; });
+  /* Única escritura: el campo maestro del proyecto. */
+  o.fechaComprometidaCliente = valor || '';
   rsDrawerRefrescar(oppId);
 }
 function toggleRSCard(id){
@@ -6855,53 +7005,29 @@ function toggleEntregableEstado(oppId, entId, showConfirmationToast){
   if(!o) return;
   const e = o.entregables.find(x=>x.id===entId);
   if(!e) return;
-  /* Mismo setter que la ficha (aplicarEstadoTarea): el estado fino y el grueso
-     no pueden quedar distintos. Reabrir deja la tarea En proceso. */
+  /* Regla única (cambiarEstadoTarea): completa o reabre la tarea, crea su
+     envío a Comercial si es técnica y resuelve el vínculo con su origen si es
+     el envío. Todo antes del único persist + render, así el proyecto no
+     desaparece ni pierde su posición semanal (semanaRev/secSemana intactos). */
   const numSemanaPrevio = rsNumeroSemana(oppId);
-  const fechaClienteMaestra = rsFechaCliente(o);
-  aplicarEstadoTarea(e, e.estado==='pendiente' ? 'completado' : 'en_proceso');
-  /* Completar una tarea técnica crea, en el mismo paso, su «Enviar al cliente
-     — «tarea»» en Comercial a nombre del KAM (mismo creador y mismo vínculo
-     envioOrigenId que el check "Pendiente por enviar al cliente"), con fecha
-     interna de hoy y la fecha cliente maestra. Sin duplicados: si el envío de
-     esa tarea ya existe, no se crea otro. La etapa no se toca acá. Todo pasa
-     antes del único persist + render, así el proyecto no desaparece ni pierde
-     su posición semanal (semanaRev/secSemana no cambian). */
-  let nuevoEnvio = null;
-  if(e.estado==='completado' && esAreaTecnica(e.area) && !esEntregableEnvio(e) && !envioDeOrigen(o.entregables, e)){
-    nuevoEnvio = crearEnvioDesdeOrigen(e, o.kam, o.kamOtro);
-    nuevoEnvio.ronda = e.ronda != null ? e.ronda : (o.rondaActual || 1);
-    nuevoEnvio.fechaEntrega = todayISO();
-    nuevoEnvio.fechaComprometidaCliente = fechaClienteMaestra || '';
-    nuevoEnvio.estadoTarea = 'por_iniciar';
-    nuevoEnvio.bloqueoOrigen = ''; nuevoEnvio.bloqueoDetalle = '';
-    e.pendienteEnvioCliente = true;
-    o.entregables.push(nuevoEnvio);
-  }
-  /* Mismo salto que en la ficha (ver fichaTareaEstado), para cuando el envío se
-     completa desde un chip de las tablas, el calendario o Revisión semanal en
-     vez de abrir la oportunidad: enviar al cliente deja la etapa en Análisis de
-     cliente y el responsable en Cliente, y apaga el check de su origen. */
+  const res = cambiarEstadoTarea(o.entregables, e, e.estado==='pendiente' ? 'completado' : 'en_proceso', contextoNegocioDe(o));
+  /* Enviar al cliente completado: la oportunidad pasa a Análisis de cliente con
+     el responsable en Cliente, y por la regla de la etapa se va a Entregas. */
   let avisoEnvio = '';
-  if(esEntregableEnvio(e)){
-    const origen = o.entregables.find(x=>x.id===e.envioOrigenId);
-    if(origen) origen.pendienteEnvioCliente = (e.estado!=='completado');
-    if(e.estado==='completado'){
-      o.etapa = 'analisis';
-      o.responsableActual = 'cliente';
-      avisoEnvio = '📤 Enviado al cliente · pasa a Análisis de cliente y se mueve a Entregas.';
-    }
+  if(res.enviado){
+    o.etapa = 'analisis';
+    o.responsableActual = 'cliente';
+    avisoEnvio = '📤 Enviado al cliente · pasa a Análisis de cliente y se mueve a Entregas.';
   }
   finalizarRondaSiCorresponde(oppId);
   persistLocal();
   renderAll();
   /* Si el drawer de Revisión semanal está abierto sobre esta misma oportunidad
-     (venga de Prioridades o de Calendario), se refresca en el mismo lugar —
-     mismo patrón que ya usa calDayDrop — en vez de cerrarlo. */
-  if(rsDrawerOppId===oppId) openRSDetailDrawer(oppId, nuevoEnvio ? nuevoEnvio.id : entId);
+     (venga de Prioridades o de Calendario), se refresca en el mismo lugar. */
+  if(rsDrawerOppId===oppId) openRSDetailDrawer(oppId, res.nuevoEnvio ? res.nuevoEnvio.id : entId);
+  if(showConfirmationToast && res.completada) rsToastCompletada(o, e, numSemanaPrevio);
   if(avisoEnvio) showToast(avisoEnvio, 'ok');
-  else if(showConfirmationToast && e.estado==='completado') rsToastCompletada(o, e, numSemanaPrevio);
-  else if(showConfirmationToast) showToast('Estado de «' + e.nombre + '» actualizado a en proceso.', 'ok');
+  else if(showConfirmationToast && !res.completada) showToast('Estado de «' + e.nombre + '» actualizado a en proceso.', 'ok');
 }
 
 /* ============================================================
@@ -8697,7 +8823,7 @@ function fichaEstadoTexto(e){
 function fichaTareaCardHtml(e){
   const est = fichaEstadoTexto(e);
   const fechas = esAreaTecnica(e.area)
-    ? [e.fechaEntrega ? 'Entrega <b>' + fichaFecha(e.fechaEntrega) + '</b>' : '', e.fechaComprometidaCliente ? 'Cliente <b>' + fichaFecha(e.fechaComprometidaCliente) + '</b>' : ''].filter(Boolean)
+    ? [e.fechaEntrega ? 'Entrega <b>' + fichaFecha(e.fechaEntrega) + '</b>' : '', modalFechaCliente ? 'Cliente <b>' + fichaFecha(modalFechaCliente) + '</b>' : ''].filter(Boolean)
     : [e.fechaEntrega ? 'Fecha <b>' + fichaFecha(e.fechaEntrega) + '</b>' : ''].filter(Boolean);
   const meta = [escAttr(nombreResponsableEntregable(e) || 'Sin responsable')].concat(fechas.length ? fechas : ['Sin fecha']).join(' · ');
   const bloqueo = e.estadoTarea==='bloqueado'
@@ -8882,8 +9008,8 @@ function renderFichaDetalle(){
       <label class="fx-campo"><span>${tecnica ? 'Fecha entrega' : 'Fecha'}</span>
         <input type="date" value="${e.fechaEntrega || ''}" onchange="fichaTareaFecha(${id},'fechaEntrega',this.value)">
       </label>
-      ${tecnica ? `<label class="fx-campo"><span>Fecha cliente</span>
-        <input type="date" value="${e.fechaComprometidaCliente || ''}" onchange="fichaTareaFecha(${id},'fechaComprometidaCliente',this.value)">
+      ${tecnica ? `<label class="fx-campo" title="Fecha comprometida con el cliente: es una sola para todo el proyecto"><span>Fecha cliente (proyecto)</span>
+        <input type="date" value="${modalFechaCliente || ''}" onchange="fichaFechaClienteProyecto(this.value)">
       </label>` : ''}
     </div>
     <div class="fx-campo fx-detalle-estado"><span>Estado</span>
@@ -8957,6 +9083,14 @@ function fichaTareaResponsable(id, valor){
   }
   renderModalEntregables();
 }
+/* Fecha cliente del proyecto (borrador de la ficha; saveModal la guarda en
+   o.fechaComprometidaCliente). Es la misma para todas las tareas. */
+let modalFechaCliente = '';
+let estadosAlAbrirFicha = new Set();
+function fichaFechaClienteProyecto(valor){
+  modalFechaCliente = valor || '';
+  renderModalEntregables();
+}
 function fichaTareaFecha(id, campo, valor){
   const e = fichaTarea(id);
   if(!e) return;
@@ -8967,19 +9101,30 @@ function fichaTareaFecha(id, campo, valor){
     if(metrado){ sincronizarMetradoDesdeOrigen(e, metrado); fichaRefrescarFila(metrado.id); }
   }
 }
+/* Estado desde la ficha: misma regla única (cambiarEstadoTarea) sobre el
+   borrador. Completar pide la misma confirmación que en el resto del panel;
+   si se cancela, no cambia nada. */
 function fichaTareaEstado(id, valor){
   const e = fichaTarea(id);
   if(!e) return;
-  const previo = e.estado;
-  aplicarEstadoTarea(e, valor);
-  /* Vínculos heredados del envío al cliente: completar el envío apaga el
-     pendiente de su origen; reabrir un origen ya enviado deshace su envío. */
-  if(esEntregableEnvio(e)){
-    const origen = modalEntregables.find(x=>x.id===e.envioOrigenId);
-    if(origen) origen.pendienteEnvioCliente = (e.estado!=='completado');
-  } else if(previo!=='pendiente' && e.estado==='pendiente' && e.pendienteEnvioCliente){
-    modalEntQuitarEnvio(e);
+  if(valor==='completado' && e.estadoTarea!=='completado'){
+    askConfirm(`¿Deseas marcar «${e.nombre || 'Tarea'}» como concluido?`, ()=>fichaAplicarEstado(id, valor), null, {
+      title: '✅ Marcar entregable como concluido',
+      confirmLabel: '✅ Marcar como concluido',
+      confirmClass: 'btn-primary',
+      detailsHtml: `
+        <div class="drawer-row"><span>Área</span><b>${AREA_LABEL[e.area] || '—'}</b></div>
+        <div class="drawer-row"><span>Responsable</span><b>${escAttr(nombreResponsableEntregable(e) || '—')}</b></div>
+        <div class="drawer-row"><span>Fecha de entrega</span><b>${formatFechaCorta(e.fechaEntrega)}</b></div>`,
+    });
+    return;
   }
+  fichaAplicarEstado(id, valor);
+}
+function fichaAplicarEstado(id, valor){
+  const e = fichaTarea(id);
+  if(!e) return;
+  cambiarEstadoTarea(modalEntregables, e, valor, {kam:modalEquipo.kam, kamOtro:modalEquipo.kamOtro, ronda:fichaRondaActual()});
   renderModalEntregables();
   if(valor==='bloqueado'){
     const txt = document.querySelector('#ficha-detalle .fx-bloqueo textarea');
@@ -9323,6 +9468,8 @@ function fichaPrepararApertura(o){
   modalEquipoEditando = fichaAreasAbiertas.size>0;
   modalEntregables = o ? JSON.parse(JSON.stringify(o.entregables)) : [];
   modalIdsOriginales = new Set(modalEntregables.map(e=>e.id));
+  modalFechaCliente = o ? (o.fechaComprometidaCliente || '') : '';
+  estadosAlAbrirFicha = new Set(modalEntregables.map(e=>e.id + ':' + e.estadoTarea));
   fichaNuevaTarea = null;
   fichaApoyoArea = null;
   fichaHistArea = 'todas';
@@ -9497,6 +9644,7 @@ function saveModal(){
     presupuestador: modalEquipo.presupuestador,
     presupuestadorOtro: modalEquipo.presupuestador==='otro' ? (modalEquipo.presupuestadorOtro || '').trim() : '',
     apoyos,
+    fechaComprometidaCliente: modalFechaCliente || '',
     entregables: finalEntregables,
   };
 
@@ -9525,6 +9673,14 @@ function saveModal(){
   persistLocal();
   renderAll();
   closeModal();
+  /* Mismo toast que en el resto de las vistas, solo por las tareas que en
+     este guardado pasaron de verdad a Completada. */
+  const oGuardada = oportunidades.find(x=>x.id===savedId);
+  if(oGuardada){
+    const num = rsNumeroSemana(savedId);
+    oGuardada.entregables.filter(e=>e.estadoTarea==='completado' && !estadosAlAbrirFicha.has(e.id + ':completado'))
+      .forEach(e=>rsToastCompletada(oGuardada, e, num));
+  }
 }
 function deleteCurrentOpp(){
   if(editingOppId === null) return;
@@ -9582,8 +9738,8 @@ function exportarExcel(){
   oportunidades.forEach(o=>o.entregables.forEach(e=>{
     entRows.push([o.id, o.cliente, o.proyecto, e.nombre, AREA_LABEL[e.area], nombreResponsableEntregable(e),
       etapaLabel(e.etapa), PRI_LABEL[e.prioridad], ESTADO_TAREA_LABEL[e.estadoTarea] || (e.estado==='completado'?'Completado':'Pendiente'),
-      formatFechaLarga(e.fechaEntrega), formatFechaLarga(e.fechaComprometidaCliente),
-      margenClienteLabel(e.fechaEntrega, e.fechaComprometidaCliente), e.proximoPaso, e.observacion]);
+      formatFechaLarga(e.fechaEntrega), formatFechaLarga(o.fechaComprometidaCliente),
+      margenClienteLabel(e.fechaEntrega, o.fechaComprometidaCliente), e.proximoPaso, e.observacion]);
   }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([oppHeaders, ...oppRows]), 'Oportunidades');
@@ -10002,6 +10158,8 @@ function runImportApply(reemplazar){
      Bloqueado sigue Bloqueado si el Excel lo trae como pendiente). La carga
      masiva no se registra evento por evento en el historial. */
   oportunidades.forEach(ensureNuevosCampos);
+  /* Proyecto sin fecha cliente maestra + Excel con fecha cliente en sus tareas. */
+  oportunidades.forEach(o=>{ if(!o.fechaComprometidaCliente) o.fechaComprometidaCliente = fechaClienteDesdeTareas(o); });
   tomarBaseHistorial();
   persistLocal();
   renderAll();
