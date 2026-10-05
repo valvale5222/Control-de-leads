@@ -668,6 +668,7 @@
 
   /* SUBTABS (áreas) */
   .subtabs{display:inline-flex;flex-wrap:wrap;padding:4px;border-radius:var(--radius-pill);background:var(--glass-bg-soft);backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);margin-bottom:18px;gap:2px;}
+  .subtab-btn[hidden]{display:none !important;}
   .subtab-btn{
     background:transparent;border:none;color:var(--ink-soft);font-family:'Inter',sans-serif;font-weight:600;
     font-size:12.5px;padding:7px 15px;border-radius:var(--radius-pill);cursor:pointer;white-space:nowrap;
@@ -1306,23 +1307,27 @@
 
   /* Incidencias: sección propia, nunca mezclada con el cumplimiento. */
   .des-inc-balance{display:inline-flex;gap:8px;margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:700;}
-  .des-inc-balance .is-positiva,.des-inc-grupo-head .is-positiva{color:var(--ok);}
-  .des-inc-balance .is-negativa,.des-inc-grupo-head .is-negativa{color:var(--danger);}
-  .des-inc-grupos{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;}
-  .des-inc-grupo{border:1px solid var(--line);border-radius:11px;background:var(--card-surface);padding:10px 12px;display:flex;flex-direction:column;gap:2px;}
-  .des-inc-grupo-head{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;}
-  .des-inc-grupo-head b{font-family:'Space Grotesk',sans-serif;font-size:14px;color:var(--ink);margin-right:auto;}
-  .des-inc{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"dot main fecha" ". proy proy";gap:2px 9px;align-items:baseline;padding:6px 0;border-top:1px solid color-mix(in srgb, var(--line) 70%, transparent);}
-  .des-inc-grupo-head + .des-inc{border-top:none;}
-  .des-inc-dot{grid-area:dot;width:7px;height:7px;border-radius:50%;align-self:center;}
-  .des-inc.is-positiva .des-inc-dot{background:var(--ok);}
-  .des-inc.is-negativa .des-inc-dot{background:var(--danger);}
-  .des-inc-main{grid-area:main;display:flex;flex-direction:column;min-width:0;}
-  .des-inc-main b{display:none;}
-  .des-inc-main span{font-size:12.5px;line-height:1.45;color:var(--ink);}
-  .des-inc-proy{grid-area:proy;font-size:11px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .des-inc-fecha{grid-area:fecha;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-dim);white-space:nowrap;}
-  @media (max-width:560px){ .des-inc-grupos{grid-template-columns:1fr;} }
+  .des-inc-balance .is-positiva{color:var(--ok);}
+  .des-inc-balance .is-negativa{color:var(--danger);}
+  /* Una fila de tarjetas puntuales (desplazamiento horizontal si no entran). */
+  .des-inc-fila{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 6px;scroll-snap-type:x proximity;}
+  .des-inc{
+    flex:0 0 260px;min-width:0;display:flex;flex-direction:column;gap:5px;scroll-snap-align:start;
+    background:var(--card-surface);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:10px;padding:9px 12px;
+    transition:transform var(--dur-1) var(--ease),box-shadow var(--dur-2) var(--ease);
+  }
+  .des-inc:hover{transform:translateY(-1px);box-shadow:var(--shadow-xs);}
+  .des-inc.is-positiva{border-left-color:var(--ok);}
+  .des-inc.is-negativa{border-left-color:var(--danger);}
+  .des-inc-top{display:flex;align-items:baseline;gap:7px;min-width:0;}
+  .des-inc-top b{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:auto;}
+  .des-inc-signo{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;}
+  .des-inc.is-positiva .des-inc-signo{color:var(--ok);}
+  .des-inc.is-negativa .des-inc-signo{color:var(--danger);}
+  .des-inc-desc{margin:0;font-size:12.5px;line-height:1.45;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .des-inc-proy{font-size:11px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .des-inc-fecha{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-dim);white-space:nowrap;}
+  @media (prefers-reduced-motion:reduce){ .des-inc{transition:none;} .des-inc:hover{transform:none;} }
   @media (prefers-reduced-motion:reduce){ .des-body.is-entrando > *,.des-items.is-entrando{animation:none;} .des-resp:hover{transform:none;} .des-barra i{transition:none;} }
 
   .equipo-header{
@@ -3579,7 +3584,7 @@
     <div class="subtabs carga-vista-toggle" data-subtabs="carga-vista">
       <button class="subtab-btn active" data-vista="carga" onclick="setCargaVista('carga')">👥 Carga laboral</button>
       <button class="subtab-btn" data-vista="equipo" onclick="setCargaVista('equipo')">🤝 Equipo de trabajo</button>
-      <button class="subtab-btn" data-vista="desempeno" onclick="setCargaVista('desempeno')">📈 Desempeño</button>
+      <button class="subtab-btn" data-vista="desempeno" id="subtab-desempeno" hidden onclick="setCargaVista('desempeno')">📈 Desempeño</button>
     </div>
     <div class="workload-shell" id="carga-vista-carga">
       <div class="workload-header">
@@ -6141,7 +6146,7 @@ function renderAll(){
   renderRevisionSemanal();
   renderCarga();
   renderEquipo();
-  if(cargaVista==='desempeno') renderDesempeno();
+  if(cargaVista==='desempeno' && esAdmin()) renderDesempeno();
   renderGantt();
   renderDetalle();
   renderDetalleEntregas();
@@ -7959,23 +7964,21 @@ function incFormHtml(ctx, proyecto){
   </div>`;
 }
 /* Lista compacta: las 2 más recientes y "+N incidencias"; cada una se expande. */
+/* En el detalle del proyecto y en la ficha solo se ve el título, el contador
+   (+ positivas / − negativas) y el botón para registrar. El detalle de cada
+   incidencia no se muestra acá: se consulta en Desempeño (solo admin). */
 function incidenciasHtml(ctx, proyecto, lista, ro){
   const ui = incUI[ctx];
-  const orden = (lista || []).slice().sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
-  const vis = ui.verTodas ? orden : orden.slice(0, INC_VISIBLES);
-  const resto = orden.length - vis.length;
-  const pos = orden.filter(i=>i.tipo==='positiva').length;
-  const neg = orden.length - pos;
+  const total = (lista || []).length;
+  const pos = (lista || []).filter(i=>i.tipo==='positiva').length;
+  const neg = total - pos;
   return `<div class="inc-sec">
     <div class="inc-head">
       <span class="rsd-k">Incidencias</span>
-      ${orden.length ? `<span class="inc-cuenta"><span class="is-positiva">+${pos}</span><span class="is-negativa">−${neg}</span></span>` : ''}
+      <span class="inc-cuenta" title="Positivas / negativas registradas"><span class="is-positiva">+${pos}</span><span class="is-negativa">−${neg}</span></span>
       ${ro || ui.form ? '' : `<button type="button" class="inc-add" onclick="incAbrirForm('${ctx}')">+ Registrar incidencia</button>`}
     </div>
     ${ui.form ? incFormHtml(ctx, proyecto) : ''}
-    ${orden.length ? `<div class="inc-lista">${vis.map(i=>incItemHtml(ctx, i, proyecto, ro)).join('')}</div>` : (ui.form ? '' : '<span class="rsd-vacio">Sin incidencias registradas.</span>')}
-    ${resto>0 ? `<button type="button" class="inc-mas" onclick="incVerTodas('${ctx}',true)">+${resto} ${resto===1 ? 'incidencia' : 'incidencias'}</button>`
-      : (ui.verTodas && orden.length>INC_VISIBLES ? `<button type="button" class="inc-mas" onclick="incVerTodas('${ctx}',false)">Ver menos</button>` : '')}
   </div>`;
 }
 /* Abrir el formulario; desde una tarea viene con la tarea y su responsable. */
@@ -8422,7 +8425,14 @@ function equipoRolOtrosHtml(o, rol, nombreMostrado){
   }</span>`;
 }
 
+/* Desempeño es solo para administradores: la pestaña está oculta hasta que el
+   perfil confirma rol admin (ver aplicarPermisosDeRol). usuarioActual se
+   declara al final del script, de ahí el try. */
+function esAdmin(){
+  try{ return !!(usuarioActual && usuarioActual.rol === 'admin'); }catch(e){ return false; }
+}
 function setCargaVista(vista){
+  if(vista === 'desempeno' && !esAdmin()) vista = 'carga';
   cargaVista = vista;
   document.querySelectorAll('[data-subtabs="carga-vista"] .subtab-btn')
     .forEach(b=>b.classList.toggle('active', b.dataset.vista===vista));
@@ -8734,13 +8744,14 @@ function desToggleItem(btn){
   wrap.classList.toggle('is-open', abrir);
   btn.setAttribute('aria-expanded', String(abrir));
 }
+/* Una tarjeta por incidencia: tipo (+/−), responsable, fecha, descripción y
+   proyecto. Van en una sola fila con desplazamiento horizontal. */
 function desIncHtml(x){
   const inc = x.inc;
   return `<div class="des-inc is-${inc.tipo}">
-    <span class="des-inc-dot" aria-hidden="true"></span>
-    <span class="des-inc-main"><b>${escAttr(inc.responsable)}</b><span>${escAttr(inc.descripcion)}</span></span>
+    <div class="des-inc-top"><span class="des-inc-signo">${inc.tipo==='positiva' ? '+' : '−'}</span><b>${escAttr(inc.responsable)}</b><span class="des-inc-fecha">${incFechaCorta(inc.fecha)}</span></div>
+    <p class="des-inc-desc" title="${escAttr(inc.descripcion)}">${escAttr(inc.descripcion)}</p>
     <span class="des-inc-proy" title="${escAttr(x.o.proyecto || '')}">${escAttr(x.o.cliente)} · ID ${x.o.id}</span>
-    <span class="des-inc-fecha">${incFechaCorta(inc.fecha)}</span>
   </div>`;
 }
 function renderDesempeno(){
@@ -8782,9 +8793,6 @@ function renderDesempeno(){
   const filtros = [['todos','Todos', base.length], ['anticipado','Anticipados', cuenta('anticipado')], ['atiempo','A tiempo', cuenta('atiempo')], ['tarde','Tarde', cuenta('tarde')], ['reprog','Reprogramados', st.reprog], ['vencido','Vencidos por confirmar', cuenta('vencido')]];
   const incVis = desResp ? incid.filter(x=>x.inc.responsable===desResp) : incid;
   const incPos = incVis.filter(x=>x.inc.tipo==='positiva').length;
-  /* Incidencias agrupadas por responsable: cada uno con su balance y las más recientes. */
-  const incGrupos = new Map();
-  incVis.forEach(x=>{ if(!incGrupos.has(x.inc.responsable)) incGrupos.set(x.inc.responsable, []); incGrupos.get(x.inc.responsable).push(x); });
   const tonoPct = p=>p==null ? '' : (p>=85 ? 'ok' : p>=60 ? 'warn' : 'danger');
 
   body.innerHTML = `
@@ -8820,10 +8828,7 @@ function renderDesempeno(){
         <span class="des-card-sub">Registro cualitativo manual · no afecta métricas, fechas ni clasificación</span>
         ${incVis.length ? `<span class="des-inc-balance"><span class="is-positiva">+${incPos}</span><span class="is-negativa">−${incVis.length - incPos}</span></span>` : ''}
       </header>
-      ${incVis.length ? `<div class="des-inc-grupos">${[...incGrupos.entries()].map(([nombre, xs])=>{
-        const p = xs.filter(x=>x.inc.tipo==='positiva').length;
-        return `<div class="des-inc-grupo"><div class="des-inc-grupo-head"><b>${escAttr(nombre)}</b><span class="is-positiva">+${p}</span><span class="is-negativa">−${xs.length - p}</span></div>${xs.map(desIncHtml).join('')}</div>`;
-      }).join('')}</div>` : '<div class="des-vacio">Sin incidencias registradas en este periodo. Se registran desde el detalle del proyecto (tab Tareas) o desde la ficha.</div>'}
+      ${incVis.length ? `<div class="des-inc-fila">${incVis.map(desIncHtml).join('')}</div>` : '<div class="des-vacio">Sin incidencias registradas en este periodo. Se registran desde el detalle del proyecto (tab Tareas) o desde la ficha.</div>'}
     </section>`;
   if(desAnimar){
     body.classList.remove('is-entrando'); void body.offsetWidth; body.classList.add('is-entrando');
@@ -12109,7 +12114,10 @@ const ROLES_QUE_EDITAN = ['admin', 'editor'];
 
 function aplicarPermisosDeRol(){
   document.body.classList.toggle('solo-lectura', !puedeEditar);
-  document.getElementById('btn-usuarios').style.display = (usuarioActual && usuarioActual.rol === 'admin') ? '' : 'none';
+  document.getElementById('btn-usuarios').style.display = esAdmin() ? '' : 'none';
+  /* Desempeño: solo admin. Si otro rol la tenía abierta, vuelve a Carga laboral. */
+  document.getElementById('subtab-desempeno').hidden = !esAdmin();
+  if(!esAdmin() && cargaVista === 'desempeno') setCargaVista('carga');
   /* El N° de la secuencia en Carga laboral lleva el atributo `disabled` según
      el rol dentro del HTML ya pintado. El primer render ocurre antes de que
      llegue el perfil, así que se repinta una vez que el rol está confirmado; el
