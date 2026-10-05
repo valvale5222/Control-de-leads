@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Control de Oportunidades — Grupo Friopacking</title>
 <script>
   /* Guardia de sesión: se ejecuta antes de pintar nada del panel. Si no hay
@@ -3264,6 +3264,362 @@
 
   footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-dim);font-family:'IBM Plex Mono',monospace;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;}
 
+  /* ============================================================
+     OPTIMIZACIÓN MÓVIL (iPhone / Safari iOS) — solo presentación.
+     Todo va con "screen and" para no alterar la impresión, y reutiliza los
+     cortes que ya usa el panel (1023 / 767 / 639 px). En escritorio lo único
+     que existe de este bloque son las piezas ocultas de abajo.
+     ============================================================ */
+  /* Piezas exclusivas de móvil: en escritorio no se ven, y .filtros-mas usa
+     display:contents para que sus hijos sigan siendo celdas/ítems directos de
+     la barra de filtros (misma grilla y mismo orden que antes). */
+  .filtros-movil-btn,.filtros-chips,.col-movil-toggle,.rsw-col-plegar{display:none;}
+  .filtros-mas{display:contents;}
+  .filtros-movil-n[hidden]{display:none !important;}
+
+  /* Safe area: con viewport-fit=cover env() solo vale >0 donde hay muesca o
+     indicador de inicio; en el resto max() deja el relleno de siempre. */
+  @media screen and (max-width:1023px){
+    .sheet{padding-left:max(20px, env(safe-area-inset-left));padding-right:max(20px, env(safe-area-inset-right));}
+  }
+  @media screen and (max-width:639px){
+    .sheet{
+      padding-left:max(12px, env(safe-area-inset-left));padding-right:max(12px, env(safe-area-inset-right));
+      padding-bottom:calc(50px + env(safe-area-inset-bottom));
+    }
+  }
+
+  /* Safari iOS amplía la página al enfocar un campo con letra < 16px. Solo en
+     iOS (-webkit-touch-callout) y en pantallas chicas se fija 16px. */
+  @supports (-webkit-touch-callout:none){
+    @media screen and (max-width:767px){
+      input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),select,textarea{font-size:16px !important;}
+    }
+  }
+
+  /* NAVEGACIÓN — pestañas con scroll horizontal (ya existente) + desvanecido
+     lateral cuando hay pestañas fuera de pantalla (clases puestas por
+     actualizarFadeTabs). Sin barra de scroll visible. */
+  @media screen and (max-width:767px){
+    .tab-btn{min-height:44px;}
+    .tabs.fade-der{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);}
+    .tabs.fade-izq{-webkit-mask-image:linear-gradient(90deg,transparent,#000 32px);mask-image:linear-gradient(90deg,transparent,#000 32px);}
+    .tabs.fade-izq.fade-der{
+      -webkit-mask-image:linear-gradient(90deg,transparent,#000 32px,#000 calc(100% - 32px),transparent);
+      mask-image:linear-gradient(90deg,transparent,#000 32px,#000 calc(100% - 32px),transparent);
+    }
+    .btn-toolbar{width:42px;height:42px;}
+    .kpi-toggle{height:42px;}
+    .subtab-btn{min-height:38px;}
+  }
+  /* iPhone SE / mini (320–414): el logo de 48 px más "Oportunidades" en 20 px
+     no entraban en una fila y la marca ensanchaba todo el encabezado. */
+  @media screen and (max-width:419px){
+    .executive-summary{padding:16px 14px;}
+    .brand{gap:12px;}
+    .logo-card img{height:36px;}
+    .title-block{padding-left:12px;}
+    h1{font-size:18px;}
+  }
+
+  /* FILTROS — en celular ningún control fuerza ancho mínimo y los paneles de
+     los segmentadores se anclan a la barra completa (no al botón): la .msel
+     pasa a static, así el panel toma de contenedor a la barra (position:relative)
+     y con top:auto queda justo debajo del botón tocado. Nunca se sale del
+     viewport, sea cual sea la columna en la que esté el botón. */
+  @media screen and (max-width:639px){
+    .filters{padding:10px;gap:8px;}
+    .filters input[type="text"],.filters select{min-width:0;width:100%;}
+    .filters select,.filters input[type="text"],.filters .msel-btn{height:44px;}
+    .filters .msel-btn{width:100%;min-width:0;max-width:none;}
+    .filter-reset{width:44px;height:44px;}
+    .filters .msel,.equipo-filtro .msel{position:static;}
+    .equipo-filtro{position:relative;justify-content:stretch;}
+    .equipo-filtro .msel{flex:1 1 calc(50% - 4px);min-width:0;}
+    .equipo-filtro .msel-btn{width:100%;min-width:0;max-width:none;height:44px;}
+    .filters .msel-panel,.equipo-filtro .msel-panel,.equipo-filtro #equipo-f-resp .msel-panel{
+      top:auto;left:10px;right:10px;min-width:0;margin-top:6px;
+      max-height:min(320px, 55vh);overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+    }
+    .equipo-filtro .msel-panel,.equipo-filtro #equipo-f-resp .msel-panel{left:0;right:0;}
+    .msel-opt{white-space:normal;min-height:40px;padding:8px 10px;}
+    .msel-opt input[type="checkbox"]{width:18px;height:18px;}
+    .des-periodo{display:flex;width:100%;overflow-x:auto;scrollbar-width:none;}
+    .des-periodo::-webkit-scrollbar{display:none;}
+    .des-per-btn{flex:1 0 auto;min-height:38px;}
+
+    /* Barras con panel "Filtros" (Revisión semanal, Detalle > Oportunidades y
+       Entregas): fila 1 = búsqueda + botón Filtros; al abrir, los secundarios
+       en una sola columna; con el panel cerrado, los activos como chips. */
+    .filters.filtros-movil{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;}
+    .filters.filtros-movil > *{min-width:0;}
+    .filtros-movil .detail-view-toggle{grid-column:1 / -1;display:flex;}
+    .filtros-movil .detail-view-btn{flex:1;justify-content:center;min-height:40px;}
+    .filtros-movil-btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 13px;
+      background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--ink);
+      font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;
+      transition:border-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease),box-shadow var(--dur-2) var(--ease);
+    }
+    .filtros-movil .filtros-movil-btn{display:inline-flex;}
+    .filtros-movil-btn svg{width:15px;height:15px;color:var(--ink-dim);transition:transform var(--dur-2) var(--ease);}
+    .filtros-movil-btn[aria-expanded="true"]{border-color:var(--teal);box-shadow:var(--ring);}
+    .filtros-movil-btn[aria-expanded="true"] svg{transform:rotate(180deg);}
+    .filtros-movil-n{
+      display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;
+      border-radius:var(--radius-pill);background:var(--teal);color:#06241d;
+      font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;
+    }
+    .filtros-movil .filtros-mas{display:none;grid-column:1 / -1;grid-template-columns:minmax(0,1fr);gap:8px;}
+    .filtros-movil.filtros-abiertos .filtros-mas{display:grid;animation:filtrosMasIn var(--dur-2) var(--ease-emphasized) both;}
+    /* "Limpiar filtros" deja de ser solo el icono: dentro del panel se lee. */
+    .filtros-movil .filtros-mas .filter-reset{width:100%;gap:8px;}
+    .filtros-movil .filtros-mas .filter-reset .tt{
+      position:static;transform:none;opacity:1;background:none;color:inherit;padding:0;
+      font-size:12.5px;font-weight:600;pointer-events:none;
+    }
+    .filtros-movil .filtros-chips{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px;}
+    .filtros-movil .filtros-chips:empty,.filtros-movil.filtros-abiertos .filtros-chips{display:none;}
+    .filtros-chip{
+      display:inline-flex;align-items:center;gap:2px;max-width:100%;min-height:30px;padding:0 2px 0 11px;
+      background:var(--surface);border:1px solid color-mix(in srgb, var(--teal) 45%, var(--line));border-radius:var(--radius-pill);
+      font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;color:var(--ink);
+    }
+    .filtros-chip-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .filtros-chip button{
+      flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;
+      background:none;border:none;border-radius:50%;color:var(--ink-soft);font-size:16px;line-height:1;cursor:pointer;
+    }
+    .filtros-chip button:active{background:var(--danger-bg);color:var(--danger);}
+    /* Conteo y "Nueva/Agregar oportunidad" a ancho completo: si compartieran la
+       columna del botón Filtros, la ensancharían y aplastarían la búsqueda. */
+    .filtros-movil .filter-count{grid-column:1 / -1;margin-left:0;text-align:right;}
+    .filtros-movil .btn-add{grid-column:1 / -1;justify-self:stretch;min-height:44px;justify-content:center;}
+    .resumen-quickfilter-chip button{width:30px;height:30px;}
+  }
+  /* Solo opacidad: un transform animado (con fill) volvería a .filtros-mas el
+     contenedor de los paneles msel y los correría respecto de la barra. */
+  @keyframes filtrosMasIn{from{opacity:0;}to{opacity:1;}}
+
+  /* DETALLE — ficha móvil ejecutiva. La fila ya se apilaba como ficha (regla
+     de max-width:767px de más arriba); acá se reordena en una grilla de dos
+     columnas: ID + importe, cliente, proyecto, etapa + responsable y "Ver
+     detalle". El resto de columnas sigue en el DOM y aparece al expandir,
+     con su rótulo de siempre. */
+  @media screen and (max-width:767px){
+    table.detail-table-fit tbody tr{
+      display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:12px;row-gap:2px;
+      padding:10px 12px 2px;margin-bottom:8px;
+    }
+    table.detail-table-fit tbody td{width:auto;min-width:0;border-bottom:none;padding:0;}
+    table.detail-table-fit tbody td::before{content:none;}
+    table.detail tbody tr:hover td:first-child{box-shadow:none;}
+    table.detail-table-fit tbody td:first-child{grid-column:1;grid-row:1;align-self:center;font-size:11px;color:var(--ink-dim);}
+    table.detail-table-fit tbody td.col-importe{
+      grid-column:2;grid-row:1;justify-self:end;align-self:center;
+      font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;
+    }
+    table.detail-table-fit tbody td.col-cliente{grid-column:1 / -1;grid-row:2;margin-top:2px;}
+    table.detail-table-fit tbody td.col-cliente .cliente-link{font-size:15px;line-height:1.3;}
+    table.detail-table-fit tbody td.col-proyecto{grid-column:1 / -1;grid-row:3;font-size:13px;font-weight:500;line-height:1.35;color:var(--ink-soft);}
+    table.detail-table-fit tbody td.col-etapa{grid-column:1;grid-row:4;align-self:center;margin-top:7px;}
+    table.detail-table-fit tbody td.col-etapa .chip{max-width:100%;white-space:normal;}
+    /* Responsable (Oportunidades) / KAM (Entregas): a la derecha de la etapa. */
+    table.detail-table-fit tbody td.col-asignado,
+    table.detail-table-fit.detail-entregas tbody td.col-kam{
+      grid-column:2;grid-row:4;justify-self:end;align-self:center;margin-top:7px;
+      text-align:right !important;font-size:12px;line-height:1.35;color:var(--ink-soft);
+    }
+    /* Entregas: el próximo paso es lo siguiente relevante y queda a la vista. */
+    table.detail-table-fit.detail-entregas tbody td.col-paso{grid-column:1 / -1;grid-row:5;margin-top:7px;font-size:12.5px;}
+    table.detail-table-fit.detail-entregas tbody td.col-paso::before{
+      content:attr(data-label);display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.03em;color:var(--ink-dim);margin-bottom:2px;
+    }
+    /* Secundarios: ocultos hasta "Ver detalle"; se ubican solos en dos columnas
+       debajo del botón, con su rótulo de siempre. */
+    table.detail-table-fit tbody td.col-tecnologia,
+    table.detail-table-fit tbody td.col-prioridad,
+    table.detail-table-fit tbody td.col-resp-actual,
+    table.detail-table-fit tbody td.col-mes-cierre,
+    table.detail-table-fit tbody td.col-prob-cierre,
+    table.detail-table-fit tbody td.col-ronda,
+    table.detail-table-fit.detail-entregas tbody td.col-fecha{display:none;padding:8px 0 4px;font-size:12.5px;}
+    table.detail-table-fit tbody tr.movil-abierta td.col-tecnologia,
+    table.detail-table-fit tbody tr.movil-abierta td.col-prioridad,
+    table.detail-table-fit tbody tr.movil-abierta td.col-resp-actual,
+    table.detail-table-fit tbody tr.movil-abierta td.col-mes-cierre,
+    table.detail-table-fit tbody tr.movil-abierta td.col-prob-cierre,
+    table.detail-table-fit tbody tr.movil-abierta td.col-ronda,
+    table.detail-table-fit.detail-entregas tbody tr.movil-abierta td.col-fecha{display:block;animation:movilDetIn var(--dur-2) var(--ease) both;}
+    table.detail-table-fit tbody tr.movil-abierta td.col-tecnologia::before,
+    table.detail-table-fit tbody tr.movil-abierta td.col-prioridad::before,
+    table.detail-table-fit tbody tr.movil-abierta td.col-resp-actual::before,
+    table.detail-table-fit tbody tr.movil-abierta td.col-mes-cierre::before,
+    table.detail-table-fit tbody tr.movil-abierta td.col-prob-cierre::before,
+    table.detail-table-fit tbody tr.movil-abierta td.col-ronda::before,
+    table.detail-table-fit.detail-entregas tbody tr.movil-abierta td.col-fecha::before{
+      content:attr(data-label);display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;
+      letter-spacing:.03em;color:var(--ink-dim);margin-bottom:3px;
+    }
+    table.detail-table-fit tbody td.col-movil-toggle{display:block;grid-column:1 / -1;grid-row:5;margin-top:8px;border-top:1px solid var(--line);}
+    table.detail-table-fit.detail-entregas tbody td.col-movil-toggle{grid-row:6;}
+    .movil-detalle-btn{
+      display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:42px;
+      background:none;border:none;padding:0;cursor:pointer;
+      font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--teal);
+    }
+    .movil-detalle-btn svg{width:14px;height:14px;transition:transform var(--dur-2) var(--ease);}
+    .movil-detalle-btn[aria-expanded="true"] svg{transform:rotate(180deg);}
+    table.detail-table-fit tbody tr.movil-abierta{border-color:color-mix(in srgb, var(--teal) 35%, var(--line));}
+    .detalle-page-btn{min-height:40px;min-width:40px;}
+    .detalle-pagination-nav{width:100%;}
+    .detalle-page-nav{flex:1;}
+    .detalle-pagination-nums{order:3;width:100%;justify-content:center;flex-wrap:wrap;}
+  }
+  @keyframes movilDetIn{from{opacity:0;transform:translateY(-3px);}to{opacity:1;transform:none;}}
+
+  /* REVISIÓN SEMANAL — barra de semana/vistas, secciones plegables y cards
+     más bajas. El orden, la secuencia y las columnas no cambian. */
+  @media screen and (max-width:639px){
+    .rs-toolbar{gap:8px;}
+    .rs-toolbar-left,.rs-view-toggle{width:100%;}
+    .rs-view-toggle{display:flex;}
+    .rs-view-btn{flex:1;justify-content:center;min-height:40px;}
+    .rs-cal-nav{width:100%;display:grid;grid-template-columns:44px minmax(0,1fr) 44px auto;gap:6px;}
+    .rs-cal-nav button{min-height:44px;justify-content:center;}
+    .rs-cal-nav button[aria-label]{padding:0;}
+    .rs-cal-range{min-width:0;text-align:center;font-size:12px;line-height:1.3;}
+    /* renderRSNavSemana oculta "Semana actual" con visibility; acá además deja
+       de ocupar su columna para que el rango de fechas use ese ancho. */
+    .rs-cal-nav .rs-cal-hoy[style*="hidden"]{display:none;}
+    .rsw-alertas{gap:4px 14px;font-size:12.5px;}
+    .rsw-alerta{white-space:normal;}
+  }
+  @media screen and (max-width:767px){
+    .rsw-board{gap:10px;}
+    /* Toda la cabecera es zona táctil del botón (su ::before la cubre); el
+       ordenar por importe queda por encima y sigue funcionando. */
+    .rsw-col-head{position:relative;min-height:48px;padding:9px 6px 7px 12px;flex-wrap:wrap;column-gap:6px;row-gap:0;}
+    /* Fila 1: título · conteo … importe ⌄. Fila 2 (solo con la sección abierta):
+       "Importe ↓" alineado bajo el importe. Así nada se sale en 320 px. */
+    .rsw-col-title{order:1;min-width:0;overflow:hidden;text-overflow:ellipsis;letter-spacing:.08em;}
+    .rsw-col-count{order:2;}
+    .rsw-col-importe{order:3;}
+    .rsw-col-plegar{order:4;}
+    .rsw-col-head::after{content:"";order:5;flex-basis:100%;height:0;}
+    .rsw-sort{order:6;margin-left:auto;margin-right:42px;}
+    .rsw-col.is-plegada .rsw-sort,.rsw-col.is-plegada .rsw-col-head::after{display:none;}
+    .rsw-col-critico .rsw-col-head{padding-top:12px;padding-bottom:8px;margin-bottom:4px;}
+    .rsw-col-importante .rsw-col-head,.rsw-col-programado .rsw-col-head{padding-top:11px;}
+    .rsw-sort{position:relative;z-index:2;}
+    .rsw-sort-btn,.rsw-sort-x{min-height:32px;}
+    .rsw-col-plegar{
+      display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:36px;height:36px;margin:-6px 0;
+      background:none;border:none;border-radius:10px;color:var(--ink-soft);cursor:pointer;
+    }
+    .rsw-col-plegar::before{content:"";position:absolute;inset:0;z-index:1;}
+    .rsw-col-plegar svg{width:17px;height:17px;transition:transform var(--dur-2) var(--ease);}
+    .rsw-col-plegar:focus-visible{outline:none;box-shadow:var(--ring);}
+    .rsw-col.is-plegada .rsw-col-plegar svg{transform:rotate(-90deg);}
+    .rsw-col.is-plegada .rsw-col-body{display:none;}
+    .rsw-col-critico.is-plegada .rsw-col-head{margin-bottom:0;border-bottom-color:transparent;}
+    .rsw-col.is-abriendo .rsw-col-body{animation:rswEntrada var(--dur-3) var(--ease-emphasized) both;}
+    /* Card compacta: menos alto, misma lectura. */
+    .rsw-col-body{gap:6px;padding:0 6px 6px;}
+    .rsw-card{gap:10px;padding:8px 10px 8px 8px;border-radius:9px;}
+    .rsw-seq{min-width:26px;font-size:20px;}
+    .rsw-seq-hash{font-size:11.5px;vertical-align:3px;}
+    .rsw-cliente{font-size:14.5px;}
+    .rsw-proyecto{font-size:12.5px;line-height:1.3;}
+    .rsw-pie{margin-top:5px;padding-top:5px;}
+    .rsw-importe{font-size:14px;}
+    .rsw-fc{font-size:12px;}
+    .rsw-av-toggle{width:40px;height:40px;}
+    .rsw-av-tab{min-height:34px;}
+    .rsw-av-card{flex-basis:min(250px, 78vw);}
+  }
+  /* En táctiles el :hover queda "pegado" tras el toque: sin desplazamiento ni brillo.
+     Los tooltips de hover (.tt) tampoco se pueden ver, y como son nowrap y
+     absolutos ensanchaban el viewport de Safari (scroll horizontal fantasma). */
+  @media (hover:none){
+    .rsw-card:hover,.rsw-av-card:hover,.rs-card:hover,.resumen-card:hover,.cal-card:hover{transform:none;}
+    .rsw-card:hover::after{animation:none;}
+    .btn-toolbar .tt,.sync-indicator .tt,.filter-reset .tt{display:none;}
+  }
+  @media (hover:none) and (max-width:639px){
+    .filtros-movil .filtros-mas .filter-reset .tt{display:inline;}
+  }
+  @media screen and (max-width:767px) and (prefers-reduced-motion:reduce){
+    .rsw-col.is-abriendo .rsw-col-body,.filtros-movil.filtros-abiertos .filtros-mas,
+    table.detail-table-fit tbody tr.movil-abierta td{animation:none;}
+  }
+
+  /* MODAL DE DETALLE (Revisión semanal) Y FICHA COMPLETA — pantalla completa en
+     celular con dvh (la barra de Safari no tapa el pie), cabecera fija, cerrar
+     con área táctil de 44 px y relleno que respeta muesca e indicador de inicio. */
+  @media screen and (max-width:639px){
+    .drawer-panel{max-width:none;}
+    .drawer-panel.rsm-box{width:100%;max-width:none;height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;}
+    .rsm-head{
+      padding-top:calc(12px + env(safe-area-inset-top));
+      padding-left:max(16px, env(safe-area-inset-left));padding-right:max(16px, env(safe-area-inset-right));
+    }
+    .rsm-head-top .drawer-close{width:44px;height:44px;margin:-6px -10px -6px 0;font-size:26px;}
+    .rsm-ident .rsd-cliente{font-size:19px;}
+    .rsm-tabs{gap:22px;margin-top:10px;}
+    .rsm-tab{min-height:44px;padding:0;}
+    .rsm-box .rsd-body{padding:14px max(14px, env(safe-area-inset-right)) 16px max(14px, env(safe-area-inset-left));overscroll-behavior:contain;gap:14px;}
+    .rsd-grid{gap:12px 14px;padding:12px 14px;}
+    .rsd-panel input[type="date"],.rsd-panel select{height:40px;}
+    .rsd-t-resumen{min-height:48px;}
+    .rsm-box .rsd-footer{
+      flex-wrap:wrap;gap:6px 8px;
+      padding:10px max(16px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+    .rsm-box .rsd-acciones{order:-1;width:100%;margin-left:0;}
+    .rsm-box .rsd-acciones button{min-height:44px;}
+    .rsm-box .rsd-acciones .btn-secondary{flex:1;}
+    .rsm-box .rsd-acciones .btn-primary{flex:1.6;margin-left:0;}
+    .rsm-box .rsd-ficha{width:100%;min-height:40px;}
+
+    .modal-overlay{padding:0;}
+    .modal-box{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;overscroll-behavior:contain;}
+    .modal-box.ficha-box{height:100vh;height:100dvh;max-height:100vh;max-height:100dvh;}
+    .modal-header{padding-top:calc(14px + env(safe-area-inset-top));}
+    .modal-close{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-10px -10px -10px 0;font-size:26px;}
+    .modal-footer{padding-bottom:calc(14px + env(safe-area-inset-bottom));}
+    .modal-footer button{min-height:44px;}
+    /* Confirmaciones: diálogo centrado, no pantalla completa. */
+    #confirm-modal-overlay{padding:16px;}
+    .modal-box.confirm-box{height:auto;max-height:calc(100dvh - 32px);border-radius:16px;}
+    #confirm-modal-overlay .modal-header{padding-top:14px;}
+    #confirm-modal-overlay .modal-footer{padding-bottom:14px;}
+
+    .ficha-box .fx-head{padding:calc(12px + env(safe-area-inset-top)) 16px 10px;gap:10px 12px;}
+    .fx-head-main{flex-basis:calc(100% - 56px);}
+    .ficha-box .fx-close{margin:-8px -10px 0 0;}
+    .ficha-box .fx-title{font-size:21px;}
+    .fx-kpi-cell{padding:7px 12px;}
+    .fx-kpi-valor{font-size:17px;}
+    .fx-tab{min-height:44px;padding:0;}
+    .fx-steps,.fx-tabs{scrollbar-width:none;}
+    .fx-steps::-webkit-scrollbar,.fx-tabs::-webkit-scrollbar{display:none;}
+    .ficha-box .ficha-body{overscroll-behavior:contain;}
+    .ficha-box .modal-footer{
+      flex-wrap:wrap;gap:6px 8px;
+      padding:10px max(16px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+    .ficha-box .modal-footer-right{order:-1;width:100%;gap:8px;}
+    .ficha-box .modal-footer-right .btn-secondary{flex:1;}
+    .ficha-box .modal-footer-right .btn-primary{flex:2;font-size:14px;}
+    .ficha-box .modal-footer .btn-delete{width:100%;min-height:38px;border-color:color-mix(in srgb, var(--danger) 35%, transparent);font-size:12.5px;}
+    .ficha-box .modal-footer .btn-delete.hidden{display:none;}
+
+    .toast-stack{bottom:calc(12px + env(safe-area-inset-bottom));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));}
+    .rst-stack{top:calc(12px + env(safe-area-inset-top));left:max(12px, env(safe-area-inset-left));right:max(12px, env(safe-area-inset-right));}
+  }
+
   @media print{
     :root{
       --bg:#FFFFFF;--surface:#FFFFFF;--surface-alt:#F1F4F7;--line:#D3DAE2;
@@ -3294,7 +3650,7 @@
     .modal-overlay,.entregable-chip .ent-check,.ent-edit-btn,.rs-toolbar select,
     .rs-view-toggle,.rs-cal-nav,#rs-detail-drawer,.rs-acc-toggle,.detail-view-toggle,.detail-toolbar,#detail-view-entregas,.carga-detail-row,
     .kpi-context-tag,.resumen-block,.resumen-quickfilter-row,
-    .global-tooltip{display:none !important;}
+    .global-tooltip,.col-movil-toggle,.rsw-col-plegar{display:none !important;}
     .cliente-link{background:none !important;border:none !important;color:var(--ink) !important;font-weight:600;cursor:default;text-decoration:none;pointer-events:none;}
     .kpis-primary{grid-template-columns:repeat(3,1fr);margin-bottom:14px;}
     .kpis-secondary{grid-template-columns:repeat(4,1fr);margin-bottom:26px;}
@@ -3494,8 +3850,12 @@
   <!-- ============ TAB 01 — REVISIÓN SEMANAL ============ -->
   <div class="tab-panel active" id="revision">
     <h2 class="print-only-title">01 · Revisión semanal</h2>
-    <div class="filters filters-rs">
+    <div class="filters filters-rs filtros-movil">
       <input type="text" id="rs-f-texto" placeholder="🔍 Buscar ID, cliente o proyecto..." oninput="renderRevisionSemanal()">
+      <!-- Solo móvil: abre/cierra los filtros secundarios. En escritorio no se
+           ve y .filtros-mas usa display:contents, así la grilla queda igual. -->
+      <button type="button" class="filtros-movil-btn" aria-expanded="false" aria-controls="rs-filtros-mas" onclick="filtrosMovilToggle(this)">Filtros <span class="filtros-movil-n" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="filtros-mas" id="rs-filtros-mas">
       <div class="msel" id="rs-f-area" data-onchange="handleRSAreaChange"><button type="button" class="msel-btn" onclick="mselToggleOpen('rs-f-area',event)"><span class="msel-btn-label">Área: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
       <div class="msel" id="rs-f-asignado" data-onchange="renderRevisionSemanal"><button type="button" class="msel-btn" onclick="mselToggleOpen('rs-f-asignado',event)"><span class="msel-btn-label">Responsable asignado: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
       <div class="msel" id="rs-f-kam" data-onchange="renderRevisionSemanal"><button type="button" class="msel-btn" onclick="mselToggleOpen('rs-f-kam',event)"><span class="msel-btn-label">KAM: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
@@ -3513,6 +3873,8 @@
       <button class="filter-reset" onclick="resetFiltersRS()" aria-label="Limpiar filtros">
         <span aria-hidden="true">🧹</span><span class="tt">Limpiar filtros</span>
       </button>
+      </div>
+      <div class="filtros-chips" aria-label="Filtros activos"></div>
       <!-- Abre la MISMA ficha de creación que "Nueva oportunidad" de Detalle. -->
       <button type="button" class="btn-add" id="btn-add-oportunidad-rs" onclick="openAddModal()"><span aria-hidden="true">+</span> Agregar oportunidad</button>
     </div>
@@ -3755,7 +4117,7 @@
       <div class="resumen-quickfilter-row" id="resumen-op-chip-row" style="display:none;">
         <span class="resumen-quickfilter-chip"><span id="resumen-op-chip-label"></span><button type="button" onclick="clearResumenOpQuickFilter()" aria-label="Quitar filtro">&times;</button></span>
       </div>
-      <div class="filters">
+      <div class="filters filtros-movil">
         <div class="detail-view-toggle" id="detail-view-toggle">
           <button type="button" class="detail-view-btn active" data-detail-view="oportunidades" onclick="setDetailView('oportunidades')">
             <span aria-hidden="true">💼</span> Oportunidades</button>
@@ -3763,6 +4125,8 @@
             <span aria-hidden="true">📦</span> Entregas</button>
         </div>
         <input type="text" id="f-texto" placeholder="🔍 Buscar ID, cliente o proyecto..." oninput="applyFiltersDetalle()">
+        <button type="button" class="filtros-movil-btn" aria-expanded="false" aria-controls="f-filtros-mas" onclick="filtrosMovilToggle(this)">Filtros <span class="filtros-movil-n" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filtros-mas" id="f-filtros-mas">
         <div class="msel" id="f-kam" data-onchange="applyFiltersDetalle"><button type="button" class="msel-btn" onclick="mselToggleOpen('f-kam',event)"><span class="msel-btn-label">KAM: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
         <div class="msel" id="f-etapa" data-onchange="applyFiltersDetalle"><button type="button" class="msel-btn" onclick="mselToggleOpen('f-etapa',event)"><span class="msel-btn-label">Etapa: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
         <div class="msel" id="f-resp" data-onchange="handleDetalleAreaChange"><button type="button" class="msel-btn" onclick="mselToggleOpen('f-resp',event)"><span class="msel-btn-label">Área responsable: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
@@ -3777,6 +4141,8 @@
         <button class="filter-reset" onclick="resetFiltersDetalle()" aria-label="Limpiar filtros">
           <span aria-hidden="true">🧹</span><span class="tt">Limpiar filtros</span>
         </button>
+        </div>
+        <div class="filtros-chips" aria-label="Filtros activos"></div>
         <span class="filter-count" id="f-count"></span>
         <button class="btn-add" id="btn-add-oportunidad" onclick="openAddModal()"><span aria-hidden="true">➕</span> Nueva oportunidad</button>
       </div>
@@ -3849,7 +4215,7 @@
       <div class="resumen-quickfilter-row" id="resumen-ent-chip-row" style="display:none;">
         <span class="resumen-quickfilter-chip"><span id="resumen-ent-chip-label"></span><button type="button" onclick="clearResumenEntQuickFilter()" aria-label="Quitar filtro">&times;</button></span>
       </div>
-      <div class="filters" id="ent-filters">
+      <div class="filters filtros-movil" id="ent-filters">
         <div class="detail-view-toggle" id="detail-view-toggle-entregas">
           <button type="button" class="detail-view-btn" data-detail-view="oportunidades" onclick="setDetailView('oportunidades')">
             <span aria-hidden="true">💼</span> Oportunidades</button>
@@ -3857,6 +4223,8 @@
             <span aria-hidden="true">📦</span> Entregas</button>
         </div>
         <input type="text" id="ent-f-texto" placeholder="🔍 Buscar ID, cliente, proyecto o KAM..." oninput="renderDetalleEntregas()">
+        <button type="button" class="filtros-movil-btn" aria-expanded="false" aria-controls="ent-filtros-mas" onclick="filtrosMovilToggle(this)">Filtros <span class="filtros-movil-n" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="filtros-mas" id="ent-filtros-mas">
         <div class="msel" id="ent-f-kam" data-onchange="renderDetalleEntregas"><button type="button" class="msel-btn" onclick="mselToggleOpen('ent-f-kam',event)"><span class="msel-btn-label">KAM: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
         <div class="msel" id="ent-f-etapa" data-onchange="renderDetalleEntregas"><button type="button" class="msel-btn" onclick="mselToggleOpen('ent-f-etapa',event)"><span class="msel-btn-label">Etapa: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
         <div class="msel" id="ent-f-resp" data-onchange="renderDetalleEntregas"><button type="button" class="msel-btn" onclick="mselToggleOpen('ent-f-resp',event)"><span class="msel-btn-label">Área responsable: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
@@ -3873,6 +4241,8 @@
         <button class="filter-reset" onclick="resetFiltersEntregas()" aria-label="Limpiar filtros">
           <span aria-hidden="true">🧹</span><span class="tt">Limpiar filtros</span>
         </button>
+        </div>
+        <div class="filtros-chips" aria-label="Filtros activos"></div>
         <span class="filter-count" id="ent-f-count"></span>
       </div>
       <div class="table-scroll detail-table-shell detail-table-shell-entregas">
@@ -6324,15 +6694,19 @@ function mselUpdateButtonLabel(id){
   const baseLabel = allLabel.split(':')[0];
   /* Ninguna marcada y todas marcadas describen lo mismo (sin restricción), así
      que el botón muestra el rótulo "todos" y no queda resaltado en ambos casos. */
-  if(set.size===0 || mselAllSelected(id)){ btn.textContent = allLabel; root.classList.remove('msel-active'); return; }
-  root.classList.add('msel-active');
-  if(set.size===1){
-    const val = [...set][0];
-    const opt = options.find(o=>o.value===val);
-    btn.textContent = baseLabel + ': ' + (opt ? opt.label : val);
-  } else {
-    btn.textContent = baseLabel + ': ' + set.size + ' seleccionadas';
+  if(set.size===0 || mselAllSelected(id)){ btn.textContent = allLabel; root.classList.remove('msel-active'); }
+  else {
+    root.classList.add('msel-active');
+    if(set.size===1){
+      const val = [...set][0];
+      const opt = options.find(o=>o.value===val);
+      btn.textContent = baseLabel + ': ' + (opt ? opt.label : val);
+    } else {
+      btn.textContent = baseLabel + ': ' + set.size + ' seleccionadas';
+    }
   }
+  /* Contador y chips de la barra de filtros móvil (solo presentación). */
+  filtrosMovilSync(root.closest('.filters'));
 }
 function mselFireChange(id){
   const fnName = document.getElementById(id).dataset.onchange;
@@ -7047,11 +7421,34 @@ function rsColOrdenLimpiar(key){
   rsColOrden[key] = null;
   renderRevisionSemanal();
 }
+/* Secciones plegables del tablero — solo tienen efecto en celular (en
+   escritorio el botón no se ve y .is-plegada no oculta nada). Por defecto
+   Crítico e Importante quedan abiertas y Programado plegada, salvo que no
+   haya nada urgente visible: entonces Programado es lo más relevante y abre.
+   Lo que el usuario pliega o despliega a mano se respeta en los repintados. */
+const rsColPlegadaManual = {};
+function rsColPlegadaMovil(key, hayUrgentes){
+  if(key in rsColPlegadaManual) return rsColPlegadaManual[key];
+  return key==='programado' && hayUrgentes;
+}
+function rsColPlegarToggle(btn, key){
+  const col = btn.closest('.rsw-col');
+  const plegada = !col.classList.contains('is-plegada');
+  rsColPlegadaManual[key] = plegada;
+  col.classList.toggle('is-plegada', plegada);
+  /* Entrada suave solo al desplegar a mano, no en cada repintado. */
+  col.classList.toggle('is-abriendo', !plegada);
+  if(!plegada) setTimeout(()=>col.classList.remove('is-abriendo'), 400);
+  btn.setAttribute('aria-expanded', String(!plegada));
+  const titulo = (RS_COLUMNAS.find(c=>c.key===key) || {}).titulo || '';
+  btn.setAttribute('aria-label', (plegada ? 'Desplegar ' : 'Plegar ') + titulo);
+}
 function renderRSLista(alcance, filters){
   const board = document.getElementById('rs-list');
   const {seq, visibles} = alcance;
   document.getElementById('rs-count').textContent = visibles.length + ' de ' + seq.length + (seq.length===1 ? ' proyecto' : ' proyectos');
   board.className = 'rsw-board';
+  const hayUrgentes = visibles.some(x=>rsColDe(x.o)<2);
   board.innerHTML = RS_COLUMNAS.map((col, ci)=>{
     let items = visibles.filter(x=>rsColDe(x.o)===ci);
     const total = seq.filter(o=>rsColDe(o)===ci).length;
@@ -7065,11 +7462,13 @@ function renderRSLista(alcance, filters){
       ? items.map(x=>rsCardHtml(x.o, x.n, filters)).join('')
       : `<div class="rsw-empty">${seq.length ? 'Arrastra proyectos aquí' : 'Sin proyectos con trabajo pendiente'}</div>`;
     const conteo = items.length===total ? String(total) : items.length + ' / ' + total;
-    return `<section class="rsw-col rsw-col-${col.key}">
+    const plegada = rsColPlegadaMovil(col.key, hayUrgentes);
+    return `<section class="rsw-col rsw-col-${col.key}${plegada ? ' is-plegada' : ''}">
       <header class="rsw-col-head">
         <span class="rsw-col-title">${col.titulo}</span><span class="rsw-col-count" title="${items.length===total ? '' : 'Visibles con los filtros / total de la columna'}">${conteo}</span>
         ${sorter}
         <span class="rsw-col-importe" title="Importe de los proyectos visibles">${formatMoneda(importeCol)}</span>
+        <button type="button" class="rsw-col-plegar" aria-expanded="${!plegada}" aria-label="${plegada ? 'Desplegar' : 'Plegar'} ${col.titulo}" onclick="rsColPlegarToggle(this,'${col.key}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       </header>
       <div class="rsw-col-body" ondragover="rsColumnDragOver(event)" ondragleave="rsColumnDragLeave(event)" ondrop="rsColumnDrop(event,${ci})">${body}</div>
     </section>`;
@@ -9310,6 +9709,51 @@ function ordenarPorSegmentadorOrden(sortBy){
   if(sortBy.startsWith('fecha')) return compararPorFecha(sortBy);
   return compararPorImporte(sortBy);
 }
+/* Fichas móviles de Detalle (Oportunidades / Entregas): en celular cada fila
+   muestra solo lo principal y "Ver detalle" despliega el resto de columnas.
+   Es solo presentación: en escritorio la celda del botón no se ve (CSS) y
+   no cambia ningún dato. Las fichas abiertas se recuerdan por id para que un
+   repintado (filtros, sincronización) no las vuelva a cerrar. */
+const detalleMovilAbiertas = {op:new Set(), ent:new Set()};
+function detalleMovilClase(tabla, id){
+  return detalleMovilAbiertas[tabla].has(id) ? ' class="movil-abierta"' : '';
+}
+function detalleMovilToggleHtml(tabla, id){
+  const abierta = detalleMovilAbiertas[tabla].has(id);
+  return `<td class="col-movil-toggle"><button type="button" class="movil-detalle-btn" aria-expanded="${abierta}" onclick="detalleMovilToggle(this,'${tabla}',${id})"><span>${abierta ? 'Ocultar detalle' : 'Ver detalle'}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></td>`;
+}
+function detalleMovilToggle(btn, tabla, id){
+  const tr = btn.closest('tr');
+  const abierta = !tr.classList.contains('movil-abierta');
+  tr.classList.toggle('movil-abierta', abierta);
+  if(abierta) detalleMovilAbiertas[tabla].add(id); else detalleMovilAbiertas[tabla].delete(id);
+  btn.setAttribute('aria-expanded', String(abierta));
+  btn.querySelector('span').textContent = abierta ? 'Ocultar detalle' : 'Ver detalle';
+}
+/* Barra de filtros en móvil: "Filtros" despliega los secundarios y, con el
+   panel cerrado, los segmentadores activos se ven como chips (con × para
+   quitarlos). En escritorio el botón y los chips no se muestran. */
+function filtrosMovilToggle(btn){
+  const barra = btn.closest('.filters');
+  const abierta = !barra.classList.contains('filtros-abiertos');
+  barra.classList.toggle('filtros-abiertos', abierta);
+  btn.setAttribute('aria-expanded', String(abierta));
+  if(!abierta) barra.querySelectorAll('.msel.open').forEach(el=>el.classList.remove('open'));
+}
+function filtrosMovilSync(barra){
+  if(!barra) return;
+  const btnN = barra.querySelector('.filtros-movil-n');
+  const chips = barra.querySelector('.filtros-chips');
+  if(!btnN || !chips) return;
+  const activos = [...barra.querySelectorAll('.filtros-mas .msel.msel-active')];
+  btnN.textContent = activos.length;
+  btnN.hidden = !activos.length;
+  chips.innerHTML = activos.map(m=>`<span class="filtros-chip"><span class="filtros-chip-txt">${escAttr(m.querySelector('.msel-btn-label').textContent)}</span><button type="button" onclick="filtrosChipQuitar('${m.id}')" aria-label="Quitar filtro">&times;</button></span>`).join('');
+}
+function filtrosChipQuitar(id){
+  mselClear(id);
+  mselFireChange(id);
+}
 function renderDetalle(){
   const sortBy = document.getElementById('f-sort').value || 'importe-desc';
   const list = getOportunidadesInternas().slice().sort(ordenarPorSegmentadorOrden(sortBy));
@@ -9322,7 +9766,7 @@ function renderDetalle(){
     const asignadoText = asignPairs.length ? asignPairs.map(p=>p.nombre).join(' · ') : '—';
     const asignadoTitle = asignPairs.length ? asignPairs.map(p=>`${RESP_ACTUAL_LABEL[p.area]||p.area} — ${p.nombre}${p.entregableNombre?' ('+p.entregableNombre+')':''}`).join('\n') : '—';
     const asignadoPairsAttr = escAttr(JSON.stringify(asignPairs.map(p=>({area:p.area,nombre:p.nombre}))));
-    return `<tr data-id="${o.id}" data-kam="${o.kam}" data-etapa="${o.etapa}" data-asignado-pairs="${asignadoPairsAttr}" data-pri="${o.prioridad}" data-prob="${probabilidadBucketKey(o.probabilidadCierre)}" data-orden-trabajo="${o.ordenTrabajo}" data-resp-actual="${o.responsableActual}" data-accion-pendiente="${o.accionPendienteCliente ? '1' : '0'}">
+    return `<tr${detalleMovilClase('op', o.id)} data-id="${o.id}" data-kam="${o.kam}" data-etapa="${o.etapa}" data-asignado-pairs="${asignadoPairsAttr}" data-pri="${o.prioridad}" data-prob="${probabilidadBucketKey(o.probabilidadCierre)}" data-orden-trabajo="${o.ordenTrabajo}" data-resp-actual="${o.responsableActual}" data-accion-pendiente="${o.accionPendienteCliente ? '1' : '0'}">
       <td class="mono" data-label="ID">#${o.id}</td>
       <td class="col-cliente" data-label="Cliente"><button class="cliente-link" onclick="openEditModal(${o.id})" title="${escAttr(o.cliente)}">${o.cliente}</button></td>
       <td class="proj col-proyecto" data-label="Proyecto" title="${escAttr(o.proyecto)}">${o.proyecto}</td>
@@ -9335,6 +9779,7 @@ function renderDetalle(){
       <td class="mono col-mes-cierre" data-label="Mes de cierre">${formatMesCierre(o.mesCierre)}</td>
       <td class="mono col-prob-cierre" data-label="Prob. de cierre">${formatProbabilidadCierre(o.probabilidadCierre)}</td>
       <td class="mono col-ronda" data-label="Ronda">${rondaBadgeHtml(o)}</td>
+      ${detalleMovilToggleHtml('op', o.id)}
     </tr>`;
   }).join('');
   populateResponsableAsignadoOptions();
@@ -9743,7 +10188,7 @@ let entregasFilteredRows = [];
 let entregasPage = 1;
 const ENTREGAS_PAGE_SIZE = 10;
 function entregaRowHtml(o){
-  return `<tr>
+  return `<tr${detalleMovilClase('ent', o.id)}>
       <td class="mono" data-label="ID">#${o.id}</td>
       <td class="col-cliente" data-label="Cliente"><button class="cliente-link" onclick="openEditModal(${o.id})" title="${escAttr(o.cliente)}">${o.cliente}</button></td>
       <td class="proj col-proyecto" data-label="Proyecto" title="${escAttr(o.proyecto)}">${o.proyecto}</td>
@@ -9755,6 +10200,7 @@ function entregaRowHtml(o){
       <td class="plain-text col-paso" data-label="Próximo paso" title="${escAttr(o.proximoPaso||'')}">${o.proximoPaso || '—'}</td>
       <td class="mono col-prob-cierre" data-label="Prob. de cierre">${formatProbabilidadCierre(o.probabilidadCierre)}</td>
       <td class="mono col-ronda" data-label="Ronda">${rondaBadgeHtml(o)}</td>
+      ${detalleMovilToggleHtml('ent', o.id)}
     </tr>`;
 }
 function renderEntregasTablePage(){
@@ -11976,6 +12422,24 @@ function positionTabIndicator(){
   tabs.classList.add('indicator-ready');
 }
 window.addEventListener('resize', positionTabIndicator);
+/* Móvil: la fila de pestañas se desplaza en horizontal sin barra visible; un
+   desvanecido lateral (CSS, .fade-izq/.fade-der) avisa que hay más pestañas
+   fuera de pantalla. En escritorio no hay desborde y no se marca nada. */
+function actualizarFadeTabs(){
+  const tabs = document.querySelector('.tabbar .tabs');
+  if(!tabs) return;
+  const resto = tabs.scrollWidth - tabs.clientWidth - tabs.scrollLeft;
+  tabs.classList.toggle('fade-izq', tabs.scrollLeft > 2);
+  tabs.classList.toggle('fade-der', resto > 2);
+}
+(function(){
+  const tabs = document.querySelector('.tabbar .tabs');
+  if(!tabs) return;
+  tabs.addEventListener('scroll', actualizarFadeTabs, {passive:true});
+  window.addEventListener('resize', actualizarFadeTabs);
+  actualizarFadeTabs();
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(actualizarFadeTabs);
+})();
 
 /* ============================================================
    MOSTRAR / OCULTAR KPIs
