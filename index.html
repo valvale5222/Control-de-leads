@@ -1240,7 +1240,7 @@
   .des-items{display:flex;flex-direction:column;}
   .des-items.is-entrando{animation:rswEntrada var(--dur-2) var(--ease) both;}
   .des-item{
-    width:100%;display:grid;grid-template-columns:128px minmax(0,1.2fr) minmax(0,1.1fr) 222px 150px;align-items:center;gap:14px;
+    width:100%;display:grid;grid-template-columns:128px minmax(0,1.1fr) minmax(0,1fr) 290px 150px;align-items:center;gap:14px;
     background:none;border:none;
     padding:10px 6px;cursor:pointer;text-align:left;color:var(--ink);font-family:'Inter',sans-serif;border-radius:0;
     transition:background-color var(--dur-1) var(--ease);
@@ -1265,7 +1265,7 @@
   .des-item-main b{font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .des-item-ent b{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .des-item-main span,.des-item-ent span{font-size:11.5px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .des-fechas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .des-fechas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
   .des-fecha{display:flex;flex-direction:column;gap:1px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;white-space:nowrap;}
   .des-fecha.is-reprog{color:var(--violet);}
   /* Resultado contra cada referencia, en dos líneas. */
@@ -1281,6 +1281,8 @@
   .des-item-det-inner{overflow:hidden;display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;}
   .des-item-wrap.is-open .des-item-det-inner{padding:2px 6px 12px 148px;}
   .des-hist{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 320px;}
+  .des-ciclo{margin:0 0 8px;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);}
+  .des-ciclo b{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);margin-left:4px;}
   .des-hist-k{margin:0 0 2px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-dim);}
   .des-hist-row{display:grid;grid-template-columns:118px minmax(0,1fr) auto;gap:12px;align-items:baseline;font-size:12px;color:var(--ink-soft);}
   .des-hist-cuando{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-dim);white-space:nowrap;}
@@ -2796,6 +2798,12 @@
   .checkbox-label input{width:auto;padding:0;}
   .otro-input.hidden{display:none;}
   .confirm-details{display:flex;flex-direction:column;gap:8px;margin-top:-8px;padding:12px 14px;background:var(--surface-alt);border:1px solid var(--line);border-radius:var(--radius-md);font-size:12.5px;}
+  /* Fecha real de entrega al completar: separada del resto por una línea. */
+  .confirm-fecha-real{flex-direction:row !important;align-items:center;margin-top:4px;padding-top:10px;border-top:1px solid var(--line);
+    font-size:12.5px;text-transform:none;letter-spacing:0;}
+  .confirm-fecha-real span{display:flex;flex-direction:column;gap:2px;color:var(--ink);font-weight:600;}
+  .confirm-fecha-real small{font-size:11px;font-weight:400;color:var(--ink-dim);text-transform:none;letter-spacing:0;}
+  .confirm-fecha-real input{width:auto;flex-shrink:0;}
   .modal-footer{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface);}
   .modal-footer-right{display:flex;gap:10px;}
   .dias-preview{display:flex;gap:18px;flex-wrap:wrap;background:var(--surface-alt);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--ink-soft);}
@@ -3127,6 +3135,11 @@
   .ficha-box .ficha-body input.fx-detalle-otro{margin:-6px 0 12px;}
   .fx-detalle-grid{display:grid;grid-template-columns:minmax(0,1fr) 140px 140px;gap:10px;}
   .fx-detalle-grid.is-comercial{grid-template-columns:minmax(0,1fr) 140px;}
+  .fx-fechas-tarea{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px;padding:9px 12px;border-radius:10px;background:var(--surface-alt);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--ink);}
+  .fx-fechas-tarea span{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .fx-fechas-tarea em{font-family:'Inter',sans-serif;font-style:normal;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-dim);}
+  .fx-fechas-tarea .is-reprog{color:var(--violet);}
+  @media (max-width:560px){ .fx-fechas-tarea{grid-template-columns:repeat(2,minmax(0,1fr));} }
   @media (max-width:560px){ .fx-detalle-grid,.fx-detalle-grid.is-comercial{grid-template-columns:minmax(0,1fr);} }
   .fx-detalle .fx-campo > span:first-child{display:block;margin-bottom:5px;font-size:10px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
   .fx-detalle-estado{margin-top:14px;}
@@ -3933,6 +3946,7 @@
                 <label class="fx-campo"><span>Margen %</span><input type="number" id="m-margen-comercial" class="ficha-input fx-num" min="0" max="100" step="0.01" placeholder="Agregar…"></label>
                 <label class="fx-campo"><span>Fecha de inicio</span><input type="date" id="m-fecha-inicio" class="ficha-input"></label>
                 <label class="fx-campo"><span>Seguimiento</span><input type="date" id="m-fecha-seguimiento" class="ficha-input"></label>
+                <label class="fx-campo" title="Fecha comprometida con el cliente: una sola para todo el proyecto"><span>Fecha cliente</span><input type="date" id="m-fecha-cliente" class="ficha-input" onchange="fichaFechaClienteProyecto(this.value)"></label>
                 <div class="fx-campo fx-span-3"><span>Sistema / refrigerante</span>
                   <div class="fx-dual" id="ficha-refrig-dual">
                     <select id="m-refrigerante" class="ficha-input" aria-label="Sistema / refrigerante" onchange="wireOtro('m-refrigerante','m-refrigerante-otro');fichaRefrigOtro()"><option value="">Agregar…</option><option value="CO2">CO₂</option><option value="Amoniaco">Amoníaco</option><option value="Amoniaco/Glicol">Amoníaco/Glicol</option><option value="Freon">Freón</option><option value="HVAC">HVAC</option><option value="otro">Otro</option></select>
@@ -4228,14 +4242,37 @@ function esTareaActiva(e){ return e.estadoTarea==='en_proceso' || e.estadoTarea=
 /* Único punto que cambia el estado de una tarea. Mantiene e.estado y
    fechaCompletado alineados; el bloqueo (origen/detalle) NO se borra al salir
    de Bloqueado: queda como antecedente y el Historial registra el desbloqueo. */
-function aplicarEstadoTarea(e, v){
+function aplicarEstadoTarea(e, v, fechaReal){
   if(!ESTADO_TAREA_LABEL[v]) return;
   e.estadoTarea = v;
   e.estado = estadoGruesoDeTarea(v);
-  if(v==='completado'){ if(!e.fechaCompletado) e.fechaCompletado = todayISO(); }
+  /* Fecha real de cumplimiento: la que indica quien completa (ver
+     fechaRealCampoHtml); si no llega, se conserva la que tenía o se usa hoy. */
+  if(v==='completado') e.fechaCompletado = fechaReal || e.fechaCompletado || todayISO();
   else e.fechaCompletado = '';
 }
+/* Campo "Fecha real de entrega" del diálogo de completar: por defecto hoy,
+   editable, nunca futura. Es lo que mide Desempeño (no el día del clic). */
+function fechaRealCampoHtml(e){
+  const hoy = todayISO();
+  const prog = e && e.fechaEntrega ? ' · programada ' + formatFechaCorta(e.fechaEntrega) : '';
+  return `<label class="drawer-row confirm-fecha-real"><span>Fecha real de entrega<small>Día en que realmente se entregó${prog}</small></span>
+    <input type="date" id="confirm-fecha-real" value="${hoy}" max="${hoy}" required></label>`;
+}
+/* Lee el campo al confirmar. Vacía o futura → hoy (con aviso si era futura). */
+function leerFechaReal(){
+  const el = document.getElementById('confirm-fecha-real');
+  const hoy = todayISO();
+  const v = el ? el.value : '';
+  if(!v) return hoy;
+  if(v > hoy){ showToast('La fecha real no puede ser futura: se registró hoy.', 'warn'); return hoy; }
+  return v;
+}
 /* FECHAS DEL ENTREGABLE
+     · fechaCreacion   — cuándo se registró la tarea. Sale de lo más temprano
+                         entre created_at de Supabase y el evento "Tarea creada"
+                         del historial; una tarea nueva toma hoy. Sirve para el
+                         tiempo de ciclo (creación → real), no para cumplimiento.
      · fechaOriginal   — planificada original: se fija UNA vez, con la primera
                          fecha que tiene la tarea (al crearla, o la vigente
                          actual en tareas antiguas que no la tenían) y después
@@ -4248,6 +4285,19 @@ function aplicarEstadoTarea(e, v){
 function fijarFechaOriginal(e){
   if(typeof e.fechaOriginal!=='string') e.fechaOriginal = '';
   if(!e.fechaOriginal && e.fechaEntrega) e.fechaOriginal = e.fechaEntrega;
+  if(typeof e.fechaCreacion!=='string') e.fechaCreacion = '';
+}
+/* Fecha local (YYYY-MM-DD) de un timestamp ISO. */
+function isoLocalDeTs(ts){
+  const d = new Date(ts);
+  if(!ts || isNaN(d)) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+/* La más temprana de las fuentes conocidas de la creación de una tarea. */
+function fechaCreacionDe(o, e){
+  const ev = (o.historial || []).filter(h=>h.entregableId===e.id && h.cambio==='Tarea creada')
+    .map(h=>isoLocalDeTs(h.ts)).filter(Boolean).sort()[0] || '';
+  return [e.fechaCreacion, e.creadoEn, ev].filter(Boolean).sort()[0] || '';
 }
 /* Recuperación desde el historial: cada cambio de fecha de una tarea quedó
    registrado ("Cambio de fecha interna" / "Reprogramación (fecha interna)",
@@ -4289,6 +4339,8 @@ function recuperarFechasOriginales(lista){
   lista.forEach(o=>o.entregables.forEach(e=>{
     const h = fechaOriginalDesdeHistorial(o, e);
     if(h && h !== e.fechaOriginal){ e.fechaOriginal = h; n++; }
+    const c = fechaCreacionDe(o, e);
+    if(c && c !== e.fechaCreacion){ e.fechaCreacion = c; n++; }
   }));
   return n;
 }
@@ -4993,10 +5045,9 @@ function envioDeOrigen(lista, origen){
        registra fechaCompletado.
      · Completar o reabrir NO crea tareas hijas: ya no se genera ningún
        «Enviar al cliente» automático en Comercial.
-     · «Enviar al cliente» → Completada: apaga pendienteEnvioCliente de su origen
-       y avisa con enviado=true para que quien llama pase la oportunidad a
-       Análisis de cliente (en el borrador de la ficha lo resuelve la etapa
-       automática al guardar).
+     · «Enviar al cliente» → Completada: apaga pendienteEnvioCliente de su origen.
+       La etapa NO cambia sola (es manual).
+     · ctx.fechaReal: fecha real de entrega elegida al completar.
    ctx se conserva por compatibilidad. Devuelve {completada, nuevoEnvio:null, enviado}.
    ============================================================ */
 function contextoNegocioDe(o){
@@ -5006,7 +5057,7 @@ function cambiarEstadoTarea(lista, e, valor, ctx){
   const res = {completada:false, nuevoEnvio:null, enviado:false};
   if(!e || !ESTADO_TAREA_LABEL[valor]) return res;
   const tareaPrevia = e.estadoTarea;
-  aplicarEstadoTarea(e, valor);
+  aplicarEstadoTarea(e, valor, ctx && ctx.fechaReal);
   res.completada = tareaPrevia!=='completado' && e.estadoTarea==='completado';
   if(esEntregableEnvio(e)){
     const origen = lista.find(x=>x.id===e.envioOrigenId);
@@ -5276,6 +5327,8 @@ function rowToEntregable(r){
     fechaEntrega: r.fecha_entrega || '',
     fechaComprometidaCliente: r.fecha_comprometida_cliente || '',
     fechaCompletado: r.fecha_completado || '',
+    /* Creación real de la fila en la base (no se envía: la pone Supabase). */
+    creadoEn: r.created_at ? isoLocalDeTs(r.created_at) : '',
     /* undefined = la base no tiene la columna (ver cargarDesdeSupabase). */
     fechaOriginal: Object.prototype.hasOwnProperty.call(r, 'fecha_original') ? (r.fecha_original ? String(r.fecha_original).slice(0,10) : '') : undefined,
     estado: r.estado_tarea==='cancelado' ? 'cancelado' : (r.estado || ''),
@@ -5388,6 +5441,7 @@ async function cargarDesdeSupabase(opts){
       nuevas.forEach(o=>o.entregables.forEach(e=>{
         const p = previasEnt.get(e.id);
         if(!e.fechaOriginal && p && p.fechaOriginal) e.fechaOriginal = p.fechaOriginal;
+        if(p && p.fechaCreacion) e.fechaCreacion = p.fechaCreacion;
       }));
     }
     /* Foto de lo que hay en la nube: contra ella se calcula qué subir (solo los
@@ -5701,7 +5755,10 @@ function persistLocal(opts){
   if(!puedeEditar){ avisarSoloLectura(); return; }
   /* La fecha original se fija acá, en el portón único: una tarea que recién
      recibe su primera fecha (desde cualquier vista) queda con esa referencia. */
-  oportunidades.forEach(o=>o.entregables.forEach(fijarFechaOriginal));
+  oportunidades.forEach(o=>o.entregables.forEach(e=>{
+    fijarFechaOriginal(e);
+    if(!e.fechaCreacion) e.fechaCreacion = fechaCreacionDe(o, e) || todayISO();
+  }));
   /* Historial + estado general automático: se resuelven acá para que valgan
      igual desde la ficha que desde cualquier otra vista. */
   procesarCambiosOportunidades();
@@ -5778,6 +5835,7 @@ function fotoHistorial(o){
     tareas[e.id] = {
       nombre:e.nombre||'', area:e.area||'', responsable:e.responsable||'', responsableOtro:e.responsableOtro||'',
       fechaEntrega:e.fechaEntrega||'', fechaComprometidaCliente:e.fechaComprometidaCliente||'',
+      fechaCompletado:e.fechaCompletado||'',
       estadoTarea:e.estadoTarea||'', bloqueoOrigen:e.bloqueoOrigen||'', bloqueoDetalle:e.bloqueoDetalle||'',
       envioOrigenId:e.envioOrigenId==null ? null : e.envioOrigenId,
     };
@@ -5841,14 +5899,16 @@ function eventosDeTareas(antes, ahora, ev){
         ev(area, 'Desbloqueo', nombreT + ' · ' + textoBloqueo(a), ant, nue, eid);
         if(cierre) ev(area, cierre, nombreT, ant, nue, eid);
       }
-      else ev(area, cierre || 'Cambio de estado', nombreT, ant, nue, eid);
+      else ev(area, cierre || 'Cambio de estado', nombreT + (b.estadoTarea==='completado' && b.fechaCompletado ? ' · real ' + formatFechaCorta(b.fechaCompletado) : ''), ant, nue, eid);
     } else if(b.estadoTarea==='bloqueado' && (a.bloqueoOrigen !== b.bloqueoOrigen || a.bloqueoDetalle !== b.bloqueoDetalle)){
       ev(area, 'Cambio de bloqueo', nombreT, textoBloqueo(a), textoBloqueo(b), eid);
     }
   });
 }
 
-/* ---------- Estado general automático (lógica híbrida) ----------
+/* ---------- Estado general automático — DESACTIVADO ----------
+   Ya no se llama: la etapa es solo manual (ver procesarCambiosOportunidades).
+   Se conserva la función como referencia de las reglas anteriores.
    Solo se evalúa cuando cambió alguna tarea de la oportunidad, y nunca pisa
    una etapa elegida a mano en ese mismo guardado. Negociación, Postpuesto,
    Vendido, Perdido y Cancelado son siempre manuales. Cada regla solo avanza
@@ -5890,7 +5950,6 @@ function responsableActualParaEtapa(o, etapa){
 function procesarCambiosOportunidades(){
   if(!historialBase){ tomarBaseHistorial(); return; }
   const nuevos = [];
-  const avisosEtapa = [];
   let t = Date.now();
   oportunidades.forEach(o=>{
     const antes = historialBase.get(o.id);
@@ -5951,17 +6010,9 @@ function procesarCambiosOportunidades(){
         o.accionPendienteCliente = false;
         o.descripcionPendiente = '';
       }
-      if(base.etapa === ahora.etapa){
-        const auto = etapaAutomatica(o);
-        if(auto && auto !== o.etapa){
-          const previa = o.etapa;
-          o.etapa = auto;
-          o.responsableActual = responsableActualParaEtapa(o, auto);
-          sincronizarEstadoOperativo(o);
-          ev('sistema', 'Cambio de etapa', 'Automático según el trabajo del equipo', etapaLabelDisplay(previa), etapaLabelDisplay(auto));
-          avisosEtapa.push('#' + o.id + ' → ' + etapaLabelDisplay(auto));
-        }
-      }
+      /* La etapa es SOLO MANUAL: completar, bloquear o reabrir tareas ya no
+         la mueve (antes pasaba sola a En proceso, Entregada o Análisis de
+         cliente). Se cambia en la ficha o en el detalle. */
     }
     if(evs.length){
       o.historial = (o.historial || []).concat(evs);
@@ -5972,9 +6023,6 @@ function procesarCambiosOportunidades(){
   if(nuevos.length){
     historialPendiente = historialPendiente.concat(nuevos);
     guardarHistorialPendiente();
-  }
-  if(avisosEtapa.length && avisosEtapa.length <= 3){
-    showToast('Estado actualizado automáticamente: ' + avisosEtapa.join(' · '), 'info');
   }
 }
 
@@ -7692,9 +7740,9 @@ function rsDrawerGuardar(btn){
   if(!o || !rsDraftSucio()) return;
   confirmarGuardado([['Oportunidad', '#' + o.id + ' · ' + o.cliente]].concat(rsDraftCambios(o, rsDraft)), ()=>rsDrawerAplicar(o.id), btn);
 }
-/* Escribe el borrador en la oportunidad con las mismas reglas de siempre:
-   «Enviar al cliente» completado pasa a Análisis de cliente, la ronda se
-   reafirma y persistLocal() registra historial y sincroniza. */
+/* Escribe el borrador en la oportunidad con las mismas reglas de siempre: la
+   ronda se reafirma y persistLocal() registra historial y sincroniza. La etapa
+   no se toca (es manual). */
 function rsDrawerAplicar(oppId){
   const o = oportunidades.find(x=>x.id===oppId);
   const d = rsDraft;
@@ -7709,20 +7757,14 @@ function rsDrawerAplicar(oppId){
   o.entregables = JSON.parse(JSON.stringify(d.entregables));
   o.incidencias = JSON.parse(JSON.stringify(d.incidencias));
   const nuevasCompletadas = o.entregables.filter(e=>e.estadoTarea==='completado' && !completadasAntes.has(e.id));
-  let avisoEnvio = '';
-  if(nuevasCompletadas.some(esEntregableEnvio)){
-    o.etapa = 'analisis';
-    o.responsableActual = 'cliente';
-    avisoEnvio = '📤 Enviado al cliente · pasa a Análisis de cliente y se mueve a Entregas.';
-  }
+  /* La etapa ya no cambia sola al completar un envío: se decide a mano. */
   finalizarRondaSiCorresponde(oppId);
   rsDraft = null;
   persistLocal();
   renderAll();
   openRSDetailDrawer(oppId);
   nuevasCompletadas.forEach(e=>rsToastCompletada(o, e, numPrevio));
-  if(avisoEnvio) showToast(avisoEnvio, 'ok');
-  else if(!nuevasCompletadas.length) showToast('Cambios guardados.', 'ok');
+  if(!nuevasCompletadas.length) showToast('Cambios guardados.', 'ok');
   const movida = o.entregables.find(e=>e.estado==='pendiente' && e.fechaEntrega && e.fechaEntrega!==fechasAntes.get(e.id));
   if(movida) rsAvisarRiesgoFecha(o, movida.fechaEntrega);
 }
@@ -7791,6 +7833,21 @@ function rsDrawerTarea(oppId, entId, campo, valor){
     if(metrado) metrado.fechaEntrega = e.fechaEntrega;
   } else if(campo==='estado'){
     if(!ESTADO_TAREA_LABEL[valor] || e.estadoTarea===valor) return;
+    if(valor==='completado'){
+      /* Igual que en el resto del panel: se confirma con la fecha real. Si se
+         cancela, el selector vuelve a su estado (se repinta el modal). */
+      askConfirm(`¿Deseas marcar «${e.nombre || 'Tarea'}» como concluido?`, ()=>{
+        cambiarEstadoTarea(lista, e, valor, Object.assign(contextoNegocioDe(o), {fechaReal: leerFechaReal()}));
+        openRSDetailDrawer(oppId);
+      }, null, {
+        title: '✅ Marcar entregable como concluido',
+        confirmLabel: '✅ Marcar como concluido',
+        confirmClass: 'btn-primary',
+        detailsHtml: `<div class="drawer-row"><span>Responsable</span><b>${escAttr(nombreResponsableEntregable(e) || '—')}</b></div>` + fechaRealCampoHtml(e),
+        onCancel: ()=>openRSDetailDrawer(oppId),
+      });
+      return;
+    }
     cambiarEstadoTarea(lista, e, valor, contextoNegocioDe(o));
   } else return;
   openRSDetailDrawer(oppId);
@@ -8017,11 +8074,11 @@ function requestEntregableStatusChange(oppId, entId, triggerEl){
     <div class="drawer-row"><span>Responsable</span><b>${nombreResponsableEntregable(e) || '—'}</b></div>
     <div class="drawer-row"><span>Fecha de entrega</span><b>${formatFechaCorta(e.fechaEntrega)}</b></div>`;
   if(e.estado === 'pendiente'){
-    askConfirm(`¿Deseas marcar «${e.nombre}» como concluido?`, ()=>toggleEntregableEstado(oppId, entId, true), triggerEl, {
+    askConfirm(`¿Deseas marcar «${e.nombre}» como concluido?`, ()=>toggleEntregableEstado(oppId, entId, true, leerFechaReal()), triggerEl, {
       title: '✅ Marcar entregable como concluido',
       confirmLabel: '✅ Marcar como concluido',
       confirmClass: 'btn-primary',
-      detailsHtml,
+      detailsHtml: detailsHtml + fechaRealCampoHtml(e),
     });
   } else {
     askConfirm(`¿Deseas volver a marcar «${e.nombre}» como pendiente${e.estado==='cancelado' ? ' (hoy está cancelada)' : ''}?`, ()=>toggleEntregableEstado(oppId, entId, true), triggerEl, {
@@ -8065,7 +8122,7 @@ function reactivarOportunidadAlCrearEntregable(oppId){
 }
 function entregarEntregable(oppId, entId){ toggleEntregableEstado(oppId, entId, true); }
 
-function toggleEntregableEstado(oppId, entId, showConfirmationToast){
+function toggleEntregableEstado(oppId, entId, showConfirmationToast, fechaReal){
   const o = oportunidades.find(x=>x.id===oppId);
   if(!o) return;
   const e = o.entregables.find(x=>x.id===entId);
@@ -8074,15 +8131,9 @@ function toggleEntregableEstado(oppId, entId, showConfirmationToast){
      «Enviar al cliente» existente, resuelve el vínculo con su origen. Todo antes del único persist + render, así el proyecto no
      desaparece ni pierde su posición semanal (semanaRev/secSemana intactos). */
   const numSemanaPrevio = rsNumeroSemana(oppId);
-  const res = cambiarEstadoTarea(o.entregables, e, e.estado==='pendiente' ? 'completado' : 'en_proceso', contextoNegocioDe(o));
-  /* Enviar al cliente completado: la oportunidad pasa a Análisis de cliente con
-     el responsable en Cliente, y por la regla de la etapa se va a Entregas. */
-  let avisoEnvio = '';
-  if(res.enviado){
-    o.etapa = 'analisis';
-    o.responsableActual = 'cliente';
-    avisoEnvio = '📤 Enviado al cliente · pasa a Análisis de cliente y se mueve a Entregas.';
-  }
+  const res = cambiarEstadoTarea(o.entregables, e, e.estado==='pendiente' ? 'completado' : 'en_proceso', Object.assign(contextoNegocioDe(o), {fechaReal}));
+  /* La etapa ya no cambia sola: completar un «Enviar al cliente» o un «Envío
+     de propuesta» no pasa la oportunidad a Análisis; eso se decide a mano. */
   finalizarRondaSiCorresponde(oppId);
   persistLocal();
   renderAll();
@@ -8090,8 +8141,7 @@ function toggleEntregableEstado(oppId, entId, showConfirmationToast){
      (venga de Prioridades o de Calendario), se refresca en el mismo lugar. */
   if(rsDrawerOppId===oppId) openRSDetailDrawer(oppId, res.nuevoEnvio ? res.nuevoEnvio.id : entId);
   if(showConfirmationToast && res.completada) rsToastCompletada(o, e, numSemanaPrevio);
-  if(avisoEnvio) showToast(avisoEnvio, 'ok');
-  else if(showConfirmationToast && !res.completada) showToast('Estado de «' + e.nombre + '» actualizado a en proceso.', 'ok');
+  if(showConfirmationToast && !res.completada) showToast('Estado de «' + e.nombre + '» actualizado a en proceso.', 'ok');
 }
 
 /* ============================================================
@@ -8402,6 +8452,7 @@ function setCargaVista(vista){
      canceladas no cuentan.
    · Incidencias: el registro manual (o.incidencias), positivo / negativo.
      Contexto cualitativo: no toca métricas, fechas ni clasificación.
+   · Tiempo de ciclo: días de la creación de la tarea a su entrega real.
    Fuente: las mismas oportunidades y entregables de todo el panel.
    ============================================================ */
 const DES_PERIODOS = [
@@ -8467,7 +8518,12 @@ function desTareas(f){
         clase = 'vencido';
         dev = daysBetween(e.fechaEntrega, hoy);
       } else return;
-      out.push({o, e, resp, area:e.area, clase, dev, claseO, devO, original, reprog: esTareaReprogramada(e)});
+      /* Tiempo de ciclo: de la creación a la entrega real (solo completadas);
+         plan = de la creación a la fecha original comprometida. */
+      const creacion = e.fechaCreacion || '';
+      const ciclo = e.estado==='completado' && creacion ? daysBetween(creacion, e.fechaCompletado) : null;
+      const plan = creacion && original ? daysBetween(creacion, original) : null;
+      out.push({o, e, resp, area:e.area, clase, dev, claseO, devO, original, creacion, ciclo: ciclo!=null && ciclo>=0 ? ciclo : null, plan: plan!=null && plan>=0 ? plan : null, reprog: esTareaReprogramada(e)});
     });
   });
   return out;
@@ -8487,12 +8543,13 @@ function desIncidencias(f){
   return out.sort((a,b)=>String(b.inc.fecha).localeCompare(String(a.inc.fecha)));
 }
 function desStats(items){
-  const s = {completados:0, anticipado:0, atiempo:0, tarde:0, vencido:0, sinfecha:0, reprog:0, origOk:0, origMed:0, ant:[], ret:[]};
+  const s = {completados:0, anticipado:0, atiempo:0, tarde:0, vencido:0, sinfecha:0, reprog:0, origOk:0, origMed:0, ant:[], ret:[], ciclos:[]};
   items.forEach(x=>{
     s[x.clase]++;
     if(x.reprog) s.reprog++;
     if(x.clase==='vencido') return;
     s.completados++;
+    if(x.ciclo!=null) s.ciclos.push(x.ciclo);
     if(x.claseO){ s.origMed++; if(x.claseO!=='tarde') s.origOk++; }
     if(x.clase==='anticipado') s.ant.push(-x.dev);
     if(x.clase==='tarde') s.ret.push(x.dev);
@@ -8506,6 +8563,7 @@ function desStats(items){
   s.pctOrig = s.origMed ? Math.round(s.origOk * 100 / s.origMed) : null;
   const prom = a=>a.length ? a.reduce((x,y)=>x+y, 0) / a.length : null;
   s.promAnt = prom(s.ant); s.promRet = prom(s.ret);
+  s.promCiclo = prom(s.ciclos);
   s.maxAnt = s.ant.length ? Math.max(...s.ant) : null;
   s.maxRet = s.ret.length ? Math.max(...s.ret) : null;
   return s;
@@ -8620,6 +8678,7 @@ function desRespHtml(g){
     <span class="des-resp-dias">
       <span><em>Anticipación</em> prom. <b>${desDias(s.promAnt)}</b> · máx. <b>${desDias(s.maxAnt)}</b></span>
       <span><em>Retraso</em> prom. <b>${desDias(s.promRet)}</b> · máx. <b>${desDias(s.maxRet)}</b></span>
+      <span title="Días entre la creación de la tarea y su entrega real"><em>Ciclo</em> prom. <b>${desDias(s.promCiclo)}</b></span>
     </span>
   </button>`;
 }
@@ -8646,6 +8705,7 @@ function desItemHtml(x, conResp){
       <span class="des-item-main"><b>${escAttr(x.o.cliente)}</b><span>${escAttr(x.o.proyecto || '—')}</span></span>
       <span class="des-item-ent"><b>${escAttr(e.nombre || 'Tarea')}</b><span>${conResp ? escAttr(x.resp) : (RS_AREA_CORTA[x.area] || AREA_LABEL[x.area] || '')}</span></span>
       <span class="des-fechas">
+        <span class="des-fecha"><span class="des-fecha-k">Creada</span>${x.creacion ? formatFechaCorta(x.creacion) : '—'}</span>
         <span class="des-fecha"><span class="des-fecha-k">Original</span>${x.original ? formatFechaCorta(x.original) : '—'}</span>
         <span class="des-fecha${x.reprog ? ' is-reprog' : ''}"><span class="des-fecha-k">Vigente</span>${e.fechaEntrega ? formatFechaCorta(e.fechaEntrega) : '—'}</span>
         <span class="des-fecha"><span class="des-fecha-k">Real</span>${x.clase==='vencido' ? 'Pendiente' : formatFechaCorta(e.fechaCompletado)}</span>
@@ -8657,6 +8717,7 @@ function desItemHtml(x, conResp){
     </button>
     <div class="des-item-det"><div class="des-item-det-inner">
       <div class="des-hist">
+        ${x.plan!=null || x.ciclo!=null ? `<p class="des-ciclo"><span>Plazo planificado <b>${x.plan!=null ? x.plan + ' d' : '—'}</b></span><span>Tiempo de ciclo real <b>${x.ciclo!=null ? x.ciclo + ' d' : (x.clase==='vencido' ? 'en curso' : '—')}</b></span></p>` : ''}
         <p class="des-hist-k">Reprogramaciones</p>
         ${histHtml}
       </div>
@@ -8730,7 +8791,7 @@ function renderDesempeno(){
     <div class="des-resumen">
       ${desTileHtml(st.pctOrig==null ? '—' : st.pctOrig + '%', 'Compromiso original', tonoPct(st.pctOrig), st.origMed ? 'vs. fecha original' : 'Sin entregas medibles')}
       ${desTileHtml(st.pct==null ? '—' : st.pct + '%', 'Fecha vigente', tonoPct(st.pct), st.medidos ? 'vs. fecha vigente' : 'Sin entregas medibles')}
-      ${desTileHtml(st.completados, 'Completados', '', st.sinfecha ? st.sinfecha + ' sin fecha vigente' : '')}
+      ${desTileHtml(st.completados, 'Completados', '', st.promCiclo!=null ? 'ciclo prom. ' + desDias(st.promCiclo) : (st.sinfecha ? st.sinfecha + ' sin fecha vigente' : ''))}
       ${desTileHtml(st.anticipado, 'Anticipados', 'ok', st.promAnt!=null ? 'prom. ' + desDias(st.promAnt) : '')}
       ${desTileHtml(st.atiempo, 'A tiempo', 'info', '')}
       ${desTileHtml(st.tarde, 'Tarde', 'warn', st.promRet!=null ? 'prom. ' + desDias(st.promRet) : '')}
@@ -10260,7 +10321,7 @@ function fichaEstadoTexto(e){
 function fichaTareaCardHtml(e){
   const est = fichaEstadoTexto(e);
   const fechas = esAreaTecnica(e.area)
-    ? [e.fechaEntrega ? 'Entrega <b>' + fichaFecha(e.fechaEntrega) + '</b>' : '', modalFechaCliente ? 'Cliente <b>' + fichaFecha(modalFechaCliente) + '</b>' : ''].filter(Boolean)
+    ? [e.fechaEntrega ? 'Entrega <b>' + fichaFecha(e.fechaEntrega) + '</b>' : ''].filter(Boolean)
     : [e.fechaEntrega ? 'Fecha <b>' + fichaFecha(e.fechaEntrega) + '</b>' : ''].filter(Boolean);
   const meta = [escAttr(nombreResponsableEntregable(e) || 'Sin responsable')].concat(fechas.length ? fechas : ['Sin fecha']).join(' · ');
   const bloqueo = e.estadoTarea==='bloqueado'
@@ -10436,17 +10497,15 @@ function renderFichaDetalle(){
     <p class="fx-detalle-kicker">${AREA_LABEL[e.area] ? (e.area==='presupuestos' ? 'Presupuestos' : AREA_LABEL[e.area]) : ''} · Detalle de tarea</p>
     <select class="fx-detalle-titulo" aria-label="Tarea" onchange="fichaTareaNombre(${id},this.value)">${opcionesTarea}</select>
     ${esOtro ? `<input type="text" class="fx-detalle-otro ft-otro" value="${escAttr(e.nombre)}" maxlength="80" placeholder="Nombre de la tarea" oninput="fichaTareaTexto(${id},'nombre',this.value)">` : ''}
-    <div class="fx-detalle-grid${tecnica ? '' : ' is-comercial'}">
+    <div class="fx-detalle-grid is-comercial">
       <label class="fx-campo"><span>Responsable</span>
         <select onchange="fichaTareaResponsable(${id},this.value)">${fichaResponsableOptionsHtml(e.area, e.responsable, e.responsableOtro)}</select>
       </label>
       <label class="fx-campo"><span>${tecnica ? 'Fecha entrega' : 'Fecha'}</span>
         <input type="date" value="${e.fechaEntrega || ''}" onchange="fichaTareaFecha(${id},'fechaEntrega',this.value)">
       </label>
-      ${tecnica ? `<label class="fx-campo" title="Fecha comprometida con el cliente: es una sola para todo el proyecto"><span>Fecha cliente (proyecto)</span>
-        <input type="date" value="${modalFechaCliente || ''}" onchange="fichaFechaClienteProyecto(this.value)">
-      </label>` : ''}
     </div>
+    ${fichaFechasTareaHtml(e)}
     <div class="fx-campo fx-detalle-estado"><span>Estado</span>
       <div class="fx-seg fx-seg-estado" role="radiogroup" aria-label="Estado de la tarea">${ESTADOS_TAREA.map(s=>
         `<button type="button" class="fx-seg-btn est-${s.value}${s.value===e.estadoTarea ? ' is-on' : ''}" role="radio" aria-checked="${s.value===e.estadoTarea}" onclick="fichaTareaEstado(${id},'${s.value}')">${s.label}</button>`).join('')}
@@ -10468,6 +10527,19 @@ function renderFichaDetalle(){
       <span class="ft-nota">${nota}</span>
       <button type="button" class="fe-link" onclick="incAbrirForm('ficha',${id})">Registrar incidencia</button>
       <button type="button" class="fe-link fe-link-danger" onclick="fichaEliminarTarea(${id})">Eliminar tarea</button>
+    </div>`;
+}
+/* Las fechas de la tarea, de solo lectura: creada, original (primer
+   compromiso), vigente (la de arriba) y real. La fecha cliente es del
+   proyecto y vive en Información general. */
+function fichaFechasTareaHtml(e){
+  const f = v=>v ? fichaFecha(v) : '—';
+  const reprog = esTareaReprogramada(e);
+  return `<div class="fx-fechas-tarea">
+      <span><em>Creada</em>${f(e.fechaCreacion || todayISO())}</span>
+      <span><em>Original</em>${f(e.fechaOriginal || e.fechaEntrega)}</span>
+      <span class="${reprog ? 'is-reprog' : ''}"><em>Vigente</em>${f(e.fechaEntrega)}${reprog ? ' · reprogramada' : ''}</span>
+      <span><em>Real</em>${e.estadoTarea==='completado' ? f(e.fechaCompletado) : '—'}</span>
     </div>`;
 }
 function fichaSeleccionarTarea(id){
@@ -10554,23 +10626,23 @@ function fichaTareaEstado(id, valor){
   const e = fichaTarea(id);
   if(!e) return;
   if(valor==='completado' && e.estadoTarea!=='completado'){
-    askConfirm(`¿Deseas marcar «${e.nombre || 'Tarea'}» como concluido?`, ()=>fichaAplicarEstado(id, valor), null, {
+    askConfirm(`¿Deseas marcar «${e.nombre || 'Tarea'}» como concluido?`, ()=>fichaAplicarEstado(id, valor, leerFechaReal()), null, {
       title: '✅ Marcar entregable como concluido',
       confirmLabel: '✅ Marcar como concluido',
       confirmClass: 'btn-primary',
       detailsHtml: `
         <div class="drawer-row"><span>Área</span><b>${AREA_LABEL[e.area] || '—'}</b></div>
         <div class="drawer-row"><span>Responsable</span><b>${escAttr(nombreResponsableEntregable(e) || '—')}</b></div>
-        <div class="drawer-row"><span>Fecha de entrega</span><b>${formatFechaCorta(e.fechaEntrega)}</b></div>`,
+        <div class="drawer-row"><span>Fecha de entrega</span><b>${formatFechaCorta(e.fechaEntrega)}</b></div>` + fechaRealCampoHtml(e),
     });
     return;
   }
   fichaAplicarEstado(id, valor);
 }
-function fichaAplicarEstado(id, valor){
+function fichaAplicarEstado(id, valor, fechaReal){
   const e = fichaTarea(id);
   if(!e) return;
-  cambiarEstadoTarea(modalEntregables, e, valor, {kam:modalEquipo.kam, kamOtro:modalEquipo.kamOtro, ronda:fichaRondaActual()});
+  cambiarEstadoTarea(modalEntregables, e, valor, {kam:modalEquipo.kam, kamOtro:modalEquipo.kamOtro, ronda:fichaRondaActual(), fechaReal});
   renderModalEntregables();
   if(valor==='bloqueado'){
     const txt = document.querySelector('#ficha-detalle .fx-bloqueo textarea');
@@ -10997,6 +11069,7 @@ function fichaPrepararApertura(o){
   modalEntregables = o ? JSON.parse(JSON.stringify(o.entregables)) : [];
   modalIdsOriginales = new Set(modalEntregables.map(e=>e.id));
   modalFechaCliente = o ? (o.fechaComprometidaCliente || '') : '';
+  document.getElementById('m-fecha-cliente').value = modalFechaCliente;
   modalIncidencias = o ? JSON.parse(JSON.stringify(o.incidencias || [])) : [];
   incUIReset('ficha');
   estadosAlAbrirFicha = new Set(modalEntregables.map(e=>e.id + ':' + e.estadoTarea));
