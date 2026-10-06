@@ -3691,6 +3691,199 @@
     @page{margin:14mm;}
   }
 
+  /* ============================================================
+     BARRA LATERAL DE NAVEGACIÓN (estilo Outlook)
+     Reemplaza a la fila de pestañas: los mismos .tab-btn[data-tab] viven ahora
+     acá, así que el listener de pestañas y getKpiContext() siguen leyendo lo
+     mismo. Escritorio: fija a la izquierda, expandida (--side-w-open) o
+     colapsada a íconos (--side-w-closed, clase .side-collapsed en <html>); el
+     contenido se corre con padding-left en <body>. Móvil (≤767px): sale de la
+     pantalla y se abre como drawer desde el botón de menú.
+     Va por debajo de los overlays de drawer (95) y modal (100): queda fija y a
+     la vista, atenuada, sin moverse cuando se abren.
+     ============================================================ */
+  :root{
+    --side-w-open:232px; --side-w-closed:68px; --side-w:var(--side-w-open);
+    --side-bg:color-mix(in srgb, var(--surface) 62%, var(--bg));
+    --side-hover:color-mix(in srgb, var(--ink) 6%, transparent);
+    --side-active:color-mix(in srgb, var(--teal) 14%, transparent);
+  }
+  :root.side-collapsed{--side-w:var(--side-w-closed);}
+  .app-sidebar{
+    position:fixed;top:0;left:0;bottom:0;z-index:90;width:var(--side-w);
+    display:flex;flex-direction:column;overflow:hidden;
+    padding:16px 10px calc(12px + env(safe-area-inset-bottom));
+    background:var(--side-bg);border-right:1px solid var(--line);
+    -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  }
+  /* Las transiciones se encienden recién después del primer pintado (clase
+     .side-ready), así el estado guardado no se anima al cargar la página. */
+  :root.side-ready .app-sidebar{transition:width var(--dur-3) var(--ease-emphasized),transform var(--dur-3) var(--ease-emphasized),box-shadow var(--dur-3) var(--ease);}
+  .side-head{display:flex;align-items:center;gap:10px;height:40px;padding:0 0 0 10px;margin-bottom:14px;flex-shrink:0;}
+  .side-isotipo{width:28px;height:28px;flex-shrink:0;object-fit:contain;display:block;}
+  .side-brand-txt{display:flex;flex-direction:column;line-height:1.15;min-width:0;white-space:nowrap;}
+  .side-brand-txt b{font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-.005em;}
+  .side-brand-txt span{font-size:10.5px;font-weight:600;color:var(--ink-dim);letter-spacing:.02em;}
+  .side-close{display:none;}
+  .side-nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;overscroll-behavior:contain;}
+  .side-nav::-webkit-scrollbar{display:none;}
+  .side-group + .side-group{margin-top:14px;}
+  .side-group-label{
+    position:relative;margin:0;height:26px;padding:0 14px;display:flex;align-items:center;white-space:nowrap;
+    font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);
+    transition:color var(--dur-2) var(--ease);
+  }
+  /* Ítems: el ícono queda siempre a la misma distancia del borde (padding fijo),
+     así al colapsar no se desplaza — solo se ocultan los textos. */
+  .app-sidebar .side-item{
+    position:relative;display:flex;align-items:center;justify-content:flex-start;gap:12px;
+    width:100%;height:40px;margin:2px 0;padding:0 14px;border:none;border-radius:10px;
+    background:transparent;color:var(--ink-soft);text-decoration:none;text-align:left;
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;line-height:1.2;white-space:nowrap;
+    transition:background-color var(--dur-2) var(--ease),color var(--dur-2) var(--ease);
+  }
+  .app-sidebar .side-item:hover{background:var(--side-hover);color:var(--ink);}
+  .app-sidebar .side-item:focus-visible{outline:none;box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--teal) 55%, transparent);border-radius:10px;}
+  .app-sidebar .side-item.active{background:var(--side-active);color:var(--ink);}
+  .app-sidebar .side-item.active .side-ico{color:var(--teal);}
+  /* Acento lateral sutil en la vista activa (pisa el subrayado de .tab-btn). */
+  .app-sidebar .side-item.active::after{
+    content:"";position:absolute;left:0;right:auto;top:10px;bottom:10px;width:3px;height:auto;
+    border-radius:0 3px 3px 0;background:var(--teal);
+  }
+  .side-ico{width:20px;height:20px;flex-shrink:0;display:block;color:currentColor;transition:color var(--dur-2) var(--ease);}
+  .side-label{transition:opacity var(--dur-2) var(--ease);}
+  .app-sidebar .side-item.is-soon{color:var(--ink-dim);cursor:default;}
+  .app-sidebar .side-item.is-soon:hover{background:transparent;color:var(--ink-dim);}
+  .side-soon{
+    margin-left:auto;padding:2px 7px;border-radius:var(--radius-pill);border:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);
+  }
+  .side-foot{flex-shrink:0;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;}
+  /* Usuario: mismo #user-badge de antes (lo llena cargarPerfilUsuario), ahora
+     apilado al pie de la barra. */
+  .app-sidebar .user-badge{display:flex;flex-direction:column;align-items:stretch;gap:2px;}
+  .app-sidebar .user-badge[hidden]{display:none;}
+  .side-user-row{display:flex;align-items:center;gap:12px;height:46px;padding:0 8px;min-width:0;}
+  .side-avatar{
+    width:32px;height:32px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:color-mix(in srgb, var(--teal) 16%, transparent);color:var(--teal);
+  }
+  .side-avatar svg{width:17px;height:17px;}
+  .app-sidebar .user-badge-info{align-items:flex-start;min-width:0;}
+  .app-sidebar .user-badge-name{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .app-sidebar .readonly-badge{align-self:flex-start;margin:0 0 4px 52px;}
+  .side-toggle .side-ico{transition:transform var(--dur-3) var(--ease-emphasized),color var(--dur-2) var(--ease);}
+
+  /* Tooltip de la barra colapsada: position:fixed en <body>, fuera del
+     overflow:hidden de la barra. */
+  .side-tip{
+    position:fixed;top:0;left:0;z-index:120;pointer-events:none;
+    padding:6px 10px;border-radius:8px;background:var(--ink);color:var(--bg);
+    font-family:'Inter',sans-serif;font-size:12px;font-weight:600;white-space:nowrap;
+    box-shadow:var(--shadow-sm);opacity:0;transform:translate(-4px,-50%);
+    transition:opacity var(--dur-1) var(--ease),transform var(--dur-1) var(--ease);
+  }
+  .side-tip.visible{opacity:1;transform:translate(0,-50%);}
+
+  /* Zona superior: contexto de la vista activa (ocupa el lugar de las pestañas). */
+  /* Encabezado mínimo de la vista: solo el nombre; el contenido arranca debajo. */
+  .view-context{margin:0 0 14px;padding:2px 4px 0;}
+  .view-context-name{margin:0;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.25;}
+
+  /* Tema en el pie de la barra. */
+  .side-theme{margin:2px 0 4px;}
+  .side-theme-seg{
+    display:flex;gap:2px;padding:3px;margin:0 4px;border-radius:10px;
+    background:color-mix(in srgb, var(--ink) 6%, transparent);border:1px solid var(--line);
+  }
+  .side-theme-seg button{
+    flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 8px;
+    border:none;border-radius:7px;background:transparent;color:var(--ink-dim);
+    font-family:'Inter',sans-serif;font-size:12px;font-weight:600;white-space:nowrap;
+    transition:background-color var(--dur-2) var(--ease),color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease);
+  }
+  .side-theme-seg button svg{width:14px;height:14px;flex-shrink:0;}
+  .side-theme-seg button:hover{color:var(--ink);}
+  .side-theme-seg button.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-xs);}
+  .side-theme-seg button:focus-visible{outline:none;box-shadow:0 0 0 2px color-mix(in srgb, var(--teal) 55%, transparent);}
+  .app-sidebar .side-item.side-theme-ico{display:none;}
+  .side-theme-ico .ico-sol{display:none;}
+  :root[data-theme="light"] .side-theme-ico .ico-sol{display:block;}
+  :root[data-theme="light"] .side-theme-ico .ico-luna{display:none;}
+
+  .side-mobilebar,.side-scrim{display:none;}
+
+  @media (min-width:768px){
+    body{padding-left:var(--side-w);}
+    :root.side-ready body{
+      transition:padding-left var(--dur-3) var(--ease-emphasized),background-color .25s var(--ease),color .25s var(--ease);
+    }
+    :root.side-collapsed .side-label{opacity:0;pointer-events:none;}
+    /* Colapsada, el título del grupo se vuelve un separador fino (mismo alto). */
+    :root.side-collapsed .side-group-label{color:transparent;}
+    :root.side-collapsed .side-group-label::before{
+      content:"";position:absolute;left:16px;right:16px;top:50%;height:1px;background:var(--line);
+    }
+    :root.side-collapsed .side-toggle .side-ico{transform:rotate(180deg);}
+    :root.side-collapsed .app-sidebar .readonly-badge{display:none;}
+    :root.side-collapsed .side-theme-seg{display:none;}
+    :root.side-collapsed .app-sidebar .side-item.side-theme-ico{display:flex;}
+  }
+
+  /* MÓVIL / iPhone — la barra se convierte en drawer. */
+  @media (max-width:767px){
+    .app-sidebar{
+      width:min(84vw, 300px);z-index:150;transform:translateX(-102%);visibility:hidden;
+      padding-top:calc(14px + env(safe-area-inset-top));padding-left:max(10px, env(safe-area-inset-left));
+      background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none;
+    }
+    :root.side-ready .app-sidebar{transition:transform .3s var(--ease-emphasized),visibility 0s linear .3s,box-shadow .3s var(--ease);}
+    :root.side-open .app-sidebar{transform:none;visibility:visible;box-shadow:var(--shadow-lg);transition:transform .3s var(--ease-emphasized),visibility 0s,box-shadow .3s var(--ease);}
+    .side-head{padding-right:2px;}
+    .side-close{
+      display:flex;align-items:center;justify-content:center;margin-left:auto;width:40px;height:40px;
+      border:none;border-radius:10px;background:transparent;color:var(--ink-soft);
+    }
+    .side-close svg{width:20px;height:20px;}
+    .app-sidebar .side-item{height:46px;font-size:14.5px;}
+    .side-toggle{display:none !important;}
+    .side-scrim{
+      display:block;position:fixed;inset:0;z-index:149;background:rgba(3,8,14,.45);
+      opacity:0;pointer-events:none;transition:opacity .25s var(--ease);
+      -webkit-tap-highlight-color:transparent;
+    }
+    :root.side-open .side-scrim{opacity:1;pointer-events:auto;}
+    :root.side-open,:root.side-open body{overflow:hidden;}
+    /* Barra superior con el botón de menú: pegada arriba al hacer scroll. */
+    .side-mobilebar{
+      display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:60;
+      margin:-12px -12px 12px;padding:calc(6px + env(safe-area-inset-top)) 12px 6px;
+      background:color-mix(in srgb, var(--bg) 86%, transparent);
+      -webkit-backdrop-filter:blur(12px) saturate(120%);backdrop-filter:blur(12px) saturate(120%);
+      border-bottom:1px solid var(--line);
+    }
+    .side-burger{
+      display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0;margin-left:-6px;
+      border:none;border-radius:12px;background:transparent;color:var(--ink);
+      -webkit-tap-highlight-color:transparent;
+    }
+    .side-burger:active{background:var(--side-hover);}
+    .side-burger svg{width:22px;height:22px;}
+    .side-mobilebar-title{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    @media (min-width:640px){ .side-mobilebar{margin:-18px -20px 16px;padding-left:20px;padding-right:20px;} }
+    /* En móvil el nombre de la vista ya está en la barra superior. */
+    .view-context{display:none;}
+    .side-theme-seg button{height:36px;font-size:13px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    :root.side-ready .app-sidebar,:root.side-ready body,.side-label,.side-tip,.side-scrim{transition:none !important;}
+  }
+  @media print{
+    .app-sidebar,.side-mobilebar,.side-scrim,.side-tip,.view-context{display:none !important;}
+    body{padding-left:0 !important;}
+  }
+
   /* Cursor personalizado — isotipo real de Friopacking (recortado del logo embebido),
      28×28, transparente. Solo en punteros finos con hover; se respeta el cursor nativo
      en campos editables/selectores y se desactiva por completo en táctiles. Declarado al
@@ -3710,141 +3903,120 @@
 </style>
 </head>
 <body>
+<script>
+  /* Estado de la barra lateral antes del primer pintado, para que no salte.
+     Sin preferencia guardada: expandida en pantallas anchas, colapsada en las
+     intermedias. */
+  (function(){
+    try{
+      var v = localStorage.getItem('fp-sidebar-colapsada');
+      var colapsada = v === null ? window.innerWidth < 1200 : v === '1';
+      if(colapsada) document.documentElement.classList.add('side-collapsed');
+    }catch(e){}
+  })();
+</script>
+<!-- ============ NAVEGACIÓN PRINCIPAL — barra lateral ============
+     Los .tab-btn[data-tab] son los mismos de la antigua fila de pestañas (mismo
+     listener). Carga laboral y Equipo de trabajo apuntan los dos al panel
+     #carga y además fijan su subvista (data-carga-vista → setCargaVista). -->
+<aside class="app-sidebar" id="app-sidebar" aria-label="Navegación principal">
+  <div class="side-head">
+    <img src="isotipo.png" alt="Friopacking" class="side-isotipo">
+    <span class="side-brand-txt side-label"><b>Control de</b><span>Oportunidades</span></span>
+    <button type="button" class="side-close" onclick="sideCerrarMovil()" aria-label="Cerrar menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <nav class="side-nav">
+    <div class="side-group" role="group" aria-labelledby="side-g-op">
+      <p class="side-group-label" id="side-g-op">Operación</p>
+      <button type="button" class="tab-btn side-item active" data-tab="revision" data-side-label="Revisión semanal" aria-current="page">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="m8.5 15 2.2 2.2 4.8-4.7"/></svg>
+        <span class="side-label">Revisión semanal</span></button>
+      <button type="button" class="tab-btn side-item" data-tab="carga" data-carga-vista="carga" data-side-label="Carga laboral">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-6M22 20H2"/></svg>
+        <span class="side-label">Carga laboral</span></button>
+      <button type="button" class="tab-btn side-item" data-tab="carga" data-carga-vista="equipo" data-side-label="Equipo de trabajo">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.6c2.3.2 3.9 1.7 4.5 4.4"/></svg>
+        <span class="side-label">Equipo de trabajo</span></button>
+      <button type="button" class="tab-btn side-item" data-tab="detalle" data-side-label="Detalle de oportunidades">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18M3 14.5h18M9 9v11"/></svg>
+        <span class="side-label">Detalle de oportunidades</span></button>
+    </div>
+    <div class="side-group" role="group" aria-labelledby="side-g-ges">
+      <p class="side-group-label" id="side-g-ges">Gestión</p>
+      <!-- Gerencia: espacio reservado, todavía sin vista. -->
+      <button type="button" class="side-item is-soon" aria-disabled="true" data-side-label="Gerencia · próximamente">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20v-6M10 20V9M15 20v-4M20 20V5"/><path d="m4 9 5-4 5 4 6-5"/></svg>
+        <span class="side-label">Gerencia</span><span class="side-soon side-label">Pronto</span></button>
+      <button type="button" class="tab-btn side-item" data-tab="cronograma" data-side-label="Cronograma">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h10M7 12h12M5 19h9"/><circle cx="16" cy="5" r="1.6"/><circle cx="4" cy="12" r="1.6"/><circle cx="17" cy="19" r="1.6"/></svg>
+        <span class="side-label">Cronograma</span></button>
+    </div>
+  </nav>
+  <div class="side-foot">
+    <a href="usuarios.html" class="side-item" id="btn-usuarios" style="display:none" aria-label="Gestión de usuarios" data-side-label="Gestión de usuarios">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="side-label">Gestión de usuarios</span>
+    </a>
+    <!-- Tema: mismo applyTheme() y mismos [data-theme-btn] que el switch que
+         había en el header (applyTheme les pone .active). Expandida: control
+         Claro/Oscuro; colapsada: un solo ícono que alterna. -->
+    <div class="side-theme">
+      <div class="side-theme-seg" role="group" aria-label="Tema de la interfaz">
+        <button type="button" data-theme-btn="light" onclick="applyTheme('light')" aria-label="Tema claro">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <span>Claro</span>
+        </button>
+        <button type="button" data-theme-btn="dark" onclick="applyTheme('dark')" aria-label="Tema oscuro">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span>Oscuro</span>
+        </button>
+      </div>
+      <button type="button" class="side-item side-theme-ico" data-side-theme aria-label="Cambiar tema claro / oscuro"
+        onclick="applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'); sideMostrarTip(this);">
+        <svg class="side-ico ico-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="side-ico ico-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+    <div class="user-badge" id="user-badge" hidden>
+      <div class="side-user-row" data-side-user>
+        <span class="side-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 4-6 8-6s7.2 2 8 6"/></svg></span>
+        <div class="user-badge-info side-label">
+          <span class="user-badge-name" id="user-badge-name">—</span>
+          <span class="user-badge-role" id="user-badge-role">—</span>
+        </div>
+      </div>
+      <span class="readonly-badge side-label" title="Tu rol es visor: podés consultar todo, pero no modificar">👁️ Solo lectura</span>
+      <button type="button" class="side-item btn-logout" onclick="handleLogout()" aria-label="Cerrar sesión" data-side-label="Cerrar sesión">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>
+        <span class="side-label">Cerrar sesión</span>
+      </button>
+    </div>
+    <button type="button" class="side-item side-toggle" id="side-collapse" onclick="sideToggleColapso()" aria-controls="app-sidebar" aria-expanded="true" aria-label="Contraer menú" data-side-label="Expandir menú">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5"/></svg>
+      <span class="side-label">Contraer menú</span>
+    </button>
+  </div>
+</aside>
+<div class="side-scrim" id="side-scrim" onclick="sideCerrarMovil()" aria-hidden="true"></div>
 <div class="sheet">
 
   <canvas id="bg-fx" aria-hidden="true"></canvas>
 
-  <div class="executive-summary">
-  <header>
-    <div class="header-top">
-      <div class="brand">
-        <div class="logo-card"><img src="data:image/png;base64,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" alt="Grupo Friopacking"></div>
-        <div class="title-block">
-          <h1>Control de Oportunidades</h1>
-          <p class="subtitulo">Gestión comercial, arquitectura y presupuestos en un solo lugar</p>
-          <p class="frase-dinamica" id="frase-dinamica"></p>
-        </div>
-      </div>
-      <div class="header-right">
-      <div class="header-actions">
-        <input type="file" id="import-excel-input" accept=".xlsx,.xls" hidden onchange="handleImportExcelFile(event)">
-        <button class="btn-toolbar btn-import" onclick="triggerImportExcel()" aria-label="Importar o actualizar Excel">
-          <span class="btn-emoji" aria-hidden="true">📥</span>
-          <span class="tt">Importar o actualizar Excel</span>
-        </button>
-        <button class="btn-toolbar btn-print" onclick="imprimirInforme()" aria-label="Sacar informe">
-          <span class="btn-emoji" aria-hidden="true">📄</span>
-          <span class="tt">Sacar informe</span>
-        </button>
-        <button class="btn-toolbar btn-excel" onclick="exportarExcel()" aria-label="Descargar Excel">
-          <span class="btn-emoji" aria-hidden="true">📊</span>
-          <span class="tt">Descargar Excel</span>
-        </button>
-        <button class="btn-toolbar btn-restore" onclick="restaurarCambios()" aria-label="Restaurar el último cambio realizado">
-          <span class="btn-emoji" aria-hidden="true">↩️</span>
-          <span class="tt">Restaurar cambios</span>
-        </button>
-        <a href="usuarios.html" class="btn-toolbar btn-usuarios" id="btn-usuarios" style="display:none" aria-label="Gestión de usuarios">
-          <span class="btn-emoji" aria-hidden="true">👤</span>
-          <span class="tt">Gestión de usuarios</span>
-        </a>
-        <span id="sync-indicator" class="sync-indicator"><span class="sync-dot pending" id="sync-dot"></span><span class="tt" id="sync-tt">Conectando con la nube…</span></span>
-      </div>
-        <button type="button" class="kpi-toggle" id="kpi-toggle" onclick="toggleKpis()" aria-expanded="true" aria-controls="kpis-collapse">
-          <span class="kpi-toggle-emoji" aria-hidden="true">📊</span>
-          <span class="kpi-toggle-label">Ocultar KPIs</span>
-        </button>
-        <div class="theme-switch" id="theme-toggle">
-          <button type="button" data-theme-btn="dark" onclick="applyTheme('dark')" title="Modo oscuro" aria-label="Modo oscuro">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          </button>
-          <button type="button" data-theme-btn="light" onclick="applyTheme('light')" title="Modo claro" aria-label="Modo claro">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-          </button>
-        </div>
-        <div class="user-badge" id="user-badge" hidden>
-          <span class="readonly-badge" title="Tu rol es visor: podés consultar todo, pero no modificar">👁️ Solo lectura</span>
-          <div class="user-badge-info">
-            <span class="user-badge-name" id="user-badge-name">—</span>
-            <span class="user-badge-role" id="user-badge-role">—</span>
-          </div>
-          <button type="button" class="btn-toolbar btn-logout" onclick="handleLogout()" aria-label="Cerrar sesión">
-            <span class="btn-emoji" aria-hidden="true">🚪</span>
-            <span class="tt">Cerrar sesión</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <div class="kpis-collapse" id="kpis-collapse">
-  <div class="kpis-collapse-inner">
-  <div class="kpis-primary" id="kpis-primary">
-    <div class="kpi">
-      <div class="kpi-icon" aria-hidden="true">🗂️</div>
-      <div class="kpi-body"><div class="kpi-num" id="kpi-g-total">0</div><div class="kpi-label">Total oportunidades</div></div>
-    </div>
-    <div class="kpi warn">
-      <div class="kpi-icon" aria-hidden="true">📋</div>
-      <div class="kpi-body">
-        <div class="kpi-num" id="kpi-g-portrabajar">0</div>
-        <div class="kpi-label">Por trabajar</div>
-        <div class="kpi-subnote kpi-tooltip" id="kpi-g-portrabajar-breakdown" tabindex="0">En preparación
-          <div class="kpi-tip" id="kpi-g-portrabajar-tip"></div>
-        </div>
-      </div>
-    </div>
-    <div class="kpi ok">
-      <div class="kpi-icon" aria-hidden="true">✅</div>
-      <div class="kpi-body">
-        <div class="kpi-num" id="kpi-g-entregadas">0</div>
-        <div class="kpi-label">Entregadas</div>
-        <div class="kpi-subnote kpi-tooltip" id="kpi-g-noactivos-wrap" tabindex="0">No activos: <b id="kpi-g-noactivos">0</b>
-          <div class="kpi-tip" id="kpi-g-noactivos-tip"></div>
-        </div>
-      </div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-icon" aria-hidden="true">🔎</div>
-      <div class="kpi-body"><div class="kpi-num" id="kpi-g-analisis">0</div><div class="kpi-label">En análisis</div></div>
-    </div>
-    <div class="kpi violet">
-      <div class="kpi-icon" aria-hidden="true">🤝</div>
-      <div class="kpi-body"><div class="kpi-num" id="kpi-g-negociacion">0</div><div class="kpi-label">En negociación</div></div>
-    </div>
-    <div class="kpi ok">
-      <div class="kpi-icon" aria-hidden="true">🏆</div>
-      <div class="kpi-body"><div class="kpi-num" id="kpi-g-ganadas">0</div><div class="kpi-label">Vendidas</div></div>
-    </div>
-  </div>
-  <div class="kpis-secondary">
-    <span class="kpi-context-tag" id="kpi-context-tag">Todas las áreas</span>
-    <div class="kpi-mini"><span class="kpi-mini-icon" aria-hidden="true">📦</span><div><div class="kpi-mini-num" id="kpi-d-pendientes">0</div><div class="kpi-mini-label">Pendientes</div></div></div>
-    <div class="kpi-mini danger"><span class="kpi-mini-icon" aria-hidden="true">⛔</span><div><div class="kpi-mini-num" id="kpi-d-vencidos">0</div><div class="kpi-mini-label">Vencidos</div></div></div>
-    <div class="kpi-mini warn"><span class="kpi-mini-icon" aria-hidden="true">📅</span><div><div class="kpi-mini-num" id="kpi-d-atender">0</div><div class="kpi-mini-label">Por atender esta semana</div></div></div>
-    <div class="kpi-mini ok"><span class="kpi-mini-icon" aria-hidden="true">✅</span><div><div class="kpi-mini-num" id="kpi-d-entregados">0</div><div class="kpi-mini-label">Entregados semana pasada</div></div></div>
-  </div>
-  </div>
-  </div>
+  <!-- Solo móvil: botón de menú + nombre de la vista activa. -->
+  <div class="side-mobilebar">
+    <button type="button" class="side-burger" id="side-burger" onclick="sideAbrirMovil()" aria-label="Abrir menú" aria-controls="app-sidebar" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <span class="side-mobilebar-title" id="side-mobilebar-title">Revisión semanal</span>
   </div>
 
-  <!-- Barra de navegación: tabs + semana en curso, ya fuera de la zona ejecutiva -->
-  <div class="tabbar">
-  <div class="tabs">
-    <span class="tab-indicator" id="tab-indicator" aria-hidden="true"></span>
-    <button class="tab-btn active" data-tab="revision">
-      <span class="tab-emoji" aria-hidden="true">🎯</span>Revisión semanal</button>
-    <button class="tab-btn" data-tab="carga">
-      <span class="tab-emoji" aria-hidden="true">👥</span>Carga de trabajo</button>
-    <button class="tab-btn" data-tab="cronograma">
-      <span class="tab-emoji" aria-hidden="true">🗓️</span>Cronograma</button>
-    <button class="tab-btn" data-tab="detalle">
-      <span class="tab-emoji" aria-hidden="true">📋</span>Detalle de oportunidades</button>
-  </div>
-  <div class="meta">
-    Semana: <b id="meta-semana">—</b><br>
-    <span id="meta-hoyhora">Hoy: — · Hora: —</span>
-  </div>
+  <!-- Encabezado mínimo: solo el nombre del módulo activo (lo escribe
+       sideSincronizar). El hero ejecutivo y los KPIs generales se retiraron;
+       indicadores y exportaciones irán en la vista Gerencia. -->
+  <div class="view-context">
+    <h2 class="view-context-name" id="view-context-name">Revisión semanal</h2>
   </div>
 
   <!-- ============ TAB 01 — REVISIÓN SEMANAL ============ -->
@@ -6531,12 +6703,17 @@ function getFraseActual(){
   return FRASES[idx];
 }
 
+/* El hero (frase) y la línea de semana/hora ya no están en la página: cada
+   nodo se escribe solo si existe, así el render no depende de ellos. */
 function renderMeta(){
   const {lunesISO, domingoISO} = getSemanaActual();
-  document.getElementById('meta-semana').textContent = formatFechaCorta(lunesISO) + ' — ' + formatFechaCorta(domingoISO);
+  const semanaEl = document.getElementById('meta-semana');
+  if(semanaEl) semanaEl.textContent = formatFechaCorta(lunesISO) + ' — ' + formatFechaCorta(domingoISO);
   const hora = lastSavedAt ? new Date(lastSavedAt).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}) : '—';
-  document.getElementById('meta-hoyhora').textContent = 'Hoy: ' + formatFechaCorta(todayISO()) + ' · Hora: ' + hora;
-  document.getElementById('frase-dinamica').textContent = '“' + getFraseActual() + '”';
+  const hoyEl = document.getElementById('meta-hoyhora');
+  if(hoyEl) hoyEl.textContent = 'Hoy: ' + formatFechaCorta(todayISO()) + ' · Hora: ' + hora;
+  const fraseEl = document.getElementById('frase-dinamica');
+  if(fraseEl) fraseEl.textContent = '“' + getFraseActual() + '”';
 }
 
 function pulse(el){ el.classList.remove('kpi-pulse'); void el.offsetWidth; el.classList.add('kpi-pulse'); }
@@ -6611,6 +6788,8 @@ function renderKPIs(){
   ];
   map.forEach(([id,val])=>{
     const el = document.getElementById(id);
+    /* Los KPIs generales salieron de la página junto con el hero. */
+    if(!el) return;
     if(el.textContent !== String(val)){ el.textContent = val; pulse(el); }
   });
 
@@ -8844,6 +9023,9 @@ function setCargaVista(vista){
   else if(vista === 'desempeno'){ desAnimar = true; renderDesempeno(); }
   else renderCarga();
   hideGlobalTooltip();
+  /* La barra lateral distingue Carga laboral / Equipo de trabajo: se alinea
+     también cuando la subvista cambia desde los botones internos. */
+  sideSincronizar();
 }
 
 /* ============================================================
@@ -12463,6 +12645,7 @@ function setKpisVisibles(visibles, guardar){
 }
 function toggleKpis(){
   const zona = document.querySelector('.executive-summary');
+  if(!zona) return;
   setKpisVisibles(zona.classList.contains('kpis-hidden'), true);
 }
 function initKpisVisibles(){
@@ -12526,6 +12709,148 @@ window.addEventListener('resize', ()=>{
   clearTimeout(ganttResizeTimer);
   ganttResizeTimer = setTimeout(renderGantt, 150);
 });
+
+/* ============================================================
+   BARRA LATERAL — solo presentación de la navegación
+   El cambio de vista lo sigue haciendo el listener de .tab-btn de arriba;
+   esto solo agrega: subvista de Carga (data-carga-vista), estado activo y
+   título de contexto, colapsar/expandir en escritorio, drawer en móvil y
+   tooltip con la barra colapsada.
+   ============================================================ */
+const SIDE_KEY = 'fp-sidebar-colapsada';
+const sideMqMovil = window.matchMedia('(max-width:767px)');
+let sideResizeTimer = null;
+
+/* Marca el ítem que corresponde al panel visible. No usa estado propio: lee
+   el .tab-panel activo y cargaVista, así que se puede llamar en cualquier
+   momento (incluso antes de que termine el arranque). */
+function sideSincronizar(){
+  const panel = document.querySelector('.tab-panel.active');
+  const tab = panel ? panel.id : 'revision';
+  const subCarga = cargaVista === 'equipo' ? 'equipo' : 'carga';
+  const items = document.querySelectorAll('.app-sidebar .tab-btn');
+  let activo = null;
+  items.forEach(b=>{
+    if(activo || b.dataset.tab !== tab) return;
+    if(tab === 'carga' && b.dataset.cargaVista !== subCarga) return;
+    activo = b;
+  });
+  if(!activo) return;
+  items.forEach(b=>{
+    b.classList.toggle('active', b === activo);
+    if(b === activo) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  let nombre = activo.dataset.sideLabel;
+  if(tab === 'carga' && cargaVista === 'desempeno') nombre = 'Desempeño';
+  const n = document.getElementById('view-context-name');
+  const m = document.getElementById('side-mobilebar-title');
+  if(n) n.textContent = nombre;
+  if(m) m.textContent = nombre;
+}
+
+document.querySelectorAll('.app-sidebar .tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(btn.dataset.cargaVista) setCargaVista(btn.dataset.cargaVista);
+    sideSincronizar();
+    sideOcultarTip();
+    const estabaAbierta = document.documentElement.classList.contains('side-open');
+    sideCerrarMovil(estabaAbierta);
+    /* La barra está siempre a mano, así que se puede cambiar de vista con la
+       página bien abajo: si el inicio de la vista quedó fuera de pantalla por
+       arriba, se lleva a la vista. */
+    /* Sin hero, la vista empieza arriba de todo: basta con volver al inicio. */
+    if(window.scrollY > 0){
+      const suave = !window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+      window.scrollTo({top:0, behavior: suave ? 'smooth' : 'auto'});
+    }
+  });
+});
+
+function sideAplicarColapso(colapsada){
+  document.documentElement.classList.toggle('side-collapsed', colapsada);
+  const btn = document.getElementById('side-collapse');
+  if(!btn) return;
+  btn.setAttribute('aria-expanded', colapsada ? 'false' : 'true');
+  btn.setAttribute('aria-label', colapsada ? 'Expandir menú' : 'Contraer menú');
+}
+function sideToggleColapso(){
+  const colapsada = !document.documentElement.classList.contains('side-collapsed');
+  sideAplicarColapso(colapsada);
+  try{ localStorage.setItem(SIDE_KEY, colapsada ? '1' : '0'); }catch(e){}
+  sideOcultarTip();
+  /* El ancho útil del contenido cambia: al terminar la transición se avisa
+     como un resize normal (Gantt, fondo animado, etc. ya escuchan ese evento). */
+  clearTimeout(sideResizeTimer);
+  sideResizeTimer = setTimeout(()=>window.dispatchEvent(new Event('resize')), 380);
+}
+
+/* Móvil: drawer. Se bloquea el scroll del fondo con la clase .side-open. */
+function sideAbrirMovil(){
+  if(!sideMqMovil.matches) return;
+  document.documentElement.classList.add('side-open');
+  const burger = document.getElementById('side-burger');
+  if(burger) burger.setAttribute('aria-expanded', 'true');
+  const activo = document.querySelector('.app-sidebar .side-item.active');
+  if(activo) setTimeout(()=>activo.focus({preventScroll:true}), 60);
+}
+function sideCerrarMovil(devolverFoco){
+  const root = document.documentElement;
+  if(!root.classList.contains('side-open')) return;
+  root.classList.remove('side-open');
+  const burger = document.getElementById('side-burger');
+  if(burger){
+    burger.setAttribute('aria-expanded', 'false');
+    if(devolverFoco === true) burger.focus({preventScroll:true});
+  }
+}
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && document.documentElement.classList.contains('side-open')) sideCerrarMovil(true);
+});
+const sideAlCambiarMq = ()=>{ if(!sideMqMovil.matches) sideCerrarMovil(); sideOcultarTip(); };
+if(sideMqMovil.addEventListener) sideMqMovil.addEventListener('change', sideAlCambiarMq);
+else if(sideMqMovil.addListener) sideMqMovil.addListener(sideAlCambiarMq);
+
+/* Tooltip con el nombre del módulo, solo con la barra colapsada en escritorio. */
+const sideTip = document.createElement('div');
+sideTip.className = 'side-tip';
+sideTip.setAttribute('role', 'tooltip');
+document.body.appendChild(sideTip);
+function sideOcultarTip(){ sideTip.classList.remove('visible'); }
+function sideMostrarTip(el){
+  if(sideMqMovil.matches || !document.documentElement.classList.contains('side-collapsed')) return;
+  let texto = el.dataset.sideLabel || '';
+  if(el.hasAttribute('data-side-theme')){
+    texto = document.documentElement.getAttribute('data-theme') === 'light' ? 'Tema claro · cambiar a oscuro' : 'Tema oscuro · cambiar a claro';
+  }
+  if(el.hasAttribute('data-side-user')){
+    const nom = document.getElementById('user-badge-name');
+    const rol = document.getElementById('user-badge-role');
+    texto = (nom ? nom.textContent : '') + (rol && rol.textContent ? ' · ' + rol.textContent : '');
+  }
+  if(!texto) return;
+  sideTip.textContent = texto;
+  const r = el.getBoundingClientRect();
+  sideTip.style.top = (r.top + r.height / 2) + 'px';
+  sideTip.style.left = (r.right + 12) + 'px';
+  sideTip.classList.add('visible');
+}
+(function(){
+  const side = document.getElementById('app-sidebar');
+  if(!side) return;
+  const objetivo = e => e.target.closest && e.target.closest('[data-side-label],[data-side-user],[data-side-theme]');
+  side.addEventListener('mouseover', e=>{ const el = objetivo(e); if(el) sideMostrarTip(el); else sideOcultarTip(); });
+  side.addEventListener('mouseleave', sideOcultarTip);
+  side.addEventListener('focusin', e=>{ const el = objetivo(e); if(el && el.matches(':focus-visible')) sideMostrarTip(el); });
+  side.addEventListener('focusout', sideOcultarTip);
+  side.querySelector('.side-nav').addEventListener('scroll', sideOcultarTip, {passive:true});
+})();
+
+/* Estado inicial: la clase .side-collapsed ya la puso el script del <body>;
+   acá solo se alinean los atributos, y las transiciones se encienden después
+   del primer pintado para que nada se anime al cargar. */
+sideAplicarColapso(document.documentElement.classList.contains('side-collapsed'));
+sideSincronizar();
+requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.classList.add('side-ready')));
 
 /* ---------- Init ---------- */
 initSelectors();
