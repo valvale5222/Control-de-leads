@@ -2642,84 +2642,161 @@
   }
   .global-tooltip.visible{opacity:1;visibility:visible;}
 
-  /* GANTT (Cronograma) — matriz ejecutiva plana: el protagonismo es de la
-     información, las barras y los hitos, no de la superficie que los contiene.
-     Sin glassmorphism ni sombras pesadas; borde fino y sombra mínima. */
+  /* GANTT (Cronograma) — Gantt operativo compacto. Un solo contenedor con
+     scroll interno: cabecera de fechas fija arriba y columna de proyectos fija
+     a la izquierda, así etiquetas y barras quedan siempre alineadas. Cada
+     proyecto es un grupo (fila resumen + una subfila por entregable). La barra
+     es una guía visual corta que TERMINA en fechaEntrega (el rombo); no hay
+     fecha de inicio real, por eso el inicio se desvanece. */
   .gantt{
     background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);
-    padding:0 18px 12px;box-shadow:var(--shadow-xs);overflow:hidden;
+    padding:0;box-shadow:0 1px 2px rgba(4,8,20,.08), var(--shadow-xs);overflow:hidden;
   }
-  .gantt-topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 2px 12px;}
+  .gantt-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line);}
   .gantt-topbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;}
   .gantt-topbar-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;color:var(--ink);white-space:nowrap;}
   .gantt-area-tag{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);background:var(--surface-alt);border:1px solid var(--line);border-radius:var(--radius-pill);padding:2px 9px;white-space:nowrap;}
   .gantt-topbar-range{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-dim);white-space:nowrap;}
-  .gantt-flex{display:flex;align-items:stretch;border-top:1px solid var(--line);}
-  .gantt-labels{width:450px;flex-shrink:0;border-right:1px solid var(--line);}
-  .gantt-labels .glabel-spacer{height:var(--gantt-axis-height);border-bottom:1px solid var(--line);background:var(--surface-alt);}
-  /* Fila de proyecto (Gantt de Cronograma): #ID + cliente en la primera línea,
-     proyecto debajo — alineado con el cliente, no con el ID (grid de 2
-     columnas: la 1ª con ancho fijo y pequeño para el ID, la 2ª —compartida
-     por cliente y proyecto— se lleva todo el ancho restante). Clic abre el
-     mismo drawer de consulta que el resto del panel (openRSDetailDrawer). */
-  .gantt-proj-label{
-    display:grid;grid-template-columns:26px 1fr;column-gap:6px;row-gap:3px;align-content:center;
-    padding:6px 14px;border-bottom:1px solid color-mix(in srgb, var(--line) 70%, transparent);
-    font-size:12px;color:var(--ink);cursor:pointer;transition:background-color var(--dur-2) var(--ease);
+  .gantt-scroll{
+    position:relative;overflow:auto;max-height:max(420px, calc(100vh - 290px));
+    overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
   }
-  .gantt-proj-label:hover{background:var(--surface-alt);}
-  .gantt-proj-id{grid-column:1;grid-row:1;align-self:start;padding-top:1px;font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--ink-dim);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .gantt-proj-cliente{grid-column:2;grid-row:1;min-width:0;font-weight:700;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .gantt-proj-nombre{grid-column:2;grid-row:2;min-width:0;font-weight:400;color:var(--ink-soft);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  @media (max-width:1400px){ .gantt-labels{width:400px;} }
-  @media (max-width:1200px){ .gantt-labels{width:340px;} }
-  @media (max-width:900px){ .gantt-labels{width:280px;} .gantt-proj-label{padding:6px 10px;} .gantt-proj-cliente{font-size:12px;} .gantt-proj-nombre{font-size:10.5px;} }
-  @media (max-width:639px){ .gantt-labels{width:220px;} .gantt-proj-label{grid-template-columns:20px 1fr;column-gap:4px;padding:6px 8px;} }
-  .gantt-scroll{flex:1;overflow-x:auto;position:relative;}
-  /* La cuadrícula (líneas verticales muy sutiles, una por día hábil) se dibuja
-     con un background-image cuyo tamaño fija renderGantt() según DAY_WIDTH;
-     arranca en la columna 0, sin necesidad de fase. */
-  .gantt-inner{
-    position:relative;background-repeat:repeat-x;
-    background-image:linear-gradient(90deg, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px);
+  .gantt-inner{position:relative;width:calc(var(--gl) + var(--gw));min-width:100%;}
+
+  /* Filas: columna fija + carril de tiempo. */
+  .gc-row,.axis-row{display:grid;grid-template-columns:var(--gl) var(--gw);}
+  .gc-label{
+    position:sticky;left:0;z-index:3;min-width:0;background:var(--surface);
+    border-right:1px solid var(--line);box-shadow:4px 0 8px -6px rgba(4,8,20,.25);
   }
-  .axis-row{position:relative;height:var(--gantt-axis-height);background:var(--surface-alt);border-bottom:1px solid var(--line);}
-  /* Un tick por día hábil (lun-vie): solo el número de fecha, sin nombre del
-     día. El lunes de cada semana lleva un borde algo más marcado — separación
-     sutil entre semanas sin agregar texto extra. */
-  .day-tick{
-    position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;
-    border-left:1px solid color-mix(in srgb, var(--line) 35%, transparent);
-    font-size:10px;font-weight:600;color:var(--ink-dim);font-family:'IBM Plex Mono',monospace;
+  .gc-lane{position:relative;min-width:0;}
+
+  /* Cabecera (fija arriba). */
+  .axis-row{position:sticky;top:0;z-index:5;background:var(--surface-alt);border-bottom:1px solid var(--line);box-shadow:0 4px 8px -6px rgba(4,8,20,.3);}
+  .gc-corner{
+    position:sticky;left:0;z-index:6;display:flex;align-items:flex-end;padding:0 12px 7px;
+    background:var(--surface-alt);border-right:1px solid var(--line);
+    font-size:9.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.07em;
   }
-  .day-tick.week-start{border-left:1px solid color-mix(in srgb, var(--line) 85%, transparent);}
-  .lane-row{position:relative;border-bottom:1px solid color-mix(in srgb, var(--line) 70%, transparent);cursor:pointer;transition:background-color var(--dur-2) var(--ease);}
-  .lane-row:hover{background:color-mix(in srgb, var(--teal) 6%, transparent);}
-  /* Franja de la semana en curso — apenas diferenciada, pintada detrás de las
-     filas (transparentes salvo :hover) para no competir con hitos ni texto. */
-  .week-current-tint{position:absolute;top:0;bottom:0;background:color-mix(in srgb, var(--teal) 5%, transparent);pointer-events:none;z-index:0;}
-  /* Hito de entregable: rombo (cuadrado rotado 45°) centrado en su fecha
-     comprometida. El color comunica el estado temporal (ver ganttEstadoTemporal);
-     la prioridad queda en el tooltip, como dato secundario. */
-  .gantt-hito{
-    position:absolute;transform:translate(-50%,-50%) rotate(45deg);border-radius:2px;
-    border:1px solid rgba(255,255,255,.25);box-shadow:0 1px 3px rgba(0,0,0,.2);
-    cursor:pointer;transition:filter var(--dur-2) var(--ease),transform var(--dur-2) var(--ease);
+  .gc-axis{position:relative;height:46px;}
+  .gc-axis-sem,.gc-axis-dias{position:relative;height:23px;}
+  .gc-axis-dias{border-top:1px solid color-mix(in srgb, var(--line) 70%, transparent);}
+  .gc-sem{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;gap:7px;border-left:1px solid var(--line);font-size:10.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;}
+  .gc-sem:first-child{border-left:none;}
+  .gc-sem b{font-weight:700;color:var(--ink-soft);}
+  .gc-sem span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;}
+  .gc-sem.is-actual{background:color-mix(in srgb, var(--teal) 9%, transparent);}
+  .gc-sem.is-actual b{color:var(--teal);}
+  .gc-dia{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;gap:3px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:var(--ink-dim);}
+  .gc-dia em{font-family:'Inter',sans-serif;font-style:normal;font-size:9px;font-weight:600;opacity:.75;}
+  .gc-dia.is-lunes{border-left:1px solid var(--line);}
+  .gc-dia.is-lunes:first-child{border-left:none;}
+  .gc-dia.is-hoy{color:var(--danger);}
+  .gc-hoy-badge{
+    position:absolute;bottom:-7px;transform:translateX(-50%);z-index:2;padding:0 5px;border-radius:4px;
+    background:var(--danger);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:700;line-height:13px;
+    box-shadow:0 1px 4px color-mix(in srgb, var(--danger) 40%, transparent);
   }
-  .gantt-hito:hover,.gantt-hito:focus-visible{filter:brightness(1.18);transform:translate(-50%,-50%) rotate(45deg) scale(1.25);outline:none;}
-  /* .bar-tip ya no se muestra in-situ (quedaba recortado por el overflow:hidden de
-     .gantt/.gantt-scroll, necesario para bordes, cuadrícula, línea de HOY y el
-     scroll horizontal). Permanece oculto en el DOM como única fuente de contenido
-     para el tooltip global (#global-tooltip), igual que .ent-tip. */
-  .gantt-hito .bar-tip{display:none;}
-  .legend-diamond{width:7px;height:7px;display:inline-block;transform:rotate(45deg);border-radius:1.5px;}
-  .today-line-full{position:absolute;top:0;bottom:0;width:1px;background:var(--danger);z-index:3;pointer-events:none;}
-  /* Etiqueta "HOY" separada de la línea vertical — vive en la franja inferior del eje
-     (junto a las semanas). Ver renderGantt(). */
-  .today-axis-badge{
-    position:absolute;bottom:2px;transform:translateX(-50%);z-index:5;
-    padding:1px 5px;border-radius:5px;background:var(--danger);color:#fff;
-    font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:700;line-height:1.2;white-space:nowrap;
+
+  /* Fondo del carril: columnas por día, semana actual y línea de HOY. */
+  .gc-bg{
+    position:absolute;top:0;bottom:0;left:var(--gl);width:var(--gw);z-index:0;pointer-events:none;
+    background-image:linear-gradient(90deg, color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px);
+    background-size:var(--dw) 100%;
+  }
+  .gc-bg-actual{position:absolute;top:0;bottom:0;background:color-mix(in srgb, var(--teal) 5%, transparent);border-left:1px solid color-mix(in srgb, var(--teal) 18%, transparent);border-right:1px solid color-mix(in srgb, var(--teal) 18%, transparent);}
+  .gc-bg-hoy{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--danger);box-shadow:0 0 6px color-mix(in srgb, var(--danger) 45%, transparent);}
+  #gantt-lanes{position:relative;z-index:1;}
+
+  /* Grupo de proyecto. */
+  .gc-proj{border-top:1px solid var(--line);}
+  #gantt-lanes .gc-proj:first-child{border-top:none;}
+  .gc-proj-label{
+    display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:7px;align-items:baseline;
+    padding:6px 12px 5px;cursor:pointer;transition:background-color var(--dur-2) var(--ease);
+  }
+  .gc-proj-label:hover{background:color-mix(in srgb, var(--teal) 6%, var(--surface));}
+  .gc-proj-label:focus-visible{outline:none;box-shadow:inset var(--ring);}
+  .gc-id{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-dim);}
+  .gc-cliente{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gc-proyecto{grid-column:2 / 4;grid-row:2;font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gc-dot{grid-column:3;grid-row:1;width:7px;height:7px;border-radius:50%;align-self:center;background:var(--ink-dim);}
+  .gc-dot.is-vencido{background:var(--danger);}
+  .gc-dot.is-proximo{background:var(--warn);}
+  .gc-dot.is-atiempo{background:var(--teal);}
+  .gc-proj .gc-lane{cursor:pointer;}
+  .gc-resumen{
+    position:absolute;top:50%;height:4px;margin-top:-2px;border-radius:2px;
+    background:color-mix(in srgb, var(--ink) 16%, transparent);
+  }
+  .gc-resumen::before,.gc-resumen::after{content:"";position:absolute;top:0;width:2px;height:9px;background:color-mix(in srgb, var(--ink) 30%, transparent);border-radius:1px;}
+  .gc-resumen::before{left:0;}
+  .gc-resumen::after{right:0;}
+
+  /* Subfila de entregable. */
+  .gc-ent{height:24px;}
+  .gc-ent-label{display:flex;align-items:center;gap:7px;padding:0 12px 0 24px;cursor:pointer;font-size:11.5px;color:var(--ink-soft);transition:background-color var(--dur-2) var(--ease);}
+  .gc-ent-label:hover{background:color-mix(in srgb, var(--ink) 4%, var(--surface));}
+  .gc-area{flex-shrink:0;width:82px;font-size:10px;font-weight:600;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gc-area::before{content:"";display:inline-block;width:6px;height:6px;border-radius:2px;margin-right:5px;vertical-align:1px;background:var(--ink-dim);}
+  .gc-area.is-arquitectura::before{background:var(--teal);}
+  .gc-area.is-presupuestos::before{background:var(--violet);}
+  .gc-area.is-comercial::before{background:var(--navy);}
+  .gc-ent-nombre{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gc-ent:hover .gc-lane{background:color-mix(in srgb, var(--ink) 3%, transparent);}
+
+  /* Barra + hito. */
+  .gc-item{
+    --c:var(--ink-dim);--d:calc(min(var(--i, 0), 30) * 18ms);position:absolute;top:0;bottom:0;cursor:pointer;outline:none;
+  }
+  .gc-item .gc-bar{animation:gcEntra .55s var(--ease-emphasized) both;animation-delay:var(--d);}
+  .gc-item .gc-hito{animation:gcHito .3s var(--ease-emphasized) both;animation-delay:calc(var(--d) + .2s);}
+  .gc-row{--i:0;}
+  .gc-item.is-vencido{--c:var(--danger);}
+  .gc-item.is-proximo{--c:var(--warn);}
+  .gc-item.is-atiempo{--c:var(--teal);}
+  .gc-bar{
+    position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;border-radius:3px;
+    background:linear-gradient(90deg, color-mix(in srgb, var(--c) 0%, transparent), color-mix(in srgb, var(--c) 55%, transparent) 45%, var(--c));
+    box-shadow:0 1px 2px color-mix(in srgb, var(--c) 25%, transparent);
+  }
+  .gc-hito{
+    position:absolute;right:0;top:50%;width:10px;height:10px;transform:translate(50%,-50%) rotate(45deg);border-radius:2px;
+    background:var(--c);border:1.5px solid var(--surface);box-shadow:0 1px 3px rgba(4,8,20,.3);
+    transition:transform var(--dur-2) var(--ease-emphasized),box-shadow var(--dur-2) var(--ease);
+  }
+  .gc-item:hover .gc-hito,.gc-item:focus-visible .gc-hito{transform:translate(50%,-50%) rotate(45deg) scale(1.3);box-shadow:0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent), 0 2px 6px rgba(4,8,20,.3);}
+  .gc-item:hover .gc-bar,.gc-item:focus-visible .gc-bar{filter:brightness(1.12);}
+  .gc-item .bar-tip{display:none;}
+  @keyframes gcEntra{from{opacity:0;clip-path:inset(0 0 0 100%);}to{opacity:1;clip-path:inset(0 0 0 0);}}
+  @keyframes gcHito{from{opacity:0;}to{opacity:1;}}
+
+  .gc-vacio .gc-label{grid-column:1 / -1;position:static;border-right:none;box-shadow:none;padding:16px;font-size:12.5px;color:var(--ink-soft);}
+
+  /* Leyenda: barra + rombo con el color de cada estado. */
+  .gc-ley{--c:var(--ink-dim);}
+  .gc-ley.is-vencido{--c:var(--danger);}
+  .gc-ley.is-proximo{--c:var(--warn);}
+  .gc-ley.is-atiempo{--c:var(--teal);}
+  .gc-ley-bar{width:14px;height:4px;border-radius:2px;background:linear-gradient(90deg, transparent, var(--c));margin-right:-5px;}
+  .gc-ley-hito{width:7px;height:7px;border-radius:1.5px;transform:rotate(45deg);background:var(--c);}
+
+  @media (max-width:639px){
+    .gantt-topbar{padding:9px 10px;}
+    .gc-proj-label{padding:5px 8px 4px;}
+    .gc-ent-label{padding:0 8px 0 10px;gap:5px;}
+    .gc-area{width:auto;max-width:38px;font-size:9.5px;}
+    .gc-area::before{margin-right:0;}
+    .gc-area{font-size:0;}
+    .gc-area::before{width:7px;height:7px;}
+    .gc-ent-label{font-size:11px;}
+    .gc-sem b{display:none;}
+    .gc-sem.is-actual b{display:inline;}
+    .gantt-scroll{max-height:70vh;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .gc-item .gc-bar,.gc-item .gc-hito{animation:none;}
+    .gc-hito,.gc-proj-label,.gc-ent-label{transition:none;}
   }
   .legend{display:flex;gap:14px;font-size:11px;color:var(--ink-soft);flex-wrap:wrap;}
   .legend span{display:flex;align-items:center;gap:6px;}
@@ -4274,7 +4351,7 @@
     .btn-mini, .filter-reset, .ent-edit-btn, .cal-card, .rs-acc-toggle, .rs-view-btn,
     .theme-switch button, .chip-clickable, .btn-add, .btn-primary, .btn-secondary, .btn-delete,
     .btn-toolbar, .modal-close, .drawer-close, .entregable-chip-more, .ent-toggle-btn, .ent-remove-btn,
-    .rs-cal-nav button, .rs-view-btn, .cliente-link, .barwrap, .gantt-proj-label, .lane-row, .gantt-hito,
+    .rs-cal-nav button, .rs-view-btn, .cliente-link, .barwrap, .gc-proj-label, .gc-ent-label, .gc-item, .gc-proj .gc-lane,
     .resumen-card-clickable, .resumen-quickfilter-chip button{
       cursor:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAUlSURBVEhL1VZriFRVHN/EsrSHRQ8j6YMUkmJQC6LrzD3n3Dv7KDVQJDCiLxX4oA9FDzBqvkZFJFFkCJKL6O7O3Hvuc2b24aS787iPuY+Z0X2oq2uuJYWsiohanTh3d9aZuzMgaB/6wf/L+T9+83/ObWr6PwAVE6+zx3s/h5a04zlNWxDU31Ws6e96Bpri1Y7JHIGGcLFlCD8UtLmrAKa4nRvuJciWSTgfH6NvqIAZbrSvkynwLwTtbwvN1p572WLiB9ZTv+KKyrLKe2sqtQhaYhYVEwQYmISzPZOMzh/ijveSV/8sEOQoH9VGug0AS3ocedqhyIk04Ub6CCxIF6ElfsOY4sewIJehKRImGyNMpodAE5P2XzMEFbUSMMWtoNz9II3B2tIr0NE+DRmx2R/bENAWd7VNDBEmUwkqEracJNyxFM1gmiwbIyDPU91V5Gnvv5jav6gmhinF1095hNHjm6rf64IxhVWwIF8BlUwaCO0hk+NPBf0pGB3vbx0/QkLZ2DpQVpZwY4d/Qra4PWg3C2CKu9lyag5JDSHNNh8/GfSlAAbeS/vK6HwPsKTfN1zyCHLUQbAven/Q1sc6vWclsMTrQOfnEFUEWiIl/IMrybDat0PbvQBaosYWE9NtcNUJWFQ/YIviU9V2NQAFaRtbSvzD5OJziPzsPM0PFhkd8AU6otZi4OXQkttRMWFERvt9PTfST4ApJlenO5cGOXyAtLAYlRKbGZ2f8HsUJMvFfTJYkNLQEHaEDbwTWdJQ2+mjhMnzU8hTSdupXwi0pU5g4XehJbntE0N06K4BW/kCRKPzfaKQjVcgR92LbOU0LQUsSP6EBgnZUoJAW94H0jOO9EeS9Hxoy/vbxo9Q3UnkaG0VHb1CwFU+jIwOTCFHOdgUjc7zFdBRd3acy1IHP4sgERW66NAUL60blJ6tBKwgNHhgGSpqN0CeN4I6CuBpS4EjLL71YMrbIyN9c0iqxc9aF881S3sW1kSjl6mv+xFgCJeBIYx33M4xB7a4lSsnb3LDfYT11LpZ+ovuKH8zhrAx6M/oeFNkbIAAQxgK6kJHu55gy8kvgS1vmX2ktzNsSi8jW/4MukoOGEJdUlpy6GlnoKOsp5lSYQrSRuQq51tPpqd77CqpsK20NFvSQuBK21gvcWbD5SLd28Hq3t9CNDoPWDjGHquz+Jke/8LQ8kITDwMTj1EiWhmQ578HBlbpbYW2/BcwhRG6/NCRpoAjfY0MvLyJkHuCdD4YnV8LbekmLeMc0pnyIlf1iVFJUzhX3VDxRbb6BihI57hyspKxsFrrfLiWIQDGwK8hT71Zr6wVoZmCHD8+u1tV8E8bPY15/opf6nLiAnTkT2jrgrZ+P6GJDbqPQZIgIZOLn1rR3X1fMAbQhZ/pEIVy/JuMIe6KnDh8AzlKsnlPHUJoim9HRvpvBc/0TO8gvZ1VhNCSCNCFybWZ+JN1Yhzs+E0n4TzvHwHGU1eBvNbgvJnyFraUvOYPh4mnB8LEl4CBz9Mh8Cd45gpRUuSqw8iW32oiTbMDAUzxW26k/0JIF7ja6A1Ad40tJa9AR5mCrvIdcsSVQFeWIFd5Dxh4yifNxkk4E7tOPzfaz9J/fTXH2mor9V+T7XogpBx4FKTTc/rbEIyBX2KO9T4ffAeW/CPNGtHLk4uNhgweQEeW288OEWBL7wTt7xiMiREd95ndm6y8Ty97naG4U9BJg6Z4mDveexEY2GrBe//b71KKVje1KJzofHpNtuuxhtejAf4FqdgXxV/K1UcAAAAASUVORK5CYII=") 14 14, pointer;
     }
@@ -4653,13 +4730,12 @@
         </div>
         <div class="legend" id="gantt-legend"></div>
       </div>
-      <div class="gantt-flex">
-        <div class="gantt-labels" id="gantt-labels"></div>
-        <div class="gantt-scroll" id="gantt-scroll">
-          <div class="gantt-inner" id="gantt-inner">
-            <div class="axis-row" id="axis-row"></div>
-            <div id="gantt-lanes"></div>
-          </div>
+      <!-- Un solo contenedor con scroll interno: cabecera fija arriba y
+           columna de proyectos fija a la izquierda (ver renderGantt). -->
+      <div class="gantt-scroll" id="gantt-scroll">
+        <div class="gantt-inner" id="gantt-inner">
+          <div class="axis-row" id="axis-row"></div>
+          <div id="gantt-lanes"></div>
         </div>
       </div>
     </div>
@@ -7752,7 +7828,7 @@ function hideGlobalTooltip(){
   }
   bindDelegatedTooltip(document.getElementById('rs-list'), '.entregable-chip');
   bindDelegatedTooltip(document.getElementById('rs-calendar'), '.cal-card');
-  bindDelegatedTooltip(document.getElementById('gantt-inner'), '.gantt-hito');
+  bindDelegatedTooltip(document.getElementById('gantt-inner'), '.gc-item');
   bindDelegatedTooltip(document.getElementById('kpis-primary'), '.kpi-tooltip');
   window.addEventListener('scroll', hideGlobalTooltip, true);
   window.addEventListener('resize', hideGlobalTooltip);
@@ -10115,15 +10191,22 @@ function ganttEstadoTemporal(fechaEntrega, hoy){
   if(dias <= 30) return {key:'atiempo', color:'var(--teal)', label:'A tiempo'};
   return {key:'planificado', color:'var(--ink-dim)', label:'Planificado'};
 }
+/* Orden de las subfilas dentro de cada proyecto: el recorrido natural del
+   trabajo (Arquitectura → Presupuestos → Comercial) y, dentro del área, por fecha. */
+const GANTT_ORDEN_AREA = {arquitectura:0, presupuestos:1, comercial:2};
+/* Largo VISUAL de la barra hacia atrás desde el hito, en días hábiles. El
+   entregable no tiene fecha de inicio: la barra es solo una guía de lectura
+   que termina en fechaEntrega (la única fecha real) y se desvanece al inicio. */
+const GANTT_TRAMO_VISUAL = 2;
+function ganttAnchoEtiquetas(){
+  const w = window.innerWidth;
+  return w < 640 ? 150 : (w < 1100 ? 240 : 300);
+}
 function renderGantt(){
   hideGlobalTooltip();
-  /* El cronograma usa exclusivamente fechaEntrega (única fecha operativa del
-     entregable) — cada entregable se ubica como un marcador de un solo día en
-     esa fecha; los que no la tienen no tienen dónde ubicarse en la línea de
-     tiempo y quedan fuera. Solo entregables pendientes: el cronograma es una
-     agenda de entregas por hacer, no un histórico. */
+  /* Misma selección de siempre: entregables pendientes con fechaEntrega, del
+     área elegida. Solo se pintan los que caen en la ventana de 3 semanas. */
   const items = allEntregablesFlat().filter(x=> x.e.estado==='pendiente' && x.e.fechaEntrega && (cronArea==='todas' || x.e.area===cronArea));
-  const labelsEl = document.getElementById('gantt-labels');
   const axisEl = document.getElementById('axis-row');
   const lanesEl = document.getElementById('gantt-lanes');
   const innerEl = document.getElementById('gantt-inner');
@@ -10134,24 +10217,13 @@ function renderGantt(){
   const hoy = todayISO();
   areaTagEl.textContent = cronArea==='todas' ? 'Todas las áreas' : AREA_LABEL[cronArea];
 
-  /* Ventana fija de 3 semanas — anterior, actual y siguiente — calculada desde
-     hoy en cada render. Antes el eje iba del entregable más antiguo al más
-     lejano (con un piso de 92 días), así que había que recorrer
-     meses de línea de tiempo para ubicar una fecha. Con 3 semanas la semana
-     actual queda siempre en el tercio central, entre la anterior y la siguiente.
-     Los entregables fuera de la ventana no se pintan; su cantidad se informa en
-     la barra superior para que no desaparezcan en silencio, y siguen contando en
-     los KPIs del resumen, que son de toda la cartera y no de la ventana. */
+  /* Ventana fija de 3 semanas hábiles (anterior, actual y siguiente). Los fines
+     de semana no tienen columna: una fecha en sábado/domingo se ubica en el
+     lunes siguiente solo para dibujarla (la fecha real no se toca). */
   const semanaActual = getSemanaActual();
-  const VENTANA_SEMANAS = 3;
-  const VENTANA_DIAS_HABILES = VENTANA_SEMANAS * 5;
-  /* Escala del eje: solo días hábiles (lun-vie), cada uno su propia columna —
-     los fines de semana no ocupan columna. Un entregable cuya fechaEntrega real
-     cae en sábado/domingo se ubica en el lunes siguiente (no hay columna de fin
-     de semana donde ponerlo); la fecha en sí no se toca en ningún otro lado
-     (tooltip, drawer, KPIs siguen usando fechaEntrega real). */
-  const refMondayISO = addDaysISO(semanaActual.lunesISO, -7);   // lunes de la semana anterior
-  const ventanaFinISO = addDaysISO(semanaActual.lunesISO, 11);  // viernes de la semana siguiente
+  const VENTANA_DIAS_HABILES = 15;
+  const refMondayISO = addDaysISO(semanaActual.lunesISO, -7);
+  const ventanaFinISO = addDaysISO(semanaActual.lunesISO, 11);
   function dayOffset(iso){
     const [y,m,d] = iso.split('-').map(Number);
     const dow = new Date(Date.UTC(y,m-1,d)).getUTCDay();
@@ -10159,62 +10231,49 @@ function renderGantt(){
     const diff = daysBetween(refMondayISO, snapped);
     return Math.floor(diff/7)*5 + (diff%7);
   }
-  /* Con solo 15 columnas el ancho fijo de DAY_WIDTH dejaría el Gantt como una
-     franja delgada pegada a la izquierda, así que el día se estira para llenar
-     el espacio disponible. DAY_WIDTH queda como piso: en pantallas angostas la
-     ventana vuelve a tener scroll horizontal en vez de comprimirse. */
-  const dayW = Math.max(DAY_WIDTH, Math.floor((scrollEl.clientWidth || 0) / VENTANA_DIAS_HABILES));
-  function xPx(iso){ return dayOffset(iso) * dayW; }
-  const todayX = xPx(hoy);
-  /* El filtro va sobre el offset ya "snapeado", no sobre la fecha cruda: así un
-     entregable del sábado de la semana siguiente, que cae en el lunes posterior,
-     queda correctamente fuera de la ventana. */
   const enVentana = (iso)=>{ const off = dayOffset(iso); return off >= 0 && off < VENTANA_DIAS_HABILES; };
   const itemsVentana = items.filter(x=> enVentana(x.e.fechaEntrega));
   const fueraDeVentana = items.length - itemsVentana.length;
 
-  /* Eje temporal por día hábil: la cuadrícula y el hito conservan su columna
-     diaria real (una por día hábil), pero para que el eje no se sature de
-     números se muestra la etiqueta solo cada N días hábiles — N se calcula
-     dinámicamente según el ancho de día para que dos números nunca queden más
-     cerca que AXIS_LABEL_MIN_GAP px. El lunes de cada semana conserva su
-     separación algo más marcada (borde), independientemente de si ese día
-     lleva número visible o no. */
-  const AXIS_LABEL_MIN_GAP = 46;
-  const axisLabelStep = Math.max(1, Math.ceil(AXIS_LABEL_MIN_GAP / dayW));
-  let axisHtml = '';
-  let cursorISO = refMondayISO;
-  while(cursorISO <= ventanaFinISO){
-    const [cy,cm,cd] = cursorISO.split('-').map(Number);
-    const dow = new Date(Date.UTC(cy,cm-1,cd)).getUTCDay();
-    if(dow!==0 && dow!==6){
-      const off = dayOffset(cursorISO);
-      const label = off % axisLabelStep === 0 ? String(cd).padStart(2,'0') : '';
-      axisHtml += `<div class="day-tick${dow===1?' week-start':''}" style="left:${off*dayW}px;width:${dayW}px;">${label}</div>`;
+  /* Escala: el día se estira para llenar el ancho disponible; en pantallas
+     angostas queda un mínimo legible y aparece el scroll interno. */
+  const labelW = ganttAnchoEtiquetas();
+  const minDia = window.innerWidth < 640 ? 34 : 40;
+  const dayW = Math.max(minDia, Math.floor(((scrollEl.clientWidth || 0) - labelW) / VENTANA_DIAS_HABILES));
+  const gridW = VENTANA_DIAS_HABILES * dayW;
+  const centro = off=>off * dayW + dayW / 2;
+  const todayOff = dayOffset(hoy);
+  const todayX = centro(todayOff);
+  innerEl.style.setProperty('--gl', labelW + 'px');
+  innerEl.style.setProperty('--gw', gridW + 'px');
+  innerEl.style.setProperty('--dw', dayW + 'px');
+
+  /* ---- Eje: semanas arriba, días hábiles abajo ---- */
+  const NOMBRES_SEMANA = ['Semana anterior', 'Semana actual', 'Semana siguiente'];
+  const LETRA = ['D','L','M','M','J','V','S'];
+  let semanasHtml = '', diasHtml = '';
+  for(let s = 0; s < 3; s++){
+    const lunes = addDaysISO(refMondayISO, s * 7), viernes = addDaysISO(lunes, 4);
+    semanasHtml += `<div class="gc-sem${s===1 ? ' is-actual' : ''}" style="left:${s*5*dayW}px;width:${5*dayW}px;"><b>${NOMBRES_SEMANA[s]}</b><span>${formatFechaCorta(lunes)} – ${formatFechaCorta(viernes)}</span></div>`;
+    for(let d = 0; d < 5; d++){
+      const iso = addDaysISO(lunes, d);
+      const [y, m, dd] = iso.split('-').map(Number);
+      const off = s * 5 + d;
+      diasHtml += `<div class="gc-dia${iso===hoy ? ' is-hoy' : ''}${d===0 ? ' is-lunes' : ''}" style="left:${off*dayW}px;width:${dayW}px;"><em>${LETRA[new Date(Date.UTC(y, m-1, dd)).getUTCDay()]}</em>${String(dd).padStart(2,'0')}</div>`;
     }
-    cursorISO = addDaysISO(cursorISO, 1);
   }
-  axisEl.innerHTML = axisHtml;
-  axisEl.insertAdjacentHTML('beforeend', `<div class="today-axis-badge" style="left:${todayX}px;">HOY</div>`);
+  axisEl.innerHTML = `<div class="gc-corner">Proyecto · entregable</div>
+    <div class="gc-axis"><div class="gc-axis-sem">${semanasHtml}</div><div class="gc-axis-dias">${diasHtml}</div>
+      ${todayOff >= 0 && todayOff < VENTANA_DIAS_HABILES ? `<span class="gc-hoy-badge" style="left:${todayX}px;">HOY</span>` : ''}</div>`;
 
-  const totalBusinessDays = VENTANA_DIAS_HABILES;
-  innerEl.style.width = (totalBusinessDays*dayW) + 'px';
-  /* La cuadrícula vertical del cuerpo (background-image en CSS) queda un
-     tick por día hábil, sin necesidad de fase (arranca en la columna 0). */
-  innerEl.style.backgroundSize = `${dayW}px 100%`;
-  innerEl.style.backgroundPosition = '0 0';
-  innerEl.querySelectorAll('.week-current-tint').forEach(el=>el.remove());
-  /* Siempre 5 (el tercio central de la ventana), pero se sigue calculando con
-     dayOffset para no duplicar la regla de la escala. */
-  const curWeekOffDays = dayOffset(semanaActual.lunesISO);
-  if(curWeekOffDays >= 0 && curWeekOffDays < totalBusinessDays){
-    innerEl.insertAdjacentHTML('afterbegin', `<div class="week-current-tint" style="left:${curWeekOffDays*dayW}px;width:${5*dayW}px;"></div>`);
-  }
+  /* ---- Capa de fondo: columnas, semana actual y línea de HOY ---- */
+  innerEl.querySelectorAll('.gc-bg').forEach(el=>el.remove());
+  innerEl.insertAdjacentHTML('afterbegin', `<div class="gc-bg" aria-hidden="true">
+      <div class="gc-bg-actual" style="left:${5*dayW}px;width:${5*dayW}px;"></div>
+      ${todayOff >= 0 && todayOff < VENTANA_DIAS_HABILES ? `<div class="gc-bg-hoy" style="left:${todayX}px;"></div>` : ''}
+    </div>`);
 
-  /* Agrupado por proyecto/oportunidad (no por responsable): cada oportunidad es
-     una única fila y sus entregables visibles (según el subtab de área) se
-     ubican como hitos independientes sobre esa misma línea de tiempo. Solo se
-     dibujan las oportunidades con algún entregable dentro de la ventana. */
+  /* ---- Proyectos y sus entregables ---- */
   const projMap = new Map();
   itemsVentana.forEach(x=>{
     if(!projMap.has(x.o.id)) projMap.set(x.o.id, {o:x.o, items:[]});
@@ -10226,62 +10285,61 @@ function renderGantt(){
     return fa < fb ? -1 : fa > fb ? 1 : a.o.id - b.o.id;
   });
 
-  const itemSize = 10, itemGap = 7, rowH = 44;
-  let labelsHtml = `<div class="glabel-spacer"></div>`;
-  let lanesHtml = '';
-
-  projects.forEach(proj=>{
+  let fila = 0;
+  const lanesHtml = projects.map(proj=>{
     const o = proj.o;
-    const laneItems = proj.items.map(x=>{
-      const day = dayOffset(x.e.fechaEntrega);
-      return {x, startDay: day, endDay: day};
-    });
-    const {items: placed, subRowCount} = assignSubRows(laneItems);
-    const laneHeight = Math.max(rowH, subRowCount*(itemSize+itemGap)+itemGap);
-    const count = proj.items.length;
-
-    labelsHtml += `<div class="gantt-proj-label" style="height:${laneHeight}px;" role="button" tabindex="0"
-        title="${count} entregable${count===1?'':'s'} pendiente${count===1?'':'s'}"
-        onclick="openRSDetailDrawer(${o.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openRSDetailDrawer(${o.id});}">
-      <span class="gantt-proj-id">#${o.id}</span><span class="gantt-proj-cliente">${o.cliente || '(sin cliente)'}</span><span class="gantt-proj-nombre">${o.proyecto || '(sin nombre)'}</span>
+    const abrir = `openRSDetailDrawer(${o.id})`;
+    const ents = proj.items.slice().sort((a, b)=>
+      (GANTT_ORDEN_AREA[a.e.area] ?? 9) - (GANTT_ORDEN_AREA[b.e.area] ?? 9) || (a.e.fechaEntrega < b.e.fechaEntrega ? -1 : a.e.fechaEntrega > b.e.fechaEntrega ? 1 : 0));
+    /* Barra resumen del proyecto: del inicio visual más temprano al último hito. */
+    const offs = ents.map(x=>dayOffset(x.e.fechaEntrega));
+    const pIni = centro(Math.max(0, Math.min(...offs) - GANTT_TRAMO_VISUAL)), pFin = centro(Math.max(...offs));
+    const peor = ents.map(x=>ganttEstadoTemporal(x.e.fechaEntrega, hoy).key)
+      .sort((a, b)=>['vencido','proximo','atiempo','planificado'].indexOf(a) - ['vencido','proximo','atiempo','planificado'].indexOf(b))[0];
+    const n = ents.length;
+    let html = `<div class="gc-row gc-proj" style="--i:${fila++}">
+      <div class="gc-label gc-proj-label" role="button" tabindex="0" title="${n} entregable${n===1?'':'s'} pendiente${n===1?'':'s'} en la ventana"
+        onclick="${abrir}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${abrir};}">
+        <span class="gc-id">#${o.id}</span><span class="gc-cliente">${escAttr(o.cliente || '(sin cliente)')}</span>
+        <span class="gc-proyecto">${escAttr(o.proyecto || '(sin nombre)')}</span><span class="gc-dot is-${peor}" aria-hidden="true"></span>
+      </div>
+      <div class="gc-lane" onclick="${abrir}"><span class="gc-resumen" style="left:${pIni}px;width:${Math.max(4, pFin - pIni)}px;"></span></div>
     </div>`;
-
-    const hitos = placed.map(it=>{
-      const e = it.x.e;
-      const cx = it.startDay*dayW;
-      const cy = it.subRow*(itemSize+itemGap) + itemGap + itemSize/2;
-      const estado = ganttEstadoTemporal(e.fechaEntrega, hoy);
-      const priLabel = PRIORIDAD_TABLERO_LABEL[e.prioridad] || '—';
-      return `<div class="gantt-hito" tabindex="0" style="left:${cx}px;top:${cy}px;width:${itemSize}px;height:${itemSize}px;background:${estado.color};" onclick="event.stopPropagation();openRSDetailDrawer(${o.id},${e.id})">
-        <span class="bar-tip"><b>${e.nombre}</b><br>${nombreResponsableEntregable(e) || '(sin asignar)'}<br>${formatFechaLarga(e.fechaEntrega)}<br>P${e.prioridad || '—'} · ${priLabel}</span>
+    ents.forEach(x=>{
+      const e = x.e;
+      const off = dayOffset(e.fechaEntrega);
+      const est = ganttEstadoTemporal(e.fechaEntrega, hoy);
+      const x1 = centro(off), x0 = centro(Math.max(0, off - GANTT_TRAMO_VISUAL)) - (off - GANTT_TRAMO_VISUAL < 0 ? dayW / 2 : 0);
+      const resp = nombreResponsableEntregable(e);
+      const dif = daysBetween(hoy, e.fechaEntrega);
+      const cuando = dif === 0 ? 'Hoy' : (dif < 0 ? 'hace ' + Math.abs(dif) + ' d' : 'en ' + dif + ' d');
+      const area = RS_AREA_CORTA[e.area] || AREA_LABEL[e.area] || '—';
+      const abrirE = `event.stopPropagation();openRSDetailDrawer(${o.id},${e.id})`;
+      html += `<div class="gc-row gc-ent" style="--i:${fila++}">
+        <div class="gc-label gc-ent-label" onclick="${abrirE}" title="${escAttr(e.nombre || 'Tarea')}">
+          <span class="gc-area is-${e.area}">${area}</span><span class="gc-ent-nombre">${escAttr(e.nombre || 'Tarea')}</span>
+        </div>
+        <div class="gc-lane">
+          <div class="gc-item is-${est.key}" tabindex="0" style="left:${x0}px;width:${Math.max(dayW / 2, x1 - x0)}px;"
+            onclick="${abrirE}" onkeydown="if(event.key==='Enter'){${abrirE}}" aria-label="${escAttr((e.nombre || 'Tarea') + ' · ' + formatFechaLarga(e.fechaEntrega) + ' · ' + est.label)}">
+            <span class="gc-bar"></span><span class="gc-hito"></span>
+            <span class="bar-tip"><b>#${o.id} · ${escAttr(o.cliente || '')}</b><br>${escAttr(o.proyecto || '—')}<br>${escAttr(e.nombre || 'Tarea')} · ${area}<br>Responsable: ${escAttr(resp || 'sin asignar')}<br>Entrega: ${formatFechaLarga(e.fechaEntrega)} (${cuando})<br>Estado: ${est.label}</span>
+          </div>
+        </div>
       </div>`;
-    }).join('');
-    lanesHtml += `<div class="lane-row gantt-proj-row" style="height:${laneHeight}px;" onclick="openRSDetailDrawer(${o.id})">${hitos}</div>`;
-  });
+    });
+    return html;
+  }).join('');
 
-  labelsEl.innerHTML = labelsHtml;
-  lanesEl.innerHTML = lanesHtml || '';
-  /* Se distingue "no hay nada" de "hay, pero cae fuera de estas 3 semanas": sin
-     ese matiz un Gantt vacío haría pensar que el área no tiene trabajo. */
-  if(!projects.length){
-    lanesEl.innerHTML = fueraDeVentana
-      ? `<p class="rs-empty-inline" style="padding:16px;display:block;">🗓️ Sin entregas en estas 3 semanas · ${fueraDeVentana} entregable${fueraDeVentana===1?'':'s'} pendiente${fueraDeVentana===1?'':'s'} con fecha fuera de la ventana.</p>`
-      : '<p class="rs-empty-inline" style="padding:16px;display:block;">🟢 Sin entregables pendientes en esta área.</p>';
-  }
+  lanesEl.innerHTML = lanesHtml || `<div class="gc-row gc-vacio"><div class="gc-label">${fueraDeVentana
+      ? `🗓️ Sin entregas en estas 3 semanas · ${fueraDeVentana} entregable${fueraDeVentana===1?'':'s'} pendiente${fueraDeVentana===1?'':'s'} con fecha fuera de la ventana.`
+      : '🟢 Sin entregables pendientes en esta área.'}</div><div class="gc-lane"></div></div>`;
 
-  innerEl.querySelectorAll('.today-line-full').forEach(el=>el.remove());
-  innerEl.insertAdjacentHTML('beforeend', `<div class="today-line-full" style="left:${todayX}px;"></div>`);
+  legendEl.innerHTML = ['vencido','proximo','atiempo','planificado'].map(k=>{
+    const label = {vencido:'Vencido', proximo:'Próximo / en riesgo', atiempo:'A tiempo', planificado:'Planificado'}[k];
+    return `<span class="gc-ley is-${k}"><i class="gc-ley-bar"></i><i class="gc-ley-hito"></i>${label}</span>`;
+  }).join('');
 
-  legendEl.innerHTML = `
-    <span><span class="legend-diamond" style="background:var(--teal);"></span> A tiempo</span>
-    <span><span class="legend-diamond" style="background:var(--warn);"></span> En riesgo</span>
-    <span><span class="legend-diamond" style="background:var(--danger);"></span> Vencido</span>
-    <span><span class="legend-diamond" style="background:var(--ink-dim);"></span> Planificado</span>`;
-
-  /* El rango de la barra superior es el de la ventana, más cuántos entregables
-     quedaron fuera: es la única señal de que el Gantt no muestra toda la
-     cartera. Los KPIs de abajo siguen contando TODO lo pendiente del área (no
-     solo la ventana), igual que antes. */
   rangeEl.textContent = formatFechaCorta(refMondayISO) + ' — ' + formatFechaCorta(ventanaFinISO) +
     (fueraDeVentana ? '  ·  ' + fueraDeVentana + ' fuera de la ventana' : '');
   const vencidosCron = items.filter(x=> x.e.fechaEntrega < hoy).length;
@@ -10293,7 +10351,8 @@ function renderGantt(){
     <div class="kpi-mini"><span class="kpi-mini-icon" aria-hidden="true">⛔</span><div><div class="kpi-mini-num">${vencidosCron}</div><div class="kpi-mini-label">Vencidos</div></div></div>
     <div class="kpi-mini"><span class="kpi-mini-icon" aria-hidden="true">⏳</span><div><div class="kpi-mini-num">${proximosCron}</div><div class="kpi-mini-label">Próximos (semana)</div></div></div>`;
 
-  requestAnimationFrame(()=>{ scrollEl.scrollLeft = Math.max(0, todayX - scrollEl.clientWidth/2); });
+  /* Con scroll horizontal (pantallas angostas), HOY queda centrado. */
+  requestAnimationFrame(()=>{ scrollEl.scrollLeft = Math.max(0, todayX - (scrollEl.clientWidth - labelW) / 2); });
 }
 
 /* ============================================================
