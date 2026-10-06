@@ -3884,6 +3884,386 @@
     body{padding-left:0 !important;}
   }
 
+  /* ============================================================
+     GERENCIA — dashboard ejecutivo compacto. Orden de lectura:
+     Gerente (KPIs · movimiento · pipeline · lectura) → Jefaturas
+     (cumplimiento · operación · atención) → Análisis del cliente.
+     Tarjetas compactas con elevación suave; color solo con significado y
+     siempre de la paleta. Animaciones cortas, una sola vez.
+     ============================================================ */
+  @keyframes gerSube{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  @keyframes gerCrece{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+  @keyframes gerCreceY{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+  @keyframes gerRevela{from{clip-path:inset(0 100% 0 0);}to{clip-path:inset(0 0 0 0);}}
+  @keyframes gerArco{from{stroke-dasharray:0 100;}}
+
+  /* Gerencia trae su propio encabezado (título + controles). */
+  .sheet:has(#gerencia.active) > .view-context{display:none;}
+  .ger-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px 20px;flex-wrap:wrap;margin:0 0 18px;padding:2px 4px 0;}
+  .ger-head-tit{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .ger-titulo{margin:0;font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--ink);line-height:1.15;}
+  .ger-rango{display:inline-flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-dim);}
+  .ger-rango::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px color-mix(in srgb, var(--teal) 55%, transparent);}
+  .ger-head-ctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+  .ger-filtros{display:flex;gap:8px;}
+  .ger-filtros .msel-btn{min-width:150px;}
+  .ger-f-per[hidden]{display:none;}
+  .ger-f-per .msel-btn{min-width:150px;}
+  .ger-f-per .msel-panel{max-height:340px;overflow-y:auto;}
+  .ger-acciones{display:inline-flex;padding:3px;gap:2px;border-radius:var(--radius-pill);border:1px solid var(--line);background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .ger-btn{
+    display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 13px;border-radius:var(--radius-pill);
+    border:none;background:transparent;color:var(--ink-soft);
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;
+    transition:background-color var(--dur-2) var(--ease),color var(--dur-1) var(--ease),box-shadow var(--dur-2) var(--ease);
+  }
+  .ger-btn svg{width:15px;height:15px;flex-shrink:0;color:var(--teal);}
+  .ger-btn:hover{color:var(--ink);background:var(--surface);box-shadow:var(--shadow-xs);}
+  .ger-btn:focus-visible{outline:none;box-shadow:var(--ring);}
+
+  .ger-body{display:flex;flex-direction:column;gap:16px;}
+  .ger-body > *{animation:gerSube .45s var(--ease-emphasized) both;}
+  .ger-body > *:nth-child(2){animation-delay:.05s;}
+  .ger-body > *:nth-child(3){animation-delay:.1s;}
+  .ger-body > *:nth-child(4){animation-delay:.15s;}
+  .ger-body > *:nth-child(n+5){animation-delay:.2s;}
+  #gerencia [role="button"]{cursor:pointer;}
+  #gerencia [role="button"]:focus-visible{outline:none;box-shadow:var(--ring);border-radius:10px;}
+  .ger-cnt{font-variant-numeric:tabular-nums;}
+  .ger-vacio{margin:0;padding:8px 0;font-size:12px;color:var(--ink-dim);}
+  .ger-link{background:none;border:none;padding:0;font:inherit;font-size:12px;font-weight:600;color:var(--teal);cursor:pointer;}
+  .ger-link:hover{text-decoration:underline;text-underline-offset:3px;}
+  .ger-link:focus-visible{outline:none;box-shadow:var(--ring);border-radius:4px;}
+  .ger-delta{font-size:11px;color:var(--ink-dim);white-space:nowrap;}
+  .ger-delta.is-ok{color:var(--ok);font-weight:600;}
+  .ger-delta.is-danger{color:var(--danger);font-weight:600;}
+
+  /* Tarjeta base: elevación suave, filo de luz arriba y un leve volumen. */
+  .ger-row{display:grid;gap:16px;}
+  .ger-card{
+    position:relative;min-width:0;padding:16px 18px;border-radius:16px;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--ink) 3%), var(--surface));
+    border:1px solid var(--glass-border);
+    box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 7%, transparent), 0 1px 2px rgba(4,8,20,.10), var(--shadow-sm);
+    transition:transform var(--dur-2) var(--ease-emphasized),box-shadow var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease);
+  }
+  .ger-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;margin:0 0 12px;}
+  .ger-card-t{margin:0;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .ger-card-sub{font-size:11px;color:var(--ink-dim);}
+  .ger-card-sub.is-danger{color:var(--danger);font-weight:600;}
+
+  /* ---------- 1 · KPIs ---------- */
+  .ger-r-kpi{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .ger-kpi{--k-c:var(--navy);display:flex;flex-direction:column;gap:6px;padding:14px 16px 13px;overflow:hidden;}
+  .ger-kpi::after{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg, var(--k-c), transparent 70%);opacity:.75;}
+  .ger-kpi:hover{transform:translateY(-2px);border-color:color-mix(in srgb, var(--k-c) 30%, var(--glass-border));box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent), 0 2px 4px rgba(4,8,20,.10), var(--shadow-md);}
+  .ger-kpi.is-teal{--k-c:var(--teal);}
+  .ger-kpi.is-ok{--k-c:var(--ok);}
+  .ger-kpi.is-danger{--k-c:var(--danger);}
+  .ger-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .ger-kpi-k{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ger-kpi-ico{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:8px;color:var(--k-c);background:color-mix(in srgb, var(--k-c) 13%, transparent);box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent);}
+  .ger-kpi-ico svg{width:14px;height:14px;}
+  .ger-kpi-v{display:flex;align-items:baseline;gap:9px;font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;line-height:1.05;color:var(--ink);letter-spacing:-.025em;white-space:nowrap;}
+  .ger-kpi.is-danger .ger-kpi-v{color:var(--danger);}
+  .ger-kpi-v small{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:var(--ink-soft);letter-spacing:0;}
+  .ger-kpi-sub{font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ger-seg{display:flex;gap:2px;height:5px;}
+  .ger-seg i{width:var(--w);background:var(--c);border-radius:3px;transform-origin:left;animation:gerCrece .7s var(--ease-emphasized) .15s both;}
+  .ger-prog{display:block;height:5px;border-radius:3px;background:color-mix(in srgb, var(--ink) 8%, transparent);overflow:hidden;}
+  .ger-prog i{display:block;height:100%;width:var(--w);border-radius:3px;background:linear-gradient(90deg, color-mix(in srgb, var(--k-c) 50%, transparent), var(--k-c));transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) .15s both;}
+  .ger-spark{display:block;width:100%;height:18px;overflow:visible;}
+  .ger-spark path{fill:none;stroke:var(--k-c);stroke-width:1.6;}
+
+  /* ---------- 2 · Movimiento + Pipeline ---------- */
+  .ger-r-2{grid-template-columns:minmax(0,7fr) minmax(0,5fr);}
+  .ger-ley{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 10px;}
+  .ger-ley-it{
+    --l-c:var(--ok);display:inline-flex;align-items:baseline;gap:7px;padding:5px 10px;border-radius:10px;font-size:11.5px;color:var(--ink-soft);
+    background:color-mix(in srgb, var(--l-c) 8%, transparent);transition:background-color var(--dur-2) var(--ease),transform var(--dur-2) var(--ease);
+  }
+  .ger-ley-it:hover{background:color-mix(in srgb, var(--l-c) 15%, transparent);transform:translateY(-1px);}
+  .ger-ley-it i{width:8px;height:8px;border-radius:50%;background:var(--l-c);align-self:center;}
+  .ger-ley-it b{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--ink);}
+  .ger-ley-it em{font-family:'IBM Plex Mono',monospace;font-style:normal;font-size:11px;color:var(--l-c);}
+  .ger-ley-it.is-navy{--l-c:var(--navy);}
+  .ger-ley-it.is-teal{--l-c:var(--teal);}
+
+  .ger-ch{position:relative;}
+  .ger-ch-plot{position:relative;height:150px;}
+  .ger-ch-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  .ger-ch-max{position:absolute;right:0;top:-2px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-dim);}
+  .ger-ch-grid line{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4;}
+  .ger-ch-g0{stop-color:var(--ok);stop-opacity:.28;}
+  .ger-ch-g1{stop-color:var(--ok);stop-opacity:0;}
+  .ger-ch-area{fill:url(#ger-ch-g);}
+  .ger-ch-line{fill:none;stroke-width:2.2;stroke-linecap:round;}
+  .ger-ch-plot svg,.ger-spark{animation:gerRevela 1.1s var(--ease-emphasized) .1s both;}
+  .ger-ch-line.is-ok{stroke:var(--ok);}
+  .ger-ch-line.is-navy{stroke:var(--navy);stroke-width:1.8;}
+  .ger-ch-line.is-teal{stroke:var(--teal);stroke-width:1.8;}
+  .ger-ch-guia{position:absolute;top:0;bottom:0;width:1px;background:color-mix(in srgb, var(--ink) 22%, transparent);opacity:0;pointer-events:none;transition:left var(--dur-1) var(--ease),opacity var(--dur-1) var(--ease);}
+  .ger-ch-dot{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--surface);border:2px solid var(--d-c, var(--ok));opacity:0;pointer-events:none;transition:left var(--dur-1) var(--ease),top var(--dur-1) var(--ease),opacity var(--dur-1) var(--ease);box-shadow:0 0 0 3px color-mix(in srgb, var(--d-c, var(--ok)) 20%, transparent);}
+  .ger-ch-dot.is-navy{--d-c:var(--navy);}
+  .ger-ch-dot.is-teal{--d-c:var(--teal);}
+  .ger-ch-hits{position:absolute;inset:0;display:flex;}
+  .ger-ch-hits span{flex:1;}
+  .ger-tip{
+    position:absolute;bottom:calc(100% + 6px);transform:translateX(-50%);z-index:3;min-width:150px;padding:9px 11px;border-radius:10px;
+    background:var(--surface);border:1px solid var(--glass-border);box-shadow:var(--shadow-md);
+    display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--ink-soft);opacity:0;pointer-events:none;
+    transition:opacity var(--dur-1) var(--ease),left var(--dur-1) var(--ease);
+  }
+  .ger-tip b{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);margin-bottom:2px;}
+  .ger-tip span{display:flex;align-items:center;gap:7px;}
+  .ger-tip span i{width:7px;height:7px;border-radius:50%;background:var(--ok);}
+  .ger-tip span.is-navy i{background:var(--navy);}
+  .ger-tip span.is-teal i{background:var(--teal);}
+  .ger-tip em{margin-left:auto;font-style:normal;font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);}
+  .ger-ch-plot.is-hover .ger-ch-guia,.ger-ch-plot.is-hover .ger-ch-dot,.ger-ch-plot.is-hover .ger-tip{opacity:1;}
+  .ger-ch-x{display:flex;justify-content:space-between;margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-dim);}
+
+  .ger-pipe-rows{display:flex;flex-direction:column;gap:2px;}
+  .ger-pr{
+    --p-c:var(--navy);display:grid;grid-template-columns:minmax(0,128px) 26px minmax(0,1fr) 76px;align-items:center;gap:10px;
+    padding:8px 8px;margin:0 -8px;border-radius:10px;transition:background-color var(--dur-2) var(--ease);
+  }
+  .ger-pr:hover{background:color-mix(in srgb, var(--p-c) 8%, transparent);}
+  .ger-pr.is-cliente{--p-c:var(--teal);}
+  .ger-pr:last-child{--p-c:var(--orange);}
+  .ger-pr-k{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ger-pr-al{width:6px;height:6px;border-radius:50%;background:var(--warn);flex-shrink:0;box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 18%, transparent);}
+  .ger-pr-n{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--ink);text-align:right;}
+  .ger-pr-bar{display:block;height:10px;border-radius:6px;background:color-mix(in srgb, var(--ink) 6%, transparent);overflow:hidden;}
+  .ger-pr-bar i{display:block;height:100%;width:var(--w);border-radius:6px;background:linear-gradient(90deg, color-mix(in srgb, var(--p-c) 45%, transparent), var(--p-c));box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 22%, transparent);transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) both;animation-delay:calc(var(--i) * 60ms + .15s);}
+  .ger-pr-imp{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);text-align:right;white-space:nowrap;}
+  .ger-pr.is-cero .ger-pr-k,.ger-pr.is-cero .ger-pr-n{color:var(--ink-dim);}
+
+  /* Lectura gerencial: una franja breve, sin caja pesada. */
+  .ger-lec{display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));align-items:start;gap:10px 22px;padding:2px 4px;}
+  .ger-lec-t{font-size:10.5px;font-weight:700;color:var(--teal-deep);text-transform:uppercase;letter-spacing:.09em;padding-top:2px;white-space:nowrap;}
+  .ger-lec-it{--in-c:var(--navy);position:relative;margin:0;padding-left:11px;font-size:12px;line-height:1.45;color:var(--ink-soft);}
+  .ger-lec-it::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:2px;border-radius:2px;background:var(--in-c);}
+  .ger-lec-it b{color:var(--ink);}
+  .ger-lec-it.is-ok{--in-c:var(--ok);}
+  .ger-lec-it.is-warn{--in-c:var(--warn);}
+  .ger-lec-it.is-danger{--in-c:var(--danger);}
+
+  /* ---------- 3 · Jefaturas ---------- */
+  .ger-r-3{grid-template-columns:minmax(0,3.2fr) minmax(0,5fr) minmax(0,3.8fr);}
+  .ger-cum-in{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:12px;}
+  .ger-dona-wrap{--d-c:var(--ink-dim);position:relative;width:118px;height:118px;border-radius:50%;transition:transform var(--dur-2) var(--ease-emphasized);}
+  .ger-dona-wrap:hover{transform:scale(1.03);}
+  .ger-dona-wrap.is-ok{--d-c:var(--ok);}
+  .ger-dona-wrap.is-warn{--d-c:var(--warn);}
+  .ger-dona-wrap.is-danger{--d-c:var(--danger);}
+  .ger-dona{width:100%;height:100%;display:block;filter:drop-shadow(0 4px 10px color-mix(in srgb, var(--d-c) 22%, transparent));}
+  .ger-dona-track{fill:none;stroke:color-mix(in srgb, var(--ink) 8%, transparent);stroke-width:10;}
+  .ger-dona-arc{fill:none;stroke:var(--d-c);stroke-width:10;stroke-linecap:round;animation:gerArco 1s var(--ease-emphasized) .2s both;}
+  .ger-dona-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+  .ger-dona-c b{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;color:var(--ink);line-height:1;}
+  .ger-dona-c > span{font-size:10.5px;color:var(--ink-dim);margin-top:3px;}
+  .ger-cum-areas{display:flex;flex-direction:column;gap:8px;}
+  .ger-ca{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:baseline;padding:4px 6px;margin:0 -6px;border-radius:8px;transition:background-color var(--dur-2) var(--ease);}
+  .ger-ca:hover{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .ger-ca-k{font-size:12px;color:var(--ink-soft);}
+  .ger-ca > b{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .ger-ca > b.is-ok{color:var(--ok);}
+  .ger-ca > b.is-warn{color:var(--warn);}
+  .ger-ca > b.is-danger{color:var(--danger);}
+  .ger-ca-bar{grid-column:1 / -1;position:relative;display:block;height:5px;border-radius:3px;background:color-mix(in srgb, var(--ink) 8%, transparent);overflow:hidden;}
+  .ger-ca-bar::after{content:"";position:absolute;left:85%;top:0;bottom:0;width:1px;background:color-mix(in srgb, var(--ink) 30%, transparent);}
+  .ger-ca-bar i{display:block;height:100%;width:var(--w);border-radius:3px;background:var(--ink-dim);transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) both;animation-delay:calc(var(--i) * 70ms + .25s);}
+  .ger-ca-bar i.is-ok{background:var(--ok);}
+  .ger-ca-bar i.is-warn{background:var(--warn);}
+  .ger-ca-bar i.is-danger{background:var(--danger);}
+
+  .ger-op-cols,.ger-op-r{display:grid;grid-template-columns:minmax(0,1fr) 54px 54px 54px;gap:4px 8px;align-items:center;}
+  .ger-op-cols{padding:0 8px 6px;margin:0 -8px;border-bottom:1px solid var(--line);}
+  .ger-op-cols span{font-size:9.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;text-align:right;}
+  .ger-op-r{padding:10px 8px 11px;margin:0 -8px;border-bottom:1px solid var(--line);border-radius:10px;transition:background-color var(--dur-2) var(--ease);}
+  .ger-op-r:last-of-type{border-bottom:none;}
+  .ger-op-r:hover{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .ger-op-k{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .ger-op-k b{font-family:'Space Grotesk',sans-serif;font-size:14.5px;font-weight:700;color:var(--ink);}
+  .ger-op-k span{font-size:10.5px;color:var(--ink-dim);}
+  .ger-op-n{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--ink);text-align:right;}
+  .ger-op-n.is-ok{color:var(--ok);}
+  .ger-op-n.is-danger{color:var(--danger);}
+  .ger-op-n.is-cero{color:var(--ink-dim);}
+  .ger-op-bar{grid-column:1 / -1;display:flex;gap:2px;height:6px;margin-top:4px;}
+  .ger-op-bar i{width:var(--w);border-radius:3px;transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) .2s both;}
+  .ger-op-bar i.is-ok,.ger-op-ley .is-ok i{background:var(--ok);}
+  .ger-op-bar i.is-pend,.ger-op-ley .is-pend i{background:color-mix(in srgb, var(--navy) 65%, transparent);}
+  .ger-op-bar i.is-venc,.ger-op-ley .is-venc i{background:var(--danger);}
+  .ger-op-ley{display:flex;gap:14px;margin-top:10px;font-size:10.5px;color:var(--ink-dim);}
+  .ger-op-ley span{display:inline-flex;align-items:center;gap:5px;}
+  .ger-op-ley i{width:8px;height:8px;border-radius:2px;}
+
+  .ger-al{--a-c:var(--ink-dim);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;align-items:baseline;padding:7px 8px;margin:0 -8px;border-radius:10px;transition:background-color var(--dur-2) var(--ease);}
+  .ger-al:hover{background:color-mix(in srgb, var(--a-c) 8%, transparent);}
+  .ger-al.is-danger{--a-c:var(--danger);}
+  .ger-al.is-warn{--a-c:var(--warn);}
+  .ger-al-k{font-size:12.5px;color:var(--ink-soft);}
+  .ger-al > b{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--a-c);}
+  .ger-al.is-cero > b{color:var(--ink-dim);}
+  .ger-al-bar{grid-column:1 / -1;display:block;height:4px;border-radius:2px;background:color-mix(in srgb, var(--ink) 6%, transparent);overflow:hidden;}
+  .ger-al-bar i{display:block;height:100%;width:var(--w);border-radius:2px;background:var(--a-c);transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) both;animation-delay:calc(var(--i) * 60ms + .25s);}
+  .ger-atn-mas{display:block;margin-top:10px;}
+
+  /* Tarjetas de Jefaturas: elevación al pasar el mouse. */
+  .ger-r-2 .ger-card:hover,.ger-r-3 .ger-card:hover{box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent), 0 2px 4px rgba(4,8,20,.10), var(--shadow-md);}
+
+  /* Barras de origen de bloqueo (modal "Tareas bloqueadas"). */
+  .ger-m-bloq{display:flex;flex-direction:column;gap:2px;margin-bottom:6px;}
+  .ger-bl{display:grid;grid-template-columns:minmax(0,110px) minmax(0,1fr) 20px;gap:10px;align-items:center;padding:5px 6px;margin:0 -6px;border-radius:8px;font-size:12px;color:var(--ink-soft);transition:background-color var(--dur-2) var(--ease);}
+  .ger-bl:hover{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .ger-bl-bar{display:block;height:6px;border-radius:3px;background:color-mix(in srgb, var(--ink) 6%, transparent);overflow:hidden;}
+  .ger-bl-bar i{display:block;height:100%;width:var(--w);border-radius:3px;background:var(--c);transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) .25s both;}
+  .ger-bl b{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);text-align:right;}
+
+  /* ---------- 4 · Análisis del cliente (último y subordinado) ---------- */
+  .ger-an{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);align-items:center;gap:12px 28px;padding:12px 18px;border-radius:14px;border:1px solid var(--line);}
+  .ger-an-id{display:flex;flex-direction:column;gap:2px;padding:4px 6px;margin:-4px -6px;border-radius:8px;}
+  .ger-an-id .ger-card-t{color:var(--ink-soft);}
+  .ger-an-id > span{font-size:12px;color:var(--ink-dim);}
+  .ger-an-id > span b{font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--ink);}
+  .ger-an-tl{display:flex;flex-direction:column;gap:8px;min-width:0;}
+  .ger-an-bar{display:flex;gap:2px;height:6px;border-radius:3px;background:color-mix(in srgb, var(--ink) 6%, transparent);overflow:hidden;}
+  .ger-an-bar i{border-radius:3px;transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) .2s both;}
+  .ger-an-bk{display:flex;flex-wrap:wrap;gap:4px 18px;}
+  .ger-an-b{--b-c:var(--ink-dim);display:inline-flex;align-items:center;gap:6px;padding:2px 4px;margin:0 -4px;border-radius:6px;font-size:11.5px;color:var(--ink-soft);transition:background-color var(--dur-2) var(--ease);}
+  .ger-an-b:hover{background:color-mix(in srgb, var(--b-c) 10%, transparent);}
+  .ger-an-b i{width:7px;height:7px;border-radius:2px;background:var(--b-c);}
+  .ger-an-b b{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);}
+  .ger-an-b.is-cero{opacity:.5;}
+  .ger-an-b.is-danger,.ger-an-bar .is-danger{--b-c:var(--danger);}
+  .ger-an-b.is-warn,.ger-an-bar .is-warn{--b-c:var(--warn);}
+  .ger-an-b.is-info,.ger-an-bar .is-info{--b-c:var(--info);}
+  .ger-an-b.is-neutral,.ger-an-bar .is-neutral{--b-c:color-mix(in srgb, var(--ink-dim) 70%, transparent);}
+  .ger-an-bar i{background:var(--b-c);}
+  .ger-an-b.is-muted{color:var(--ink-dim);}
+
+  /* ---------- Modal de análisis ---------- */
+  .ger-mbox{max-width:600px;display:flex;flex-direction:column;overflow:hidden;}
+  .ger-m-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:22px 24px 16px;border-bottom:1px solid var(--line);flex-shrink:0;
+    background:linear-gradient(125deg, color-mix(in srgb, var(--summary-start) 55%, transparent), transparent 70%);
+  }
+  .ger-m-head-txt{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .ger-m-kicker{font-size:10.5px;font-weight:700;color:var(--teal-deep);text-transform:uppercase;letter-spacing:.09em;}
+  .ger-m-titulo{margin:0;font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.015em;}
+  .ger-m-body{padding:16px 24px 20px;overflow-y:auto;flex:1;min-height:0;-webkit-overflow-scrolling:touch;}
+  .ger-m-body > *{animation:gerSube .35s var(--ease-emphasized) both;}
+  .ger-m-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 24px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line);flex-shrink:0;}
+  .ger-m-proy{margin:0 0 12px;font-size:14px;color:var(--ink-soft);}
+  .ger-m-res{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:14px;}
+  .ger-m-res div{display:flex;flex-direction:column;gap:2px;padding:11px 12px 11px 0;min-width:0;}
+  .ger-m-res div + div{padding-left:12px;border-left:1px solid var(--line);}
+  .ger-m-res b{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ger-m-res span{font-size:10px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
+  .ger-m-res .is-ok b{color:var(--ok);}
+  .ger-m-res .is-warn b{color:var(--warn);}
+  .ger-m-res .is-danger b{color:var(--danger);}
+  .ger-m-res .is-info b{color:var(--info);}
+  .ger-m-sub{margin:12px 0 6px;font-size:11.5px;color:var(--ink-dim);}
+  .ger-m-lista{display:flex;flex-direction:column;}
+  .ger-m-fila{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left;
+    padding:10px 8px;margin:0 -8px;width:calc(100% + 16px);background:none;border:none;border-bottom:1px solid var(--line);border-radius:8px;
+    font:inherit;color:inherit;cursor:pointer;transition:background-color var(--dur-1) var(--ease);
+  }
+  .ger-m-fila:last-child{border-bottom:none;}
+  .ger-m-fila:hover{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .ger-m-fila:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ger-m-fila.is-plana{cursor:default;}
+  .ger-m-fila.is-plana:hover{background:none;}
+  .ger-m-fila .ger-fila-id{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .ger-m-fila .ger-fila-id b{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ger-m-fila .ger-fila-id span{font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ger-m-der{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink);text-align:right;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ger-m-der.is-danger{color:var(--danger);}
+  .ger-m-der.is-warn{color:var(--warn);}
+  .ger-m-der.is-ok{color:var(--ok);}
+  .ger-m-der.is-info{color:var(--info);}
+  .ger-m-der.is-muted{color:var(--ink-dim);}
+  .ger-m-nota{margin:8px 0 0;font-size:11.5px;color:var(--ink-dim);}
+  .ger-m-dl{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin:0 0 4px;}
+  .ger-m-dl div{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .ger-m-dl dt{font-size:10px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
+  .ger-m-dl dd{margin:0;font-size:13px;color:var(--ink);}
+  .ger-m-alertas{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;}
+  .ger-m-alertas li{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
+  .ger-m-alertas li::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+  .ger-m-alertas li.is-danger{color:var(--danger);}
+  .ger-m-alertas li.is-warn{color:var(--warn);}
+
+  @media (prefers-reduced-motion:reduce){
+    #gerencia *,#gerencia *::before,#gerencia *::after,#ger-modal *{animation:none !important;transition:none !important;}
+  }
+
+  /* ---------- Laptop / tablet ---------- */
+  @media (max-width:1280px){
+    .ger-lec{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .ger-lec-t{grid-column:1 / -1;}
+  }
+  @media (max-width:1180px){
+    .ger-r-3{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);}
+    .ger-atn{grid-column:1 / -1;}
+  }
+  @media (max-width:980px){
+    .ger-head{align-items:stretch;}
+    .ger-head-ctrl{justify-content:flex-start;width:100%;}
+    .ger-r-kpi{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .ger-r-2{grid-template-columns:1fr;}
+  }
+
+  /* ---------- iPhone ---------- */
+  @media (max-width:767px){
+    .ger-head{margin-bottom:14px;}
+    .ger-titulo{display:none;}
+    .ger-head-ctrl{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .ger-periodo{grid-column:1 / -1;display:flex;width:100%;}
+    .ger-periodo .des-per-btn{flex:1;padding:8px 6px;font-size:13px;}
+    .ger-f-per{grid-column:1 / -1;}
+    .ger-f-per .msel-btn{width:100%;max-width:none;}
+    .ger-filtros{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .ger-filtros .msel-btn{min-width:0;width:100%;max-width:none;}
+    .ger-acciones{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;}
+    .ger-btn{justify-content:center;height:36px;padding:0 8px;}
+    .ger-btn span{overflow:hidden;text-overflow:ellipsis;}
+    .ger-body,.ger-row{gap:12px;}
+    .ger-card{padding:14px;}
+    .ger-kpi{padding:12px 13px;}
+    .ger-kpi-v{font-size:25px;}
+    .ger-kpi-v small{display:none;}
+    .ger-kpi-ico{display:none;}
+    .ger-ch-plot{height:130px;}
+    .ger-pr{grid-template-columns:minmax(0,1fr) 24px 70px;}
+    .ger-pr-bar{grid-column:1 / -1;grid-row:2;height:8px;}
+    .ger-lec{grid-template-columns:1fr;}
+    .ger-r-3{grid-template-columns:1fr;}
+    .ger-an{grid-template-columns:1fr;}
+    /* Modal casi a pantalla completa. */
+    .ger-overlay{padding:8px;padding-top:calc(8px + env(safe-area-inset-top));align-items:stretch;}
+    .modal-box.ger-mbox{max-width:100%;height:auto;max-height:none;border-radius:16px;}
+    .ger-m-head{padding:16px 16px 12px;}
+    .ger-m-body{padding:14px 16px 18px;}
+    .ger-m-foot{padding-left:16px;padding-right:16px;}
+    .ger-m-foot button{flex:1;}
+  }
+
+  @media print{
+    :root:not(.print-gerencia) #gerencia{display:none !important;}
+    :root.print-gerencia .tab-panel:not(#gerencia){display:none !important;}
+    :root.print-gerencia #gerencia{display:block !important;}
+    #gerencia .ger-head-ctrl,#gerencia .ger-titulo{display:none !important;}
+    #gerencia *,#gerencia *::before,#gerencia *::after{animation:none !important;}
+    #gerencia .ger-card{box-shadow:none !important;}
+    #gerencia .ger-row,#gerencia .ger-an{page-break-inside:avoid;}
+    #gerencia .ger-tip,#gerencia .ger-ch-hits{display:none !important;}
+  }
+
   /* Cursor personalizado — isotipo real de Friopacking (recortado del logo embebido),
      28×28, transparente. Solo en punteros finos con hover; se respeta el cursor nativo
      en campos editables/selectores y se desactiva por completo en táctiles. Declarado al
@@ -3945,10 +4325,9 @@
     </div>
     <div class="side-group" role="group" aria-labelledby="side-g-ges">
       <p class="side-group-label" id="side-g-ges">Gestión</p>
-      <!-- Gerencia: espacio reservado, todavía sin vista. -->
-      <button type="button" class="side-item is-soon" aria-disabled="true" data-side-label="Gerencia · próximamente">
+      <button type="button" class="tab-btn side-item" data-tab="gerencia" data-side-label="Gerencia">
         <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20v-6M10 20V9M15 20v-4M20 20V5"/><path d="m4 9 5-4 5 4 6-5"/></svg>
-        <span class="side-label">Gerencia</span><span class="side-soon side-label">Pronto</span></button>
+        <span class="side-label">Gerencia</span></button>
       <button type="button" class="tab-btn side-item" data-tab="cronograma" data-side-label="Cronograma">
         <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h10M7 12h12M5 19h9"/><circle cx="16" cy="5" r="1.6"/><circle cx="4" cy="12" r="1.6"/><circle cx="17" cy="19" r="1.6"/></svg>
         <span class="side-label">Cronograma</span></button>
@@ -4195,6 +4574,62 @@
         </button>
       </div>
       <div class="des-body" id="des-body"></div>
+    </div>
+  </div>
+
+  <!-- ============ GERENCIA — lectura ejecutiva ============
+       Qué tengo → qué se movió → qué está con el cliente → qué entregó cada
+       área → qué está en riesgo → qué necesita atención. Solo lectura: todo
+       se calcula con renderGerencia() sobre las mismas oportunidades y
+       entregables del panel. Cada bloque abre primero el modal de análisis. -->
+  <div class="tab-panel" id="gerencia">
+    <h2 class="print-only-title">Gerencia · lectura ejecutiva</h2>
+    <div class="ger-head">
+      <div class="ger-head-tit">
+        <h2 class="ger-titulo">Gerencia</h2>
+        <span class="ger-rango" id="ger-rango">—</span>
+      </div>
+      <div class="ger-head-ctrl">
+        <div class="des-periodo ger-periodo" id="ger-periodo" role="radiogroup" aria-label="Periodo">
+          <button type="button" class="des-per-btn" role="radio" data-periodo="24h" onclick="setGerPeriodo('24h')">24 h</button>
+          <button type="button" class="des-per-btn" role="radio" data-periodo="48h" onclick="setGerPeriodo('48h')">48 h</button>
+          <button type="button" class="des-per-btn is-on" role="radio" data-periodo="semana" onclick="setGerPeriodo('semana')">Semana</button>
+          <button type="button" class="des-per-btn" role="radio" data-periodo="mes" onclick="setGerPeriodo('mes')">Mes</button>
+        </div>
+        <!-- Selección múltiple de semanas / meses (solo el del periodo activo). -->
+        <div class="msel ger-f-per" id="ger-f-sem" data-onchange="renderGerencia"><button type="button" class="msel-btn" onclick="mselToggleOpen('ger-f-sem',event)"><span class="msel-btn-label">Semana actual</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
+        <div class="msel ger-f-per" id="ger-f-mes" data-onchange="renderGerencia" hidden><button type="button" class="msel-btn" onclick="mselToggleOpen('ger-f-mes',event)"><span class="msel-btn-label">Mes actual</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
+        <div class="ger-filtros">
+          <div class="msel" id="ger-f-area" data-onchange="renderGerencia"><button type="button" class="msel-btn" onclick="mselToggleOpen('ger-f-area',event)"><span class="msel-btn-label">Área: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
+          <div class="msel" id="ger-f-kam" data-onchange="renderGerencia"><button type="button" class="msel-btn" onclick="mselToggleOpen('ger-f-kam',event)"><span class="msel-btn-label">Comercial: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
+        </div>
+        <div class="ger-acciones">
+          <button type="button" class="ger-btn" onclick="gerDescargarExcel()" title="Descarga consolidada de oportunidades y entregables">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg><span>Descargar Excel</span></button>
+          <button type="button" class="ger-btn" onclick="gerDescargarInforme()" title="Reporte ejecutivo de Gerencia (imprimir o guardar como PDF)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg><span>Descargar informe</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="ger-body" id="ger-body"></div>
+  </div>
+
+  <!-- Modal de análisis de Gerencia: resumen primero; "Ver detalles →" lleva a
+       la vista que corresponde (lo arma gerModalAbrir). -->
+  <div class="modal-overlay ger-overlay hidden" id="ger-modal" onclick="if(event.target===this) gerModalCerrar()">
+    <div class="modal-box ger-mbox" role="dialog" aria-modal="true" aria-labelledby="ger-m-titulo">
+      <div class="ger-m-head">
+        <div class="ger-m-head-txt">
+          <span class="ger-m-kicker" id="ger-m-kicker"></span>
+          <h3 class="ger-m-titulo" id="ger-m-titulo"></h3>
+        </div>
+        <button type="button" class="modal-close" onclick="gerModalCerrar()" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="ger-m-body" id="ger-m-body"></div>
+      <div class="ger-m-foot">
+        <button type="button" class="btn-secondary" onclick="gerModalCerrar()">Cerrar</button>
+        <button type="button" class="btn-primary" id="ger-m-ir" onclick="gerModalIr()">Ver detalles →</button>
+      </div>
     </div>
   </div>
 
@@ -6689,6 +7124,7 @@ function renderAll(){
   renderCarga();
   renderEquipo();
   if(cargaVista==='desempeno' && esAdmin()) renderDesempeno();
+  renderGerencia();
   renderGantt();
   renderDetalle();
   renderDetalleEntregas();
@@ -6947,6 +7383,7 @@ function populateFilterOptions(){
   mselSetOptions('rs-f-orden', RS_COLUMNAS.map(c=>({value:c.key, label:c.titulo})), 'Prioridad: todas');
   mselSetOptions('rs-f-plazo', [{value:'vencido',label:'Vencido'},{value:'proximo',label:'Próximo'},{value:'atiempo',label:'A tiempo'},{value:'entregado',label:'Entregado'}], 'Plazo: todos');
   populateDesempenoFiltros();
+  populateGerenciaFiltros();
   populateResponsableAsignadoOptions();
   populateRSResponsableAsignadoOptions();
   populateEntregasKamOptions();
@@ -12685,6 +13122,875 @@ function flashFiltros(barra){
   }, true);
 });
 
+/* ============================================================
+   GERENCIA — lectura ejecutiva (solo lectura)
+   Trabaja con cantidad, importe aproximado, tiempos y cumplimiento; nada
+   de win rate, margen ni ganados/perdidos. Criterios:
+   · Periodo (24 h / 48 h / Semana = 7 días / Mes = 30 días, móviles): mueve
+     solo lo que es MOVIMIENTO (entregado, ingresó, pasó a análisis,
+     cumplimiento, reprogramaciones, actividad por área). Los stocks
+     (activas, pipeline, riesgo, vencidas, Análisis del cliente, flujo,
+     bloqueos) son siempre la foto de hoy.
+   · Las fechas de tareas son de día: un día cuenta si se cruza con la
+     ventana. Los eventos del historial usan su hora exacta.
+   · Comercial (KAM) filtra oportunidades; Área filtra tareas.
+   · Cumplimiento = tareas completadas hasta su fecha ORIGINAL (la que una
+     reprogramación no puede mover) sobre las completadas con fecha.
+   ============================================================ */
+/* 24 h = el día anterior (ayer); 48 h = los dos días anteriores. Semana y
+   Mes se eligen en selectores múltiples (semanas de lunes a domingo, meses
+   calendario); sin selección = la semana / el mes en curso. */
+const GER_PERIODOS = {
+  '24h':   {label:'Últimas 24 h'},
+  '48h':   {label:'Últimas 48 h'},
+  'semana':{label:'Semana'},
+  'mes':   {label:'Mes'},
+};
+const GER_MESES_LARGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const GER_ETAPAS_INACTIVAS = ['cancelado','postpuesto','perdido','cerrado'];
+/* Flujo operativo: 'comercial' es una etapa heredada que se lee como Prospecto. */
+const GER_FLUJO = [
+  {key:'prospecto',       label:'Prospecto',             etapas:['prospecto','comercial']},
+  {key:'cotizacion',      label:'Cotización',            etapas:['cotizacion']},
+  {key:'pendiente_envio', label:'Pendiente de envío',    etapas:['pendiente_envio']},
+  {key:'analisis',        label:'Análisis del cliente',  etapas:['analisis']},
+  {key:'negociacion',     label:'Negociación',           etapas:['negociacion']},
+];
+const GER_AREAS = [
+  {value:'arquitectura', label:'Arquitectura'},
+  {value:'presupuestos', label:'Presupuestos'},
+  {value:'comercial',    label:'Comercial'},
+];
+const GER_BLOQUEOS = [
+  {key:'cliente',      label:'Cliente',          de:['cliente']},
+  {key:'comercial',    label:'Comercial',        de:['comercial']},
+  {key:'arquitectura', label:'Arquitectura',     de:['arquitectura']},
+  {key:'presupuestos', label:'Presupuestos',     de:['presupuestos','ingenieria']},
+  {key:'decision',     label:'Decisión interna', de:['decision']},
+  {key:'otro',         label:'Otro',             de:['informacion','otro','']},
+];
+let gerPeriodo = 'semana';
+let gerUlt = null;          // último modelo calculado (lo usa el modal)
+let gerModalDestino = null; // acción de "Ver detalles →"
+
+/* "US$ 1.8 MM", "US$ 420K". */
+function gerMoneda(n){
+  const v = Math.abs(Number(n) || 0);
+  if(v >= 1e6) return 'US$ ' + (v/1e6).toFixed(v >= 1e7 ? 0 : 1).replace(/\.0$/, '') + ' MM';
+  if(v >= 1e3) return 'US$ ' + Math.round(v/1e3) + 'K';
+  return 'US$ ' + Math.round(v);
+}
+function gerPlural(n, uno, varios){ return n + ' ' + (n === 1 ? uno : varios); }
+function gerImporte(lista){ return lista.reduce((s, o)=>s + (Number(o.importe) || 0), 0); }
+function gerUnicas(lista){ return [...new Map(lista.map(o=>[o.id, o])).values()]; }
+
+/* Ventana actual y anterior (misma duración, inmediatamente antes). */
+/* Semana ISO (1-53) de un lunes YYYY-MM-DD. */
+function gerNumSemana(lunes){
+  const [y, m, d] = lunes.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + 3));
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+  return 1 + Math.round(((t - y0) / 86400000 - 3 + ((y0.getUTCDay() + 6) % 7)) / 7);
+}
+function gerFinMes(ym){ const [y, m] = ym.split('-').map(Number); return addDaysISO((m === 12 ? (y + 1) + '-01' : y + '-' + String(m + 1).padStart(2, '0')) + '-01', -1); }
+function gerSelPropia(id){
+  const ok = new Set((mselOptionsCache[id] || []).map(o=>o.value));
+  return [...(mselState[id] || new Set())].filter(v=>ok.has(v)).sort();
+}
+function gerSemanasSel(){ const v = gerSelPropia('ger-f-sem'); return v.length ? v : [getSemanaActual().lunesISO]; }
+function gerMesesSel(){ const v = gerSelPropia('ger-f-mes'); return v.length ? v : [todayISO().slice(0, 7)]; }
+/* Tramos de días del periodo (pueden ser varios y no contiguos). */
+function gerTramos(){
+  const hoy = todayISO(), ayer = addDaysISO(hoy, -1);
+  if(gerPeriodo==='24h') return [[ayer, ayer]];
+  if(gerPeriodo==='48h') return [[addDaysISO(hoy, -2), ayer]];
+  if(gerPeriodo==='semana') return gerSemanasSel().map(l=>[l, addDaysISO(l, 6)]);
+  return gerMesesSel().map(ym=>[ym + '-01', gerFinMes(ym)]);
+}
+function gerTsDia(iso){ const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).getTime(); }
+function gerArmarRango(tramos){
+  const t = tramos.map(([a, b])=>({desdeD:a, hastaD:b, desdeTs:gerTsDia(a), hastaTs:gerTsDia(addDaysISO(b, 1))}))
+    .sort((x, y)=>x.desdeD < y.desdeD ? -1 : 1);
+  return {tramos:t, desdeD:t[0].desdeD, hastaD:t[t.length - 1].hastaD, desdeTs:t[0].desdeTs, hastaTs:t[t.length - 1].hastaTs,
+    dias:t.reduce((n, x)=>n + daysBetween(x.desdeD, x.hastaD) + 1, 0)};
+}
+/* Actual y anterior: el anterior es un tramo continuo de la misma cantidad de
+   días, inmediatamente antes del inicio del periodo. */
+function gerRango(){
+  const act = gerArmarRango(gerTramos());
+  const antHasta = addDaysISO(act.desdeD, -1);
+  return {act, ant: gerArmarRango([[addDaysISO(antHasta, 1 - act.dias), antHasta]])};
+}
+function gerEnFecha(iso, r){ if(!iso) return false; const d = String(iso).slice(0,10); return r.tramos.some(x=>d >= x.desdeD && d <= x.hastaD); }
+function gerEnTs(ts, r){ const t = new Date(ts).getTime(); return !isNaN(t) && r.tramos.some(x=>t >= x.desdeTs && t < x.hastaTs); }
+/* Nombre corto del periodo para títulos y textos. */
+function gerPeriodoLabel(){
+  if(gerPeriodo==='24h') return 'Últimas 24 h';
+  if(gerPeriodo==='48h') return 'Últimas 48 h';
+  if(gerPeriodo==='semana'){
+    const w = gerSemanasSel();
+    if(w.length === 1) return w[0]===getSemanaActual().lunesISO ? 'Semana actual' : 'Semana ' + gerNumSemana(w[0]);
+    return w.length + ' semanas';
+  }
+  const m = gerMesesSel();
+  if(m.length === 1){ const [y, mm] = m[0].split('-').map(Number); return GER_MESES_LARGO[mm - 1].replace(/^./, c=>c.toUpperCase()) + ' ' + y; }
+  return m.length + ' meses';
+}
+/* Detalle de fechas del periodo (encabezado). */
+function gerRangoTexto(r){
+  const hoy = todayISO();
+  const t = r.tramos.map(x=>x.desdeD===x.hastaD ? formatFechaCorta(x.desdeD) : formatFechaCorta(x.desdeD) + ' – ' + formatFechaCorta(x.hastaD > hoy ? hoy : x.hastaD));
+  const txt = t.length > 3 ? t[0] + ' … ' + t[t.length - 1] : t.join(' · ');
+  return gerPeriodoLabel() + ' · ' + txt;
+}
+
+/* Cuándo ingresó la oportunidad: el evento "Oportunidad creada" o, si no
+   quedó registrado, la creación más temprana de sus tareas. */
+function gerIngreso(o){
+  const ev = (o.historial || []).find(h=>h.cambio==='Oportunidad creada');
+  if(ev) return {ts:ev.ts};
+  const d = (o.entregables || []).map(e=>e.fechaCreacion).filter(Boolean).sort()[0];
+  return d ? {d} : null;
+}
+function gerIngresoEn(o, r){
+  const i = gerIngreso(o);
+  return !!i && (i.ts ? gerEnTs(i.ts, r) : gerEnFecha(i.d, r));
+}
+const GER_LABEL_ANALISIS = () => etapaLabelDisplay('analisis');
+function gerPasoAAnalisisEn(o, r){
+  return (o.historial || []).some(h=>h.cambio==='Cambio de etapa' && h.nuevo===GER_LABEL_ANALISIS() && gerEnTs(h.ts, r));
+}
+/* Reprogramaciones registradas (fecha interna de tareas o fecha cliente). La
+   primera asignación ("— → 5 oct") no cuenta. */
+function gerEsReprog(h){
+  return (CAMBIOS_FECHA_TAREA.includes(h.cambio) || h.cambio==='Reprogramación (fecha cliente)') && h.anterior && h.anterior!=='—';
+}
+function gerReprogsProyecto(o){
+  const n = (o.historial || []).filter(gerEsReprog).length;
+  return n || o.entregables.filter(e=>e.estadoTarea!=='cancelado' && esTareaReprogramada(e)).length;
+}
+function gerCumplimiento(tareas){
+  let ok = 0, med = 0;
+  tareas.forEach(e=>{
+    const ref = e.fechaOriginal || e.fechaEntrega;
+    if(!ref || !e.fechaCompletado) return;
+    med++; if(e.fechaCompletado <= ref) ok++;
+  });
+  return {pct: med ? Math.round(ok * 100 / med) : null, med, ok};
+}
+function gerDiasTxt(n){ return n === 1 ? '1 día' : n + ' días'; }
+
+/* Motivos de atención de un proyecto, del más grave al más leve. */
+function gerMotivos(o, pend, hoy){
+  const out = [];
+  const fc = rsFechaCliente(o);
+  if(fc && fc < hoy && pend.length) out.push({sev:100 + daysBetween(fc, hoy), riesgo:true, txt:'Fecha cliente vencida hace ' + gerDiasTxt(daysBetween(fc, hoy))});
+  const ue = pend.filter(e=>e.fechaEntrega).map(e=>e.fechaEntrega).sort().pop();
+  if(fc && ue && ue > fc && fc >= hoy) out.push({sev:80 + daysBetween(fc, ue), riesgo:true, txt:'Entrega interna ' + gerDiasTxt(daysBetween(fc, ue)) + ' después de la fecha cliente'});
+  const venc = pend.filter(e=>e.fechaEntrega && e.fechaEntrega < hoy).sort((a,b)=>a.fechaEntrega < b.fechaEntrega ? -1 : 1)[0];
+  if(venc) out.push({sev:60 + daysBetween(venc.fechaEntrega, hoy), txt:(venc.nombre || 'Tarea') + ' vencida hace ' + gerDiasTxt(daysBetween(venc.fechaEntrega, hoy))});
+  const bloq = pend.find(e=>e.estadoTarea==='bloqueado');
+  if(bloq){
+    const orig = GER_BLOQUEOS.find(b=>b.de.includes(bloq.bloqueoOrigen || ''));
+    out.push({sev:50, txt:(bloq.nombre || 'Tarea') + ' bloqueada' + (orig && orig.key!=='otro' ? ' por ' + orig.label : '')});
+  }
+  if(o.etapa==='analisis' && o.fechaSeguimiento && o.fechaSeguimiento < hoy)
+    out.push({sev:40 + daysBetween(o.fechaSeguimiento, hoy), txt:'Seguimiento vencido hace ' + gerDiasTxt(daysBetween(o.fechaSeguimiento, hoy))});
+  return out.sort((a,b)=>b.sev - a.sev);
+}
+
+function gerModelo(){
+  const kams = mselValues('ger-f-kam');
+  const areas = mselValues('ger-f-area');
+  const hoy = todayISO();
+  const R = gerRango();
+  const enArea = e=> !areas.length || areas.includes(e.area);
+  const opps = oportunidades.filter(o=> !kams.length || kams.includes(o.kam));
+  const activas = opps.filter(o=>!GER_ETAPAS_INACTIVAS.includes(o.etapa));
+  const tareas = [];
+  opps.forEach(o=>o.entregables.forEach(e=>{ if(e.estadoTarea!=='cancelado' && enArea(e)) tareas.push({o, e}); }));
+  const pendientes = tareas.filter(x=>x.e.estado==='pendiente');
+  const completadasEn = r=>tareas.filter(x=>x.e.estado==='completado' && gerEnFecha(x.e.fechaCompletado, r));
+
+  /* Movimiento del periodo. */
+  const entregadas = completadasEn(R.act);
+  const ingresos = opps.filter(o=>gerIngresoEn(o, R.act));
+  const aAnalisis = opps.filter(o=>gerPasoAAnalisisEn(o, R.act));
+
+  /* Cumplimiento y reprogramaciones, actual vs. anterior. */
+  const cumAct = gerCumplimiento(entregadas.map(x=>x.e));
+  const cumAnt = gerCumplimiento(completadasEn(R.ant).map(x=>x.e));
+  const reprogEvs = r=>{
+    const out = [];
+    opps.forEach(o=>(o.historial || []).forEach(h=>{
+      if(!gerEsReprog(h) || !gerEnTs(h.ts, r)) return;
+      const e = h.entregableId!=null ? o.entregables.find(t=>t.id===h.entregableId) : null;
+      if(e && !enArea(e)) return;
+      if(!e && areas.length) return;
+      out.push({o, e, h});
+    }));
+    return out;
+  };
+  const reprogAct = reprogEvs(R.act), reprogAnt = reprogEvs(R.ant);
+  /* Solo se compara si el historial ya cubre el periodo anterior completo. */
+  const primerEvento = oportunidades.reduce((m, o)=>(o.historial || []).reduce((mm, h)=>{ const t = new Date(h.ts).getTime(); return isNaN(t) ? mm : Math.min(mm, t); }, m), Infinity);
+  const historialCubre = primerEvento <= R.ant.desdeTs;
+
+  /* Foto global. */
+  const vencidas = pendientes.filter(x=>x.e.fechaEntrega && x.e.fechaEntrega < hoy);
+  const atencion = activas.map(o=>{
+    const pend = o.entregables.filter(e=>e.estado==='pendiente' && enArea(e));
+    const motivos = gerMotivos(o, pend, hoy);
+    return {o, motivos, reprog: gerReprogsProyecto(o)};
+  }).filter(x=>x.motivos.length)
+    .sort((a,b)=>b.motivos[0].sev - a.motivos[0].sev || (Number(b.o.importe)||0) - (Number(a.o.importe)||0));
+  const enRiesgo = atencion.filter(x=>x.motivos.some(m=>m.riesgo));
+
+  /* Análisis del cliente: stock actual, nunca depende del periodo. */
+  const finSemana = getSemanaActual().domingoISO;
+  const analisis = opps.filter(o=>o.etapa==='analisis');
+  const buckets = [
+    {key:'vencidos', label:'Vencidos',    tone:'danger', test:f=>f < hoy},
+    {key:'hoy',      label:'Hoy',         tone:'warn',   test:f=>f === hoy},
+    {key:'48h',      label:'Próx. 48 h',  tone:'info',   test:f=>f > hoy && f <= addDaysISO(hoy, 2)},
+    {key:'semana',   label:'Esta semana', tone:'',       test:f=>f > addDaysISO(hoy, 2) && f <= finSemana},
+  ].map(b=>Object.assign(b, {opps: analisis.filter(o=>o.fechaSeguimiento && b.test(o.fechaSeguimiento))}));
+  const masAdelante = analisis.filter(o=>o.fechaSeguimiento && o.fechaSeguimiento > finSemana && o.fechaSeguimiento > addDaysISO(hoy, 2));
+  const sinSeguimiento = analisis.filter(o=>!o.fechaSeguimiento);
+  const agenda = analisis.slice().sort((a,b)=>(a.fechaSeguimiento || '9999') < (b.fechaSeguimiento || '9999') ? -1 : ((a.fechaSeguimiento || '9999') > (b.fechaSeguimiento || '9999') ? 1 : (Number(b.importe)||0) - (Number(a.importe)||0)));
+
+  /* Flujo operativo (stock). La señal es una sola por etapa. */
+  const flujo = GER_FLUJO.map(st=>{
+    const lista = activas.filter(o=>st.etapas.includes(o.etapa));
+    let alerta = '';
+    if(st.key==='analisis'){
+      const n = lista.filter(o=>o.fechaSeguimiento && o.fechaSeguimiento < hoy).length;
+      if(n) alerta = gerPlural(n, 'seguimiento vencido', 'seguimientos vencidos');
+    } else {
+      const n = lista.filter(o=>o.entregables.some(e=>e.estado==='pendiente' && enArea(e) && e.fechaEntrega && e.fechaEntrega < hoy)).length;
+      if(n) alerta = n + ' con atraso';
+    }
+    return Object.assign({}, st, {opps: lista, importe: gerImporte(lista), alerta});
+  });
+
+  /* Actividad por área (periodo + pendientes de hoy). */
+  const areasVis = GER_AREAS.filter(a=>!areas.length || areas.includes(a.value));
+  const actividad = areasVis.map(a=>{
+    const del = x=>x.e.area===a.value;
+    const ent = entregadas.filter(del);
+    return {
+      area:a.value, label:a.label,
+      recibio: tareas.filter(x=>del(x) && gerEnFecha(x.e.fechaCreacion, R.act)),
+      entrego: ent,
+      pendientes: pendientes.filter(del),
+      vencidas: vencidas.filter(del),
+      cum: gerCumplimiento(ent.map(x=>x.e)),
+    };
+  });
+
+  /* Origen de bloqueos (stock). */
+  const bloqueadas = pendientes.filter(x=>x.e.estadoTarea==='bloqueado');
+  const bloqueos = GER_BLOQUEOS.map(b=>Object.assign({}, b, {items: bloqueadas.filter(x=>b.de.includes(x.e.bloqueoOrigen || ''))}));
+
+  return {
+    hoy, R, kams, areas, opps, activas, tareas, pendientes, vencidas, entregadas, ingresos, aAnalisis,
+    cumAct, cumAnt, reprogAct, reprogAnt, historialCubre, atencion, enRiesgo,
+    analisis, buckets, masAdelante, sinSeguimiento, agenda, flujo, actividad, bloqueadas, bloqueos,
+    pipeline: gerImporte(activas), sinImporte: activas.filter(o=>!(Number(o.importe) > 0)),
+  };
+}
+
+/* Lectura gerencial: interpretaciones, no repetición de cifras. Máx. 4. */
+function gerLectura(M){
+  const out = [];
+  const per = 'el periodo (' + gerPeriodoLabel().toLowerCase() + ')';
+  if(M.vencidas.length){
+    const top = M.actividad.slice().sort((a,b)=>b.vencidas.length - a.vencidas.length)[0];
+    if(top && top.vencidas.length && top.vencidas.length * 100 / M.vencidas.length >= 40)
+      out.push({tone:'danger', txt:`<b>${top.label}</b> concentra la mayor carga vencida: ${top.vencidas.length} de ${M.vencidas.length} tareas atrasadas.`});
+    else out.push({tone:'warn', txt:'Las tareas vencidas están repartidas entre las áreas: no hay un único cuello de botella.'});
+  }
+  const vencAn = M.buckets[0].opps;
+  if(vencAn.length) out.push({tone:'warn', txt:`${gerPlural(vencAn.length, 'oportunidad', 'oportunidades')} en Análisis del cliente ${vencAn.length === 1 ? 'tiene' : 'tienen'} el seguimiento vencido (${gerMoneda(gerImporte(vencAn))} aprox.): conviene retomarlas hoy.`});
+  else if(M.aAnalisis.length) out.push({tone:'ok', txt:`${gerPlural(M.aAnalisis.length, 'oportunidad avanzó', 'oportunidades avanzaron')} a Análisis del cliente en ${per}.`});
+  if(M.historialCubre && M.cumAct.pct!=null && M.cumAnt.pct!=null && M.cumAct.med >= 3 && M.cumAnt.med >= 3){
+    const d = M.cumAct.pct - M.cumAnt.pct;
+    if(Math.abs(d) >= 3) out.push({tone: d > 0 ? 'ok' : 'danger', txt:`El cumplimiento ${d > 0 ? 'mejoró' : 'cayó'} ${Math.abs(d)} pp frente al periodo anterior.`});
+  }
+  if(M.bloqueadas.length){
+    const top = M.bloqueos.slice().sort((a,b)=>b.items.length - a.items.length)[0];
+    if(top.items.length * 2 >= M.bloqueadas.length && top.key!=='otro')
+      out.push({tone:'neutral', txt:`<b>${top.label}</b> es el principal origen de bloqueo (${top.items.length} de ${M.bloqueadas.length}).`});
+  }
+  if(M.sinImporte.length) out.push({tone:'neutral', txt:`${gerPlural(M.sinImporte.length, 'oportunidad activa aún no tiene', 'oportunidades activas aún no tienen')} importe: el pipeline real es mayor al mostrado.`});
+  if(M.pipeline > 0){
+    const top = M.flujo.slice().sort((a,b)=>b.importe - a.importe)[0];
+    const pct = Math.round(top.importe * 100 / M.pipeline);
+    if(pct >= 40) out.push({tone:'neutral', txt:`El ${pct}% del pipeline está en <b>${top.label}</b>.`});
+  }
+  return out.slice(0, 4);
+}
+
+/* ---------- Render ----------
+   Solo presentación: todo sale de gerModelo() / gerLectura(). Orden de
+   lectura: Gerente (KPIs, movimiento, pipeline, lectura) → Jefaturas
+   (cumplimiento, operación, atención) → Análisis del cliente. */
+function gerAccion(js){
+  return ` role="button" tabindex="0" onclick="${js}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${js}}"`;
+}
+function gerDelta(d, sufijo, mejorSiSube){
+  if(d==null) return '';
+  if(d === 0) return `<span class="ger-delta">= vs periodo anterior</span>`;
+  const bueno = mejorSiSube ? d > 0 : d < 0;
+  return `<span class="ger-delta is-${bueno ? 'ok' : 'danger'}">${d > 0 ? '↑' : '↓'} ${Math.abs(d)}${sufijo} vs periodo anterior</span>`;
+}
+/* Número que se anima desde su valor anterior. El texto final ya va en el
+   HTML: la animación es solo una capa encima. */
+function gerNum(key, v, fmt){
+  return `<span class="ger-cnt" data-cnt="${key}" data-v="${Number(v) || 0}" data-fmt="${fmt || 'n'}">${fmt==='money' ? gerMoneda(v) : (fmt==='pct' ? v + '%' : v)}</span>`;
+}
+const gerValPrev = {};
+function gerContar(root){
+  const panel = document.getElementById('gerencia');
+  if(!panel || !panel.classList.contains('active')) return;
+  const quieto = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  root.querySelectorAll('[data-cnt]').forEach(el=>{
+    const key = el.dataset.cnt, fin = Number(el.dataset.v) || 0, fmt = el.dataset.fmt;
+    const ini = gerValPrev[key] == null ? 0 : gerValPrev[key];
+    gerValPrev[key] = fin;
+    const f = v=> fmt==='money' ? gerMoneda(v) : (fmt==='pct' ? Math.round(v) + '%' : String(Math.round(v)));
+    if(quieto || ini === fin){ el.textContent = f(fin); return; }
+    const t0 = performance.now(), dur = 600;
+    const paso = t=>{
+      const k = Math.min(1, Math.max(0, (t - t0) / dur)), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = f(ini + (fin - ini) * e);
+      if(k < 1) requestAnimationFrame(paso);
+    };
+    el.textContent = f(ini);
+    requestAnimationFrame(paso);
+  });
+}
+function gerTono(p){ return p==null ? '' : (p >= 85 ? 'ok' : p >= 60 ? 'warn' : 'danger'); }
+function gerSeguimientoTxt(o, hoy){
+  const f = o.fechaSeguimiento;
+  if(!f) return {txt:'Sin fecha', tone:'muted'};
+  const d = daysBetween(hoy, f);
+  if(d < 0) return {txt:'Vencido · ' + formatFechaCorta(f), tone:'danger'};
+  if(d === 0) return {txt:'Hoy', tone:'warn'};
+  if(d === 1) return {txt:'Mañana', tone:'info'};
+  if(d === 2) return {txt:'Pasado mañana', tone:'info'};
+  return {txt:formatFechaCorta(f), tone:''};
+}
+/* Color por origen de bloqueo: solo tokens de la plataforma. */
+const GER_BLOQ_COLOR = {cliente:'var(--orange)', comercial:'var(--navy)', arquitectura:'var(--teal)', presupuestos:'var(--violet)', decision:'var(--danger)', otro:'var(--ink-dim)'};
+const GER_ICO = {
+  activas:'<path d="M3 7h18M3 12h18M3 17h12"/>',
+  pipeline:'<path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  riesgo:'<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/>',
+  entregado:'<path d="M20 6 9 17l-5-5"/>',
+};
+function gerIco(k){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GER_ICO[k]}</svg>`; }
+
+/* Serie diaria del periodo con los MISMOS conjuntos del modelo (entregadas,
+   ingresos, pasos a análisis): solo se reparten por día, la suma es el total. */
+let gerSerieUlt = null;
+function gerSerie(M){
+  const r = M.R.act, hoy = todayISO();
+  const todos = [];
+  r.tramos.forEach(x=>{ for(let d = x.desdeD; d <= x.hastaD && d <= hoy; d = addDaysISO(d, 1)) todos.push(d); });
+  const semanal = todos.length > 62;
+  const clave = d=>semanal ? mondayOnOrBeforeISO(d) : d;
+  const dias = [...new Set(todos.map(clave))];
+  const idxDia = new Map(dias.map((d, i)=>[d, i]));
+  const idx = {get:d=>d ? idxDia.get(clave(d)) : undefined};
+  const cero = ()=>dias.map(()=>0);
+  const ent = cero(), ing = cero(), ana = cero();
+  const suma = (arr, d)=>{ const i = idx.get(String(d || '').slice(0, 10)); if(i != null) arr[i]++; };
+  M.entregadas.forEach(x=>suma(ent, x.e.fechaCompletado));
+  M.ingresos.forEach(o=>{ const g = gerIngreso(o); if(g) suma(ing, g.ts ? isoLocalDeTs(g.ts) : g.d); });
+  M.aAnalisis.forEach(o=>{
+    const h = (o.historial || []).filter(h=>h.cambio==='Cambio de etapa' && h.nuevo===GER_LABEL_ANALISIS() && gerEnTs(h.ts, r)).pop();
+    if(h) suma(ana, isoLocalDeTs(h.ts));
+  });
+  return {dias, semanal, series:[
+    {key:'entregado', label:'Entregado', tone:'ok', datos:ent},
+    {key:'ingreso', label:'Ingresó', tone:'navy', datos:ing},
+    {key:'analisis', label:'Pasó a análisis', tone:'teal', datos:ana},
+  ]};
+}
+/* Curva suave (Catmull-Rom → Bézier) en un lienzo 0-100. */
+function gerCurva(pts){
+  if(pts.length < 2) return '';
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for(let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const lim = y=>Math.min(Math.max(y, Math.min(p1[1], p2[1])), Math.max(p1[1], p2[1]));
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, lim(p1[1] + (p2[1] - p0[1]) / 6)];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, lim(p2[1] - (p3[1] - p1[1]) / 6)];
+    d += ` C${c1[0].toFixed(2)},${c1[1].toFixed(2)} ${c2[0].toFixed(2)},${c2[1].toFixed(2)} ${p2[0].toFixed(2)},${p2[1].toFixed(2)}`;
+  }
+  return d;
+}
+function gerY(v, max){ return 6 + (1 - v / max) * 88; }
+function gerX(i, n){ return n > 1 ? i * 100 / (n - 1) : 50; }
+function gerChartHtml(S){
+  const n = S.dias.length;
+  const max = Math.max(1, ...S.series.flatMap(s=>s.datos));
+  const paths = S.series.map((s, k)=>{
+    const pts = s.datos.map((v, i)=>[gerX(i, n), gerY(v, max)]);
+    const d = gerCurva(pts);
+    const area = k === 0 ? `<path class="ger-ch-area" d="${d} L100,100 L0,100 Z"/>` : '';
+    return `${area}<path class="ger-ch-line is-${s.tone}" d="${d}" vector-effect="non-scaling-stroke"/>`;
+  }).join('');
+  const grid = [0.25, 0.5, 0.75].map(f=>`<line x1="0" x2="100" y1="${gerY(max * f, max)}" y2="${gerY(max * f, max)}" vector-effect="non-scaling-stroke"/>`).join('');
+  const etiquetas = n <= 8 ? S.dias : [S.dias[0], S.dias[Math.floor((n - 1) / 2)], S.dias[n - 1]];
+  return `<div class="ger-ch" onmouseleave="gerChartSalir()">
+      <div class="ger-ch-plot">
+        <span class="ger-ch-max">${max}</span>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <defs><linearGradient id="ger-ch-g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ger-ch-g0"/><stop offset="1" class="ger-ch-g1"/></linearGradient></defs>
+          <g class="ger-ch-grid">${grid}</g>${paths}
+        </svg>
+        <span class="ger-ch-guia" id="ger-ch-guia"></span>
+        ${S.series.map(s=>`<span class="ger-ch-dot is-${s.tone}" data-serie="${s.key}"></span>`).join('')}
+        <div class="ger-ch-hits">${S.dias.map((d, i)=>`<span onmouseenter="gerChartPunto(${i})" onclick="gerChartPunto(${i})"></span>`).join('')}</div>
+        <div class="ger-tip" id="ger-ch-tip" role="tooltip"></div>
+      </div>
+      <div class="ger-ch-x">${etiquetas.map(d=>`<span>${(S.semanal ? 'sem ' : '') + formatFechaCorta(d)}</span>`).join('')}</div>
+    </div>`;
+}
+function gerChartPunto(i){
+  const S = gerSerieUlt;
+  if(!S) return;
+  const n = S.dias.length;
+  const max = Math.max(1, ...S.series.flatMap(s=>s.datos));
+  const x = gerX(i, n);
+  const plot = document.querySelector('#gerencia .ger-ch-plot');
+  if(!plot) return;
+  plot.classList.add('is-hover');
+  plot.querySelector('#ger-ch-guia').style.left = x + '%';
+  S.series.forEach(s=>{
+    const dot = plot.querySelector(`.ger-ch-dot[data-serie="${s.key}"]`);
+    dot.style.left = x + '%';
+    dot.style.top = gerY(s.datos[i], max) + '%';
+  });
+  const tip = plot.querySelector('#ger-ch-tip');
+  tip.innerHTML = `<b>${S.semanal ? 'Semana del ' : ''}${formatFechaCorta(S.dias[i])}</b>` + S.series.map(s=>`<span class="is-${s.tone}"><i></i>${s.label}<em>${s.datos[i]}</em></span>`).join('');
+  tip.style.left = Math.min(Math.max(x, 14), 86) + '%';
+}
+function gerChartSalir(){
+  const plot = document.querySelector('#gerencia .ger-ch-plot');
+  if(plot) plot.classList.remove('is-hover');
+}
+
+function renderGerencia(){
+  const body = document.getElementById('ger-body');
+  if(!body) return;
+  document.querySelectorAll('#ger-periodo .des-per-btn').forEach(b=>{
+    const on = b.dataset.periodo===gerPeriodo;
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-checked', String(on));
+  });
+  const M = gerModelo();
+  gerUlt = M;
+  const per = {label: gerPeriodoLabel()};
+  document.getElementById('ger-rango').textContent = gerRangoTexto(M.R.act);
+  gerSincronizarSelectores();
+
+  const S = gerSerie(M);
+  gerSerieUlt = S;
+  const cum = M.cumAct;
+  const dCum = M.historialCubre && cum.pct!=null && M.cumAnt.pct!=null && cum.med >= 3 && M.cumAnt.med >= 3 ? cum.pct - M.cumAnt.pct : null;
+  const dRep = M.historialCubre ? M.reprogAct.length - M.reprogAnt.length : null;
+  const entOpps = gerUnicas(M.entregadas.map(x=>x.o));
+  const lectura = gerLectura(M);
+
+  /* ---- 1 · KPIs ejecutivos ---- */
+  const totAct = Math.max(1, M.activas.length);
+  const distEtapas = M.flujo.map((s, i)=>`<i style="--w:${(s.opps.length * 100 / totAct).toFixed(1)}%;--c:${['var(--ink-dim)','var(--navy)','var(--violet)','var(--teal)','var(--orange)'][i]}" title="${s.label}: ${s.opps.length}"></i>`).join('');
+  const conImporte = M.activas.length - M.sinImporte.length;
+  const pctRiesgo = Math.round(M.enRiesgo.length * 100 / totAct);
+  const entSerie = S.series[0].datos, maxEnt = Math.max(1, ...entSerie);
+  const spark = entSerie.length > 1 ? `<svg class="ger-spark" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><path d="${gerCurva(entSerie.map((v, i)=>[gerX(i, entSerie.length), 3 + (1 - v / maxEnt) * 24]))}" vector-effect="non-scaling-stroke"/></svg>` : '';
+  const kpis = `
+    <div class="ger-card ger-kpi is-navy"${gerAccion(`gerModalAbrir('kpi','activas')`)}>
+      <span class="ger-kpi-top"><span class="ger-kpi-k">Oportunidades activas</span><span class="ger-kpi-ico">${gerIco('activas')}</span></span>
+      <span class="ger-kpi-v">${gerNum('k-act', M.activas.length)}</span>
+      <span class="ger-seg" aria-hidden="true">${distEtapas}</span>
+      <span class="ger-kpi-sub">${M.analisis.length} con el cliente</span>
+    </div>
+    <div class="ger-card ger-kpi is-teal"${gerAccion(`gerModalAbrir('kpi','pipeline')`)}>
+      <span class="ger-kpi-top"><span class="ger-kpi-k">Pipeline activo</span><span class="ger-kpi-ico">${gerIco('pipeline')}</span></span>
+      <span class="ger-kpi-v">${gerNum('k-pip', M.pipeline, 'money')}</span>
+      <span class="ger-prog" aria-hidden="true"><i style="--w:${(conImporte * 100 / totAct).toFixed(1)}%"></i></span>
+      <span class="ger-kpi-sub">${M.sinImporte.length ? M.sinImporte.length + ' sin importe cargado' : 'todas con importe'}</span>
+    </div>
+    <div class="ger-card ger-kpi is-${M.enRiesgo.length ? 'danger' : 'ok'}"${gerAccion(`gerModalAbrir('kpi','riesgo')`)}>
+      <span class="ger-kpi-top"><span class="ger-kpi-k">En riesgo</span><span class="ger-kpi-ico">${gerIco('riesgo')}</span></span>
+      <span class="ger-kpi-v">${gerNum('k-rie', M.enRiesgo.length)}<small>${M.enRiesgo.length ? gerMoneda(gerImporte(M.enRiesgo.map(x=>x.o))) : ''}</small></span>
+      <span class="ger-prog" aria-hidden="true"><i style="--w:${pctRiesgo}%"></i></span>
+      <span class="ger-kpi-sub">${M.enRiesgo.length ? pctRiesgo + '% de las activas' : 'fecha cliente bajo control'}</span>
+    </div>
+    <div class="ger-card ger-kpi is-ok"${gerAccion(`gerModalAbrir('mov','entregado')`)}>
+      <span class="ger-kpi-top"><span class="ger-kpi-k">Entregado · ${per.label.toLowerCase()}</span><span class="ger-kpi-ico">${gerIco('entregado')}</span></span>
+      <span class="ger-kpi-v">${gerNum('k-ent', M.entregadas.length)}<small>${M.entregadas.length ? gerMoneda(gerImporte(entOpps)) : ''}</small></span>
+      ${spark || '<span class="ger-prog"></span>'}
+      <span class="ger-kpi-sub">${M.entregadas.length === 1 ? 'tarea' : 'tareas'} completadas</span>
+    </div>`;
+
+  /* ---- 2 · Movimiento + Pipeline ---- */
+  const movImp = {entregado:gerImporte(entOpps), ingreso:gerImporte(M.ingresos), analisis:gerImporte(M.aAnalisis)};
+  const movTot = {entregado:M.entregadas.length, ingreso:M.ingresos.length, analisis:M.aAnalisis.length};
+  const movimiento = `
+    <section class="ger-card ger-mov" aria-labelledby="ger-mov-t">
+      <header class="ger-card-head"><h3 class="ger-card-t" id="ger-mov-t">Movimiento del negocio</h3><span class="ger-card-sub">${per.label}</span></header>
+      <div class="ger-ley">${S.series.map(s=>`
+        <span class="ger-ley-it is-${s.tone}"${gerAccion(`gerModalAbrir('mov','${s.key}')`)}><i></i><span>${s.label}</span><b>${gerNum('mv-' + s.key, movTot[s.key])}</b><em>${movTot[s.key] ? gerMoneda(movImp[s.key]) : ''}</em></span>`).join('')}
+      </div>
+      ${gerChartHtml(S)}
+    </section>`;
+  const maxImp = Math.max(1, ...M.flujo.map(s=>s.importe));
+  const pipeline = `
+    <section class="ger-card ger-pipe" aria-labelledby="ger-pipe-t">
+      <header class="ger-card-head"><h3 class="ger-card-t" id="ger-pipe-t">Pipeline actual</h3><span class="ger-card-sub">Hoy · ${gerMoneda(M.pipeline)}</span></header>
+      <div class="ger-pipe-rows">${M.flujo.map((s, i)=>`
+        <div class="ger-pr${s.key==='analisis' ? ' is-cliente' : ''}${s.opps.length ? '' : ' is-cero'}" style="--i:${i}"${gerAccion(`gerModalAbrir('etapa','${s.key}')`)}>
+          <span class="ger-pr-k">${s.label}${s.alerta ? `<i class="ger-pr-al" title="${s.alerta}"></i>` : ''}</span>
+          <span class="ger-pr-n">${gerNum('pr-' + s.key, s.opps.length)}</span>
+          <span class="ger-pr-bar" aria-hidden="true"><i style="--w:${Math.max(s.importe ? 3 : 0, s.importe * 100 / maxImp).toFixed(1)}%"></i></span>
+          <span class="ger-pr-imp">${s.importe ? gerMoneda(s.importe) : '—'}</span>
+        </div>`).join('')}
+      </div>
+    </section>`;
+  const lecturaHtml = lectura.length ? `
+    <section class="ger-lec" aria-label="Lectura gerencial">
+      <span class="ger-lec-t">Lectura gerencial</span>
+      ${lectura.map(l=>`<p class="ger-lec-it is-${l.tone}">${l.txt}</p>`).join('')}
+    </section>` : '';
+
+  /* ---- 3 · Jefaturas: cumplimiento, operación, atención ---- */
+  const tc = gerTono(cum.pct) || 'neutral';
+  const cumplimiento = `
+    <section class="ger-card ger-cum" aria-labelledby="ger-cum-t">
+      <header class="ger-card-head"><h3 class="ger-card-t" id="ger-cum-t">Cumplimiento</h3><span class="ger-card-sub">vs fecha original</span></header>
+      <div class="ger-cum-in">
+        <div class="ger-dona-wrap is-${tc}"${gerAccion(`gerModalAbrir('kpi','cumplimiento')`)}>
+          <svg class="ger-dona" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="ger-dona-track" cx="50" cy="50" r="40"/>
+            <circle class="ger-dona-arc" cx="50" cy="50" r="40" pathLength="100" stroke-dasharray="${cum.pct || 0} 100" transform="rotate(-90 50 50)"/>
+          </svg>
+          <span class="ger-dona-c"><b>${cum.pct==null ? '—' : gerNum('cum', cum.pct, 'pct')}</b><span>${cum.med ? cum.ok + ' de ' + cum.med : 'sin datos'}</span></span>
+        </div>
+        ${gerDelta(dCum, ' pp', true)}
+      </div>
+      <div class="ger-cum-areas">${M.actividad.map((a, i)=>{
+        const p = a.cum.pct, t = gerTono(p);
+        return `<div class="ger-ca" style="--i:${i}"${gerAccion(`gerModalAbrir('area','${a.area}')`)}>
+          <span class="ger-ca-k">${a.label}</span><b class="${t ? 'is-' + t : ''}">${p==null ? '—' : p + '%'}</b>
+          <span class="ger-ca-bar" aria-hidden="true"><i class="${t ? 'is-' + t : ''}" style="--w:${p || 0}%"></i></span>
+        </div>`;
+      }).join('')}</div>
+    </section>`;
+  const maxCarga = Math.max(1, ...M.actividad.map(a=>a.entrego.length + a.pendientes.length));
+  const operacion = `
+    <section class="ger-card ger-op" aria-labelledby="ger-op-t">
+      <header class="ger-card-head"><h3 class="ger-card-t" id="ger-op-t">Operación por área</h3><span class="ger-card-sub">${per.label} · pendientes a hoy</span></header>
+      <div class="ger-op-cols" aria-hidden="true"><span></span><span>Entregó</span><span>Pend.</span><span>Venc.</span></div>
+      ${M.actividad.map((a, i)=>{
+        const e = a.entrego.length, p = a.pendientes.length, v = a.vencidas.length;
+        const w = n=>(n * 100 / maxCarga).toFixed(1) + '%';
+        return `<div class="ger-op-r" style="--i:${i}"${gerAccion(`gerModalAbrir('area','${a.area}')`)}>
+          <span class="ger-op-k"><b>${a.label}</b><span>recibió ${a.recibio.length}</span></span>
+          <span class="ger-op-n is-ok">${gerNum('op-e-' + a.area, e)}</span>
+          <span class="ger-op-n">${gerNum('op-p-' + a.area, p)}</span>
+          <span class="ger-op-n${v ? ' is-danger' : ' is-cero'}">${gerNum('op-v-' + a.area, v)}</span>
+          <span class="ger-op-bar" aria-hidden="true"><i class="is-ok" style="--w:${w(e)}"></i><i class="is-pend" style="--w:${w(p - v)}"></i><i class="is-venc" style="--w:${w(v)}"></i></span>
+        </div>`;
+      }).join('')}
+      <div class="ger-op-ley" aria-hidden="true"><span class="is-ok"><i></i>Entregó</span><span class="is-pend"><i></i>Pendiente</span><span class="is-venc"><i></i>Vencido</span></div>
+    </section>`;
+  const alertas = [
+    {k:'Tareas vencidas', n:M.vencidas.length, tone:'danger', js:`gerModalAbrir('kpi','vencidas')`},
+    {k:'Bloqueadas', n:M.bloqueadas.length, tone:'danger', js:`gerModalAbrir('bloqueos','todo')`},
+    {k:'Reprogramaciones', n:M.reprogAct.length, tone:'warn', js:`gerModalAbrir('kpi','reprog')`, d:gerDelta(dRep, '', false)},
+    {k:'Seguimientos vencidos', n:M.buckets[0].opps.length, tone:'warn', js:`gerModalAbrir('analisis','vencidos')`},
+  ].sort((a, b)=>b.n - a.n);
+  const maxAl = Math.max(1, ...alertas.map(a=>a.n));
+  const atencion = `
+    <section class="ger-card ger-atn" aria-labelledby="ger-atn-t">
+      <header class="ger-card-head"><h3 class="ger-card-t" id="ger-atn-t">Atención gerencial</h3>${M.enRiesgo.length ? `<span class="ger-card-sub is-danger">${gerPlural(M.enRiesgo.length, 'proyecto en riesgo', 'proyectos en riesgo')}</span>` : ''}</header>
+      ${alertas.map((a, i)=>`
+        <div class="ger-al${a.n ? ' is-' + a.tone : ' is-cero'}" style="--i:${i}"${gerAccion(a.js)}>
+          <span class="ger-al-k">${a.k}</span><b>${gerNum('al-' + i + a.k, a.n)}</b>
+          <span class="ger-al-bar" aria-hidden="true"><i style="--w:${(a.n * 100 / maxAl).toFixed(1)}%"></i></span>
+        </div>`).join('')}
+      ${M.atencion.length ? `<button type="button" class="ger-link ger-atn-mas" onclick="gerModalAbrir('atencion','todo')">${gerPlural(M.atencion.length, 'proyecto requiere', 'proyectos requieren')} atención →</button>` : ''}
+    </section>`;
+
+  /* ---- 4 · Análisis del cliente (último, subordinado) ---- */
+  const analisis = `
+    <section class="ger-an" aria-labelledby="ger-an-t">
+      <div class="ger-an-id"${gerAccion(`gerModalAbrir('analisis','todo')`)}>
+        <h3 class="ger-card-t" id="ger-an-t">Análisis del cliente</h3>
+        <span><b>${gerNum('an-t', M.analisis.length)}</b> ${M.analisis.length === 1 ? 'oportunidad' : 'oportunidades'} · ${gerMoneda(gerImporte(M.analisis))}</span>
+      </div>
+      <div class="ger-an-tl">
+        <span class="ger-an-bar" aria-hidden="true">${M.buckets.map(b=>b.opps.length ? `<i class="is-${b.tone || 'neutral'}" style="flex:${b.opps.length}"></i>` : '').join('')}</span>
+        <div class="ger-an-bk">${M.buckets.map(b=>`<span class="ger-an-b is-${b.tone || 'neutral'}${b.opps.length ? '' : ' is-cero'}"${gerAccion(`gerModalAbrir('analisis','${b.key}')`)}><i></i>${b.label}<b>${b.opps.length}</b></span>`).join('')}
+          ${M.sinSeguimiento.length ? `<span class="ger-an-b is-muted"${gerAccion(`gerModalAbrir('analisis','sinfecha')`)}>Sin fecha<b>${M.sinSeguimiento.length}</b></span>` : ''}
+        </div>
+      </div>
+    </section>`;
+
+  body.innerHTML = `
+    <div class="ger-row ger-r-kpi">${kpis}</div>
+    <div class="ger-row ger-r-2">${movimiento}${pipeline}</div>
+    ${lecturaHtml}
+    <div class="ger-row ger-r-3">${cumplimiento}${operacion}${atencion}</div>
+    ${analisis}`;
+  gerContar(body);
+}
+
+/* Muestra el selector múltiple que corresponde y pone su rótulo (sin
+   selección = semana / mes en curso). */
+function gerSincronizarSelectores(){
+  const sem = document.getElementById('ger-f-sem'), mes = document.getElementById('ger-f-mes');
+  if(!sem || !mes) return;
+  sem.hidden = gerPeriodo !== 'semana';
+  mes.hidden = gerPeriodo !== 'mes';
+  const ls = sem.querySelector('.msel-btn-label'), lm = mes.querySelector('.msel-btn-label');
+  const ns = gerSelPropia('ger-f-sem').length, nm = gerSelPropia('ger-f-mes').length;
+  if(ls) ls.textContent = ns ? (ns === 1 ? gerPeriodoLabel() : ns + ' semanas') : 'Semana actual';
+  if(lm) lm.textContent = nm ? (nm === 1 ? gerPeriodoLabel() : nm + ' meses') : 'Mes actual';
+  sem.classList.toggle('msel-active', ns > 0);
+  mes.classList.toggle('msel-active', nm > 0);
+}
+function setGerPeriodo(p){
+  if(!GER_PERIODOS[p]) return;
+  gerPeriodo = p;
+  renderGerencia();
+  const b = document.getElementById('ger-body');
+  if(b){ b.classList.remove('is-entrando'); void b.offsetWidth; b.classList.add('is-entrando'); }
+}
+function populateGerenciaFiltros(){
+  if(!document.getElementById('ger-f-kam')) return;
+  mselSetOptions('ger-f-area', GER_AREAS.map(a=>({value:a.value, label:a.label})), 'Área: todas');
+  mselSetOptions('ger-f-kam', KAMS.map(k=>({value:k.value, label:k.label})), 'Comercial: todos');
+  /* Últimas 12 semanas de trabajo y últimos 12 meses, la más reciente primero. */
+  const lunes = getSemanaActual().lunesISO;
+  mselSetOptions('ger-f-sem', Array.from({length:12}, (_, i)=>{
+    const l = addDaysISO(lunes, -7 * i);
+    return {value:l, label:'Sem ' + gerNumSemana(l) + ' · ' + formatFechaCorta(l) + ' – ' + formatFechaCorta(addDaysISO(l, 6)) + (i === 0 ? ' (actual)' : '')};
+  }), 'Todas las semanas');
+  const [y0, m0] = todayISO().split('-').map(Number);
+  mselSetOptions('ger-f-mes', Array.from({length:12}, (_, i)=>{
+    const t = new Date(Date.UTC(y0, m0 - 1 - i, 1));
+    const ym = t.getUTCFullYear() + '-' + String(t.getUTCMonth() + 1).padStart(2, '0');
+    return {value:ym, label:GER_MESES_LARGO[t.getUTCMonth()].replace(/^./, c=>c.toUpperCase()) + ' ' + t.getUTCFullYear() + (i === 0 ? ' (actual)' : '')};
+  }), 'Todos los meses');
+  gerSincronizarSelectores();
+}
+
+/* ---------- Modal de análisis ---------- */
+function gerModalFila(o, der, tone, sub){
+  return `<button type="button" class="ger-m-fila" onclick="gerModalAbrir('opp',${o.id})">
+    <span class="ger-fila-id"><b>L-${o.id} · ${escAttr(o.cliente || '—')}</b><span>${escAttr(sub || o.proyecto || '—')}</span></span>
+    <span class="ger-m-der${tone ? ' is-' + tone : ''}">${der}</span>
+  </button>`;
+}
+function gerModalLista(filas, max){
+  max = max || 10;
+  if(!filas.length) return '<div class="ger-vacio">Sin registros.</div>';
+  return `<div class="ger-m-lista">${filas.slice(0, max).join('')}</div>${filas.length > max ? `<p class="ger-m-nota">y ${filas.length - max} más en el detalle.</p>` : ''}`;
+}
+function gerResumenHtml(items){
+  return `<div class="ger-m-res">${items.map(([v, k, tone])=>`<div class="${tone ? 'is-' + tone : ''}"><b>${v}</b><span>${k}</span></div>`).join('')}</div>`;
+}
+/* Navegación de "Ver detalles →": usa los mismos botones de la barra lateral. */
+function gerIrTab(tab, cargaVista){
+  const sel = '.app-sidebar .tab-btn[data-tab="' + tab + '"]' + (cargaVista ? '[data-carga-vista="' + cargaVista + '"]' : '');
+  const b = document.querySelector(sel);
+  if(b) b.click();
+}
+function gerIrDetalle(etapas){
+  gerIrTab('detalle');
+  if(!etapas || !etapas.length){ setDetailView('oportunidades'); return; }
+  if(etapas.every(e=>ETAPAS_ENTREGAS.includes(e))){
+    setDetailView('entregas');
+    resumenEntQuickFilter = etapas[0];
+    renderDetalleEntregas();
+  } else {
+    setDetailView('oportunidades');
+    mselState['f-etapa'] = new Set(etapas.filter(e=>!ETAPAS_ENTREGAS.includes(e)));
+    mselRenderPanel('f-etapa');
+    applyFiltersDetalle();
+  }
+}
+function gerIrCarga(area){
+  gerIrTab('carga', 'carga');
+  setCargaArea(area || 'todas');
+}
+function gerIrFicha(id){
+  if(puedeEditar) openEditModal(id); else openRSDetailDrawer(id);
+}
+
+function gerModalAbrir(tipo, clave){
+  const M = gerUlt || gerModelo();
+  const per = gerPeriodoLabel();
+  let kicker = '', titulo = '', html = '', destino = null, destinoTxt = 'Ver detalles →';
+  const filaVenc = x=>gerModalFila(x.o, 'Venció hace ' + gerDiasTxt(daysBetween(x.e.fechaEntrega, M.hoy)), 'danger', (x.e.nombre || 'Tarea') + ' · ' + (RS_AREA_CORTA[x.e.area] || ''));
+  const filaImp = o=>gerModalFila(o, Number(o.importe) > 0 ? gerMoneda(o.importe) : 'Sin importe', '', o.proyecto + ' · ' + etapaLabelDisplay(o.etapa));
+  const porImporte = l=>l.slice().sort((a,b)=>(Number(b.importe)||0) - (Number(a.importe)||0));
+
+  if(tipo==='kpi'){
+    kicker = 'Foto global';
+    if(clave==='activas' || clave==='pipeline'){
+      titulo = clave==='activas' ? 'Oportunidades activas' : 'Pipeline total aprox.';
+      html = gerResumenHtml([[M.activas.length, 'activas'], [gerMoneda(M.pipeline), 'importe aprox.'], [M.sinImporte.length, 'sin importe', M.sinImporte.length ? 'warn' : '']]) +
+        `<p class="ger-m-sub">Por etapa</p><div class="ger-m-lista">${M.flujo.map(s=>`<div class="ger-m-fila is-plana"><span class="ger-fila-id"><b>${s.label}</b><span>${gerPlural(s.opps.length, 'oportunidad', 'oportunidades')}</span></span><span class="ger-m-der">${s.importe ? gerMoneda(s.importe) : '—'}</span></div>`).join('')}</div>`;
+      destino = ()=>gerIrDetalle(null);
+    } else if(clave==='riesgo'){
+      titulo = 'Proyectos en riesgo';
+      html = `<p class="ger-m-sub">Fecha cliente vencida con trabajo pendiente, o entrega interna posterior a la fecha cliente.</p>` +
+        gerModalLista(M.enRiesgo.map(x=>gerModalFila(x.o, escAttr(x.motivos.find(m=>m.riesgo).txt), 'danger')));
+      destino = ()=>gerIrTab('revision');
+    } else if(clave==='cumplimiento'){
+      titulo = 'Cumplimiento · ' + per;
+      const tarde = M.entregadas.filter(x=>{ const ref = x.e.fechaOriginal || x.e.fechaEntrega; return ref && x.e.fechaCompletado > ref; });
+      html = gerResumenHtml([[M.cumAct.pct==null ? '—' : M.cumAct.pct + '%', 'a tiempo'], [M.cumAct.ok, 'en fecha'], [M.cumAct.med - M.cumAct.ok, 'fuera de fecha', tarde.length ? 'danger' : '']]) +
+        `<p class="ger-m-sub">Tareas completadas hasta su fecha original. Entregadas fuera de fecha:</p>` +
+        gerModalLista(tarde.map(x=>gerModalFila(x.o, '+' + gerDiasTxt(daysBetween(x.e.fechaOriginal || x.e.fechaEntrega, x.e.fechaCompletado)), 'warn', (x.e.nombre || 'Tarea') + ' · ' + (RS_AREA_CORTA[x.e.area] || ''))));
+      destino = ()=>gerIrCarga(null);
+    } else if(clave==='vencidas'){
+      titulo = 'Tareas vencidas';
+      html = gerResumenHtml(GER_AREAS.map(a=>[M.vencidas.filter(x=>x.e.area===a.value).length, a.label])) +
+        gerModalLista(M.vencidas.slice().sort((a,b)=>a.e.fechaEntrega < b.e.fechaEntrega ? -1 : 1).map(filaVenc));
+      destino = ()=>gerIrTab('revision');
+    } else if(clave==='reprog'){
+      titulo = 'Reprogramaciones · ' + per;
+      html = gerModalLista(M.reprogAct.slice().reverse().map(x=>gerModalFila(x.o, escAttr(x.h.anterior) + ' → <b>' + escAttr(x.h.nuevo) + '</b>', 'warn', x.e ? (x.e.nombre || 'Tarea') : 'Fecha cliente')));
+      destino = ()=>gerIrTab('revision');
+    }
+  } else if(tipo==='mov'){
+    kicker = 'Movimiento · ' + per;
+    if(clave==='entregado'){
+      titulo = 'Entregado';
+      html = gerResumenHtml(GER_AREAS.map(a=>[M.entregadas.filter(x=>x.e.area===a.value).length, a.label])) +
+        gerModalLista(M.entregadas.slice().sort((a,b)=>a.e.fechaCompletado > b.e.fechaCompletado ? -1 : 1)
+          .map(x=>gerModalFila(x.o, formatFechaCorta(x.e.fechaCompletado), 'ok', (x.e.nombre || 'Tarea') + ' · ' + (RS_AREA_CORTA[x.e.area] || ''))));
+      destino = ()=>gerIrCarga(null); destinoTxt = 'Ver carga laboral →';
+    } else if(clave==='ingreso'){
+      titulo = 'Ingresó';
+      html = gerResumenHtml([[M.ingresos.length, 'nuevas'], [gerMoneda(gerImporte(M.ingresos)), 'importe aprox.']]) + gerModalLista(porImporte(M.ingresos).map(filaImp));
+      destino = ()=>gerIrDetalle(null);
+    } else {
+      titulo = 'Pasó a Análisis del cliente';
+      html = gerResumenHtml([[M.aAnalisis.length, 'proyectos'], [gerMoneda(gerImporte(M.aAnalisis)), 'importe aprox.']]) + gerModalLista(porImporte(M.aAnalisis).map(filaImp));
+      destino = ()=>gerIrDetalle(['analisis']);
+    }
+  } else if(tipo==='analisis'){
+    kicker = 'Análisis del cliente';
+    const b = M.buckets.find(x=>x.key===clave);
+    const lista = b ? b.opps : (clave==='sinfecha' ? M.sinSeguimiento : M.agenda);
+    titulo = b ? 'Seguimiento · ' + b.label : (clave==='sinfecha' ? 'Sin fecha de seguimiento' : 'Agenda completa');
+    html = gerResumenHtml([[lista.length, lista.length === 1 ? 'oportunidad' : 'oportunidades'], [gerMoneda(gerImporte(lista)), 'importe aprox.']]) +
+      gerModalLista(lista.map(o=>{ const s = gerSeguimientoTxt(o, M.hoy); return gerModalFila(o, s.txt, s.tone, (o.proyecto || '—') + ' · ' + (nombreKAM(o) || 'Sin comercial')); }), 12);
+    destino = ()=>gerIrDetalle(['analisis']);
+  } else if(tipo==='etapa'){
+    const st = M.flujo.find(s=>s.key===clave);
+    kicker = 'Flujo operativo'; titulo = st.label;
+    html = gerResumenHtml([[st.opps.length, 'oportunidades'], [gerMoneda(st.importe), 'importe aprox.'], [st.alerta || 'Sin alertas', 'señal', st.alerta ? 'warn' : '']]) +
+      gerModalLista(porImporte(st.opps).map(filaImp));
+    destino = ()=>gerIrDetalle(st.etapas);
+  } else if(tipo==='area'){
+    const a = M.actividad.find(x=>x.area===clave);
+    kicker = 'Actividad por área · ' + per; titulo = a.label;
+    html = gerResumenHtml([[a.recibio.length, 'recibió'], [a.entrego.length, 'entregó'], [a.pendientes.length, 'pendientes'], [a.cum.pct==null ? '—' : a.cum.pct + '%', 'cumplimiento']]) +
+      `<p class="ger-m-sub">Entregado en el periodo</p>` +
+      gerModalLista(a.entrego.map(x=>gerModalFila(x.o, formatFechaCorta(x.e.fechaCompletado), 'ok', (x.e.nombre || 'Tarea') + ' · ' + (nombreResponsableEntregable(x.e) || 'Sin responsable'))), 6) +
+      (a.vencidas.length ? `<p class="ger-m-sub">Vencidas</p>` + gerModalLista(a.vencidas.map(filaVenc), 6) : '');
+    destino = ()=>gerIrCarga(a.area); destinoTxt = 'Ver carga laboral →';
+  } else if(tipo==='bloqueos'){
+    const conDatos = M.bloqueos.filter(b=>b.items.length).sort((a, b)=>b.items.length - a.items.length);
+    const maxB = Math.max(1, ...conDatos.map(b=>b.items.length));
+    const origen = e=>(GER_BLOQUEOS.find(b=>b.de.includes(e.bloqueoOrigen || '')) || {label:'Otro'}).label;
+    kicker = 'Atención gerencial'; titulo = 'Tareas bloqueadas';
+    html = gerResumenHtml([[M.bloqueadas.length, 'tareas bloqueadas', M.bloqueadas.length ? 'danger' : ''], [gerUnicas(M.bloqueadas.map(x=>x.o)).length, 'oportunidades']]) +
+      (conDatos.length ? `<p class="ger-m-sub">Bloqueos por origen</p><div class="ger-m-bloq">${conDatos.map(b=>`<div class="ger-bl" style="--c:${GER_BLOQ_COLOR[b.key]}" onclick="gerModalAbrir('bloqueo','${b.key}')" role="button" tabindex="0"><span>${b.label}</span><span class="ger-bl-bar" aria-hidden="true"><i style="--w:${(b.items.length * 100 / maxB).toFixed(1)}%"></i></span><b>${b.items.length}</b></div>`).join('')}</div>` : '') +
+      `<p class="ger-m-sub">Oportunidades con tareas bloqueadas</p>` +
+      gerModalLista(M.bloqueadas.map(x=>gerModalFila(x.o, escAttr(origen(x.e)), 'danger', (x.e.nombre || 'Tarea') + ' · ' + (RS_AREA_CORTA[x.e.area] || '') + (x.e.bloqueoDetalle ? ' · ' + x.e.bloqueoDetalle : ''))), 12);
+    destino = ()=>gerIrTab('revision');
+  } else if(tipo==='bloqueo'){
+    const b = M.bloqueos.find(x=>x.key===clave);
+    kicker = 'Origen de bloqueos'; titulo = b.label;
+    html = gerModalLista(b.items.map(x=>gerModalFila(x.o, escAttr(RS_AREA_CORTA[x.e.area] || ''), 'danger', (x.e.nombre || 'Tarea') + (x.e.bloqueoDetalle ? ' · ' + x.e.bloqueoDetalle : ''))));
+    destino = ()=>gerIrTab('revision');
+  } else if(tipo==='atencion'){
+    kicker = 'Requieren atención'; titulo = gerPlural(M.atencion.length, 'proyecto', 'proyectos');
+    html = gerModalLista(M.atencion.map(x=>gerModalFila(x.o, escAttr(x.motivos[0].txt), x.motivos[0].sev >= 80 ? 'danger' : 'warn')), 15);
+    destino = ()=>gerIrTab('revision');
+  } else if(tipo==='opp'){
+    const o = oportunidades.find(x=>x.id===clave);
+    if(!o) return;
+    const pend = o.entregables.filter(e=>e.estado==='pendiente');
+    const motivos = gerMotivos(o, pend, M.hoy);
+    const reprog = gerReprogsProyecto(o);
+    const s = gerSeguimientoTxt(o, M.hoy);
+    kicker = 'L-' + o.id + ' · ' + etapaLabelDisplay(o.etapa);
+    titulo = escAttr(o.cliente || '—');
+    html = `<p class="ger-m-proy">${escAttr(o.proyecto || '—')}</p>` +
+      gerResumenHtml([
+        [Number(o.importe) > 0 ? gerMoneda(o.importe) : '—', 'importe aprox.'],
+        [rsFechaCliente(o) ? formatFechaCorta(rsFechaCliente(o)) : '—', 'fecha cliente'],
+        [o.etapa==='analisis' ? s.txt : pend.length, o.etapa==='analisis' ? 'seguimiento' : 'tareas pendientes', o.etapa==='analisis' ? s.tone : ''],
+        [reprog, 'reprogramaciones', reprog ? 'warn' : ''],
+      ]) +
+      `<dl class="ger-m-dl"><div><dt>Comercial</dt><dd>${escAttr(nombreKAM(o) || '—')}</dd></div><div><dt>Próximo paso</dt><dd>${escAttr(o.proximoPaso || '—')}</dd></div></dl>` +
+      (motivos.length ? `<p class="ger-m-sub">Alertas</p><ul class="ger-m-alertas">${motivos.map(m=>`<li class="${m.sev >= 80 ? 'is-danger' : 'is-warn'}">${escAttr(m.txt)}</li>`).join('')}</ul>` : '');
+    destino = ()=>gerIrFicha(o.id); destinoTxt = 'Ver ficha completa →';
+  }
+  document.getElementById('ger-m-kicker').textContent = kicker;
+  document.getElementById('ger-m-titulo').innerHTML = titulo;
+  document.getElementById('ger-m-body').innerHTML = html;
+  const ir = document.getElementById('ger-m-ir');
+  ir.textContent = destinoTxt;
+  ir.hidden = !destino;
+  gerModalDestino = destino;
+  const ov = document.getElementById('ger-modal');
+  if(ov.classList.contains('hidden')) lastFocusedElement = document.activeElement;
+  ov.classList.remove('hidden');
+  const box = ov.querySelector('.ger-mbox');
+  box.scrollTop = 0;
+  box.style.animation = 'none'; void box.offsetWidth; box.style.animation = '';
+  ov.querySelector('.modal-close').focus();
+}
+function gerModalCerrar(){
+  const ov = document.getElementById('ger-modal');
+  if(!ov || ov.classList.contains('hidden')) return;
+  ov.classList.add('hidden');
+  gerModalDestino = null;
+  if(lastFocusedElement && document.contains(lastFocusedElement)) lastFocusedElement.focus();
+}
+function gerModalIr(){
+  const fn = gerModalDestino;
+  gerModalCerrar();
+  if(fn) fn();
+}
+document.addEventListener('keydown', ev=>{
+  if(ev.key==='Escape' && !document.getElementById('ger-modal').classList.contains('hidden')){ ev.stopPropagation(); gerModalCerrar(); }
+}, true);
+
+/* ---------- Descargas ---------- */
+function gerDescargarExcel(){ exportarExcel(); }
+/* Informe ejecutivo: imprime solo la vista Gerencia (guardar como PDF). */
+function gerDescargarInforme(){
+  const root = document.documentElement;
+  root.classList.add('print-gerencia');
+  const quitar = ()=>{ root.classList.remove('print-gerencia'); window.removeEventListener('afterprint', quitar); };
+  window.addEventListener('afterprint', quitar);
+  window.print();
+}
+
 /* ---------- Pestañas principales ---------- */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
@@ -12694,6 +14000,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.getElementById(btn.dataset.tab).classList.add('active');
     positionTabIndicator();
     if(btn.dataset.tab === 'cronograma') requestAnimationFrame(renderGantt);
+    if(btn.dataset.tab === 'gerencia') renderGerencia();
     renderKPIs();
     hideGlobalTooltip();
   });
