@@ -3830,6 +3830,7 @@
   }
   .side-ico{width:20px;height:20px;flex-shrink:0;display:block;color:currentColor;transition:color var(--dur-2) var(--ease);}
   .side-label{transition:opacity var(--dur-2) var(--ease);}
+  .app-sidebar .side-item[hidden]{display:none !important;}
   .app-sidebar .side-item.is-soon{color:var(--ink-dim);cursor:default;}
   .app-sidebar .side-item.is-soon:hover{background:transparent;color:var(--ink-dim);}
   .side-soon{
@@ -4402,7 +4403,9 @@
     </div>
     <div class="side-group" role="group" aria-labelledby="side-g-ges">
       <p class="side-group-label" id="side-g-ges">Gestión</p>
-      <button type="button" class="tab-btn side-item" data-tab="gerencia" data-side-label="Gerencia">
+      <!-- Gerencia: oculta hasta que el perfil confirme un rol que edita (admin /
+           editor). El visor no la ve: ver aplicarPermisosDeRol. -->
+      <button type="button" class="tab-btn side-item" data-tab="gerencia" data-side-label="Gerencia" hidden>
         <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20v-6M10 20V9M15 20v-4M20 20V5"/><path d="m4 9 5-4 5 4 6-5"/></svg>
         <span class="side-label">Gerencia</span></button>
       <button type="button" class="tab-btn side-item" data-tab="cronograma" data-side-label="Cronograma">
@@ -14053,6 +14056,8 @@ function gerDescargarInforme(){
 /* ---------- Pestañas principales ---------- */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
+    /* Gerencia no está disponible para el visor (ni antes de confirmar el rol). */
+    if(btn.dataset.tab === 'gerencia' && !puedeVerGerencia()) return;
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
@@ -14267,12 +14272,22 @@ let appIniciada = false;  // evita recargar datos/realtime en cada TOKEN_REFRESH
    así que el panel no ofrece botones que el servidor después va a rechazar. */
 const ROLES_QUE_EDITAN = ['admin', 'editor'];
 
+function puedeVerGerencia(){ return rolConfirmado && puedeEditar; }
 function aplicarPermisosDeRol(){
   document.body.classList.toggle('solo-lectura', !puedeEditar);
   document.getElementById('btn-usuarios').style.display = esAdmin() ? '' : 'none';
   /* Desempeño: solo admin. Si otro rol la tenía abierta, vuelve a Carga laboral. */
   document.getElementById('subtab-desempeno').hidden = !esAdmin();
   if(!esAdmin() && cargaVista === 'desempeno') setCargaVista('carga');
+  /* Gerencia: solo roles que editan (admin / editor). Si un visor la tenía
+     abierta, vuelve a Revisión semanal. */
+  const btnGer = document.querySelector('.app-sidebar .tab-btn[data-tab="gerencia"]');
+  if(btnGer) btnGer.hidden = !puedeVerGerencia();
+  const panelGer = document.getElementById('gerencia');
+  if(!puedeVerGerencia() && panelGer && panelGer.classList.contains('active')){
+    const btnRev = document.querySelector('.app-sidebar .tab-btn[data-tab="revision"]');
+    if(btnRev) btnRev.click();
+  }
   /* El N° de la secuencia en Carga laboral lleva el atributo `disabled` según
      el rol dentro del HTML ya pintado. El primer render ocurre antes de que
      llegue el perfil, así que se repinta una vez que el rol está confirmado; el
