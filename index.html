@@ -19,6 +19,11 @@
       });
       if(!haySesion){ window.location.replace('login.html'); }
     }catch(e){}
+    /* Tema antes del primer pintado: claro por defecto (no sigue al sistema
+       operativo); solo una preferencia guardada explícitamente lo cambia. */
+    var tema = 'light';
+    try{ tema = localStorage.getItem('panelOportunidadesTheme') || 'light'; }catch(e){}
+    document.documentElement.setAttribute('data-theme', tema);
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2268,6 +2273,20 @@
      Prioridades; acá el espaciado lo da el gap de #rs-calendar. */
   #rs-calendar .rsw-avisos{margin-bottom:0;}
   .rsw-av-list .cal-card{flex:0 0 176px;}
+  /* Calendario deslizable: arrastrar la grilla a izquierda/derecha cambia de
+     semana. Durante el gesto la grilla sigue al dedo/mouse con resistencia; al
+     cambiar de semana la nueva entra desde el lado correspondiente. */
+  .rsc-grid{cursor:grab;}
+  .rsc-grid.is-swipe{cursor:grabbing;user-select:none;-webkit-user-select:none;}
+  .rsc-grid.is-swipe .cal-card{pointer-events:none;}
+  #rs-calendar.is-deslizando{overflow-x:clip;}
+  .rsc-grid.rsc-desde-der{animation:rscDesdeDer .3s var(--ease-emphasized) both;}
+  .rsc-grid.rsc-desde-izq{animation:rscDesdeIzq .3s var(--ease-emphasized) both;}
+  @keyframes rscDesdeDer{from{opacity:0;transform:translateX(36px);}to{opacity:1;transform:none;}}
+  @keyframes rscDesdeIzq{from{opacity:0;transform:translateX(-36px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){
+    .rsc-grid.rsc-desde-der,.rsc-grid.rsc-desde-izq{animation:none;}
+  }
 
   /* Drawer de edición rápida — cabecera operativa (ID · # semana), identidad
      del proyecto, bloque de datos y tareas compactas que se expanden en el
@@ -3194,6 +3213,55 @@
   .ft-opcion:hover{color:var(--ink);border-color:var(--teal);}
   .ft-opcion.is-sel{background:var(--ok-bg);border-color:var(--teal);color:var(--teal-deep);}
   .ft-nueva-pie{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap;}
+  /* Cotizaciones alternativas (ficha) y productos — reutilizan inputs y chips de la ficha. */
+  .fx-op-titulo{display:flex;align-items:center;gap:8px;margin:0;font-size:10px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
+  .fx-op-badge{font-size:10px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--teal-deep);background:var(--ok-bg);padding:1px 8px;border-radius:var(--radius-pill);}
+  .fx-alts{display:flex;flex-direction:column;gap:6px;}
+  .fx-alt{border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:var(--shadow-xs);overflow:hidden;animation:fxIn var(--dur-2) var(--ease) both;}
+  .fx-alt-head{width:100%;display:flex;align-items:center;gap:10px;padding:8px 12px;background:none;border:none;cursor:pointer;font-family:'Inter',sans-serif;text-align:left;color:var(--ink);}
+  .fx-alt-head:hover{background:var(--glass-bg-soft);}
+  .fx-alt-num{flex-shrink:0;font-size:12px;font-weight:600;}
+  .fx-alt-resumen{flex:1;min-width:0;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .fx-alt.is-open .fe-chev{transform:translateY(2px) rotate(-135deg);}
+  .fx-alt-body{padding:0 12px 12px;border-top:1px solid var(--line);}
+  .fx-alt-campos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px;}
+  @media (max-width:560px){ .fx-alt-campos{grid-template-columns:minmax(0,1fr);} }
+  .fx-alt-pie{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;}
+  .fx-alt-add{align-self:flex-start;}
+  /* Productos: una sola fila como los demás campos; la lista se abre al hacer clic. */
+  .ficha-box .fx-fila[hidden]{display:none !important;}
+  .fx-prod-dd{position:relative;min-width:0;}
+  .fx-prod-dd > summary{
+    list-style:none;cursor:pointer;display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    background-color:var(--surface-alt);border:1px solid transparent;border-radius:8px;padding:8px 28px 8px 10px;
+    font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A96A5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 9px center;background-size:14px;
+  }
+  .fx-prod-dd > summary::-webkit-details-marker{display:none;}
+  .fx-prod-dd > summary.is-vacio{color:#A3AEBA;}
+  .fx-prod-dd[open] > summary{background-color:var(--surface);border-color:var(--teal);}
+  /* Popover: cuadrícula de 2 columnas; cada opción = checkbox + 8px + nombre, en fila.
+     Los selectores llevan .ficha-box .ficha-body para ganarle a ".modal-body label"
+     (columna) y a los estilos generales de input de la ficha. */
+  .fx-prod-panel{
+    position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;max-height:240px;overflow-y:auto;padding:6px;
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-sm);
+  }
+  .fx-prod-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 4px;}
+  .ficha-box .ficha-body label.fx-prod-op{
+    display:flex;flex-direction:row;align-items:center;gap:8px;margin:0;padding:6px 8px;border-radius:6px;
+    font-size:13px;font-weight:400;line-height:1.25;color:var(--ink);text-transform:none;letter-spacing:0;cursor:pointer;min-width:0;
+  }
+  .ficha-box .ficha-body label.fx-prod-op:hover{background:var(--surface-alt);}
+  .ficha-box .ficha-body label.fx-prod-op:has(input:checked){background:var(--ok-bg);color:var(--teal-deep);}
+  .ficha-box .ficha-body label.fx-prod-op span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ficha-box .ficha-body label.fx-prod-op input[type="checkbox"]{
+    flex:0 0 14px;width:14px;height:14px;margin:0;padding:0;border:none;background:none;box-shadow:none;accent-color:var(--teal);cursor:pointer;
+  }
+  .ficha-box .ficha-body .fx-prod-panel input.fx-prod-otro{display:block;width:100%;margin-top:6px;}
+  .ficha-box .ficha-body .fx-prod-panel input.fx-prod-otro[hidden]{display:none;}
+  .ficha-box .fx-fila.is-na select{opacity:.5;cursor:not-allowed;}
   .ficha-box .ficha-body input[type="date"],.ficha-box .ficha-body input[type="month"]{padding-right:6px;}
   .ficha-box .ficha-body label.ft-campo-inline{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:10px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
   .ficha-box .ficha-body .ft-campo-inline select{width:auto;min-width:160px;padding:5px 26px 5px 9px;font-size:12.5px;text-transform:none;letter-spacing:0;font-weight:500;}
@@ -3215,6 +3283,8 @@
   .ficha-box .ficha-body .fx-detalle-titulo:hover{border-color:#DCE2E8;background-size:14px;}
   .ficha-box .ficha-body .fx-detalle-titulo:focus{background-size:14px;background-color:var(--surface);}
   .ficha-box .ficha-body input.fx-detalle-otro{margin:-6px 0 12px;}
+  .ficha-box .ficha-body input.ft-resp-otro{margin-top:6px;}
+  .ficha-box .ficha-body .ft-nueva-pie input.ft-resp-otro{width:auto;flex:1 1 140px;max-width:220px;margin-top:0;}
   .fx-detalle-grid{display:grid;grid-template-columns:minmax(0,1fr) 140px 140px;gap:10px;}
   .fx-detalle-grid.is-comercial{grid-template-columns:minmax(0,1fr) 140px;}
   .fx-fechas-tarea{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px;padding:9px 12px;border-radius:10px;background:var(--surface-alt);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--ink);}
@@ -4342,6 +4412,467 @@
     #gerencia .ger-tip,#gerencia .ger-ch-hits{display:none !important;}
   }
 
+  /* ============================================================
+     GERENCIA · navegación interna de subvistas
+     ============================================================ */
+  .ger-subnav{display:flex;gap:2px;margin:0 0 16px;padding:3px;width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none;
+    border-radius:var(--radius-pill);border:1px solid var(--line);background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .ger-subnav::-webkit-scrollbar{display:none;}
+  .ger-subnav[hidden]{display:none;}
+  .ger-subnav-btn{flex:0 0 auto;height:30px;padding:0 16px;border:none;border-radius:var(--radius-pill);background:transparent;color:var(--ink-soft);
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;
+    transition:background-color var(--dur-2) var(--ease),color var(--dur-1) var(--ease),box-shadow var(--dur-2) var(--ease);}
+  .ger-subnav-btn:hover{color:var(--ink);}
+  .ger-subnav-btn.is-on{background:var(--surface);color:var(--teal);box-shadow:var(--shadow-xs);}
+  .ger-subnav-btn:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ger-sv[hidden]{display:none;}
+
+  /* ============================================================
+     GERENCIA · PLANNER — control analítico. Mismas tarjetas, tokens y
+     tipografías de Gerencia; color solo para excepciones/riesgo.
+     ============================================================ */
+  .pln-subt{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-dim);letter-spacing:.01em;}
+  .pln-head .ger-head-ctrl{gap:12px;}
+  .pln-body{gap:14px;}
+  .pln-body.is-quieto > *,.pln-body.is-quieto *{animation:none !important;}
+  #gerencia .pln-body [role="button"]{cursor:pointer;}
+  .pln-r-kpi{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;}
+  .pln-r-op{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:14px;align-items:start;}
+  .pln-r-fin{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:14px;align-items:start;}
+
+  /* KPIs */
+  .pln-kpi{padding:13px 15px 12px;gap:5px;}
+  .pln-kpi.is-violet{--k-c:var(--violet);}
+  .pln-kpi.is-neutral{--k-c:var(--ink-dim);}
+  .pln-kpi .ger-kpi-v{font-size:27px;gap:7px;}
+  .pln-kpi-u{font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:0;}
+  .pln-sininfo{font-family:'Inter',sans-serif;font-size:15px;font-weight:600;color:var(--ink-dim);letter-spacing:0;}
+
+  /* Sección plegable */
+  .pln-sec{padding:14px 16px 14px;}
+  .pln-sec-head{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;margin:0 0 12px;}
+  .pln-sec.is-plegada .pln-sec-head{margin-bottom:0;}
+  .pln-sec-tit{display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap;min-width:0;}
+  .pln-sec-tit .ger-card-t{font-size:13.5px;}
+  .pln-sec-tg{display:inline-flex;align-items:center;gap:6px;padding:2px 4px;margin:-2px -4px;border:none;background:none;border-radius:6px;
+    font:inherit;color:inherit;cursor:pointer;}
+  .pln-sec-tg svg{width:14px;height:14px;color:var(--ink-dim);transition:transform var(--dur-2) var(--ease);}
+  .pln-sec.is-plegada .pln-sec-tg svg{transform:rotate(-90deg);}
+  .pln-sec-tg:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-sec-ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .pln-sec.is-destacada{animation:plnDestaca 1.2s var(--ease) 1;}
+  @keyframes plnDestaca{0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--teal) 45%, transparent);}100%{box-shadow:0 0 0 10px transparent;}}
+
+  .pln-seg{flex-wrap:nowrap;}
+  .pln-seg-sm .des-per-btn{padding:5px 11px;font-size:11.5px;}
+  .pln-seg-n{margin-left:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-dim);}
+  .des-per-btn.is-on .pln-seg-n{color:inherit;opacity:.75;}
+  .pln-vacio{padding:10px 2px;font-size:12px;color:var(--ink-dim);}
+  .pln-vacio.is-ok{color:var(--ok);}
+  .pln-mas-btn{display:inline-block;margin-top:10px;}
+  .pln-nota{margin:10px 0 0;font-size:11px;color:var(--ink-dim);}
+  .pln-sub{margin:12px 0 6px;font-size:10.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
+  .pln-num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;text-align:right;}
+  .is-danger.pln-num,.pln-td.is-danger,.pln-foco-f.is-danger{color:var(--danger);}
+  .is-warn.pln-num,.pln-td.is-warn,.pln-foco-f.is-warn{color:var(--warn);}
+  .pln-td.is-info,.pln-foco-f.is-info{color:var(--info);}
+  .pln-num.is-cero{color:var(--ink-dim);}
+
+  /* Lectura (una línea interpretativa) */
+  .pln-lec{--in-c:var(--navy);position:relative;margin:12px 0 0;padding-left:11px;font-size:12px;line-height:1.5;color:var(--ink-soft);}
+  .pln-lec::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:2px;border-radius:2px;background:var(--in-c);}
+  .pln-lec b{color:var(--ink);}
+  .pln-lec.is-ok{--in-c:var(--ok);}
+  .pln-lec.is-warn{--in-c:var(--warn);}
+  .pln-lec.is-danger{--in-c:var(--danger);}
+  .pln-lec.is-neutral{--in-c:color-mix(in srgb, var(--ink-dim) 60%, transparent);}
+
+  /* Identificación de oportunidad */
+  .pln-id{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .pln-id b{font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-id b em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--ink-dim);margin-right:2px;}
+  .pln-id > span{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* Acciones contextuales (íconos discretos) */
+  .pln-acts{display:inline-flex;align-items:center;justify-content:flex-end;gap:2px;}
+  .pln-act{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:8px;
+    background:transparent;color:var(--ink-dim);cursor:pointer;transition:background-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease);}
+  .pln-act svg{width:15px;height:15px;}
+  .pln-act:hover{background:color-mix(in srgb, var(--teal) 12%, transparent);color:var(--teal);}
+  .pln-act:focus-visible{outline:none;box-shadow:var(--ring);}
+  body.solo-lectura .pln-act:not([aria-label="Abrir ficha"]){display:none;}
+
+  /* Etiqueta de alerta */
+  .pln-tag{--t-c:var(--ink-dim);display:inline-flex;align-items:center;gap:5px;justify-self:start;max-width:100%;padding:3px 8px;border-radius:6px;
+    font-size:10.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap;color:var(--t-c);background:color-mix(in srgb, var(--t-c) 11%, transparent);}
+  .pln-tag b{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;opacity:.8;}
+  .pln-tag.is-danger{--t-c:var(--danger);}
+  .pln-tag.is-warn{--t-c:var(--warn);}
+  .pln-tag.is-info{--t-c:var(--info);}
+
+  /* 2 · Foco de hoy */
+  .pln-foco-l{display:flex;flex-direction:column;}
+  .pln-foco-r{display:grid;grid-template-columns:142px minmax(0,1fr) minmax(0,120px) 112px 62px auto;align-items:center;gap:10px;
+    padding:8px 8px;margin:0 -8px;border-bottom:1px solid var(--line);border-radius:10px;transition:background-color var(--dur-1) var(--ease);}
+  .pln-foco-r:last-child{border-bottom:none;}
+  .pln-foco-r:hover{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .pln-foco-r:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-foco-resp{font-size:11.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-foco-f{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);white-space:nowrap;}
+  .pln-avance{display:inline-flex;align-items:center;gap:6px;}
+  .pln-avance.is-cero{color:var(--ink-dim);font-size:11px;}
+  .pln-av-bar{display:block;width:26px;height:4px;border-radius:2px;background:color-mix(in srgb, var(--ink) 9%, transparent);overflow:hidden;}
+  .pln-av-bar i{display:block;height:100%;width:var(--w);background:var(--teal);border-radius:2px;}
+  .pln-avance em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-dim);}
+
+  /* 3 · Producción */
+  .pln-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:10px;}
+  .pln-stats div{display:flex;flex-direction:column;gap:1px;padding:8px 6px 8px 0;min-width:0;}
+  .pln-stats div + div{padding-left:10px;border-left:1px solid var(--line);}
+  .pln-stats b{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:var(--ink);line-height:1.15;}
+  .pln-stats span{font-size:9.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-stats .is-danger b{color:var(--danger);}
+  .pln-prod-h,.pln-prod-main{display:grid;grid-template-columns:minmax(0,1fr) 40px 40px 34px 40px 74px;align-items:center;gap:8px;}
+  .pln-prod-h{padding:0 8px 5px;}
+  .pln-prod-h span{font-size:9.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;text-align:right;}
+  .pln-prod-h span:first-child{text-align:left;}
+  .pln-prod-r{border-radius:10px;margin:0 -0px;}
+  .pln-prod-r + .pln-prod-r{border-top:1px solid var(--line);}
+  .pln-prod-main{width:100%;padding:8px 8px;border:none;background:none;border-radius:10px;font:inherit;color:inherit;text-align:left;cursor:pointer;
+    transition:background-color var(--dur-1) var(--ease);}
+  .pln-prod-main:hover,.pln-prod-r.is-open .pln-prod-main{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .pln-prod-main:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-prod-n{font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-prod-r.is-sinresp .pln-prod-n{color:var(--warn);}
+  .pln-prod-main .pln-num{font-size:12px;color:var(--ink);}
+  .pln-carga{display:block;height:6px;border-radius:3px;background:color-mix(in srgb, var(--ink) 8%, transparent);overflow:hidden;}
+  .pln-carga i{display:block;height:100%;width:var(--w);border-radius:3px;background:color-mix(in srgb, var(--teal) 75%, transparent);transform-origin:left;animation:gerCrece .7s var(--ease-emphasized) .15s both;}
+  .pln-carga.is-moderada i{background:var(--warn);}
+  .pln-carga.is-alta i{background:var(--danger);}
+  .pln-carga.is-sinresp i{background:repeating-linear-gradient(135deg, var(--warn) 0 4px, color-mix(in srgb, var(--warn) 45%, transparent) 4px 8px);}
+  .pln-prod-det{padding:4px 8px 10px 14px;display:flex;flex-direction:column;gap:8px;}
+  .pln-prod-p{display:flex;flex-direction:column;gap:4px;padding-left:10px;border-left:2px solid var(--line);}
+  .pln-prod-ts{display:flex;flex-direction:column;}
+  .pln-prod-t{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;font-size:11.5px;color:var(--ink-soft);}
+  .pln-prod-t em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .pln-prod-t em.is-danger{color:var(--danger);}
+  .pln-prod-t em.is-warn{color:var(--warn);}
+  .pln-prod-st{font-size:10.5px;color:var(--ink-dim);}
+
+  /* 4 · Flujo de propuestas */
+  .pln-flujo{display:grid;grid-template-columns:repeat(5,minmax(0,1fr) 14px) minmax(0,1fr);gap:6px 4px;align-items:stretch;}
+  .pln-flujo-lado{grid-row:1;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;padding:0 4px 4px;border-bottom:1px solid var(--line);}
+  .pln-flujo-lado.is-op{grid-column:1 / 6;color:var(--navy);}
+  .pln-flujo-lado.is-com{grid-column:7 / 12;color:var(--teal-deep);}
+  .pln-paso,.pln-paso-fl{grid-row:2;}
+  .pln-paso{--p-c:var(--navy);display:flex;flex-direction:column;gap:4px;min-width:0;padding:9px 10px 8px;border-radius:12px;
+    background:color-mix(in srgb, var(--p-c) 6%, transparent);transition:background-color var(--dur-2) var(--ease),transform var(--dur-2) var(--ease);}
+  .pln-paso.is-com{--p-c:var(--teal);}
+  .pln-paso:hover{background:color-mix(in srgb, var(--p-c) 12%, transparent);transform:translateY(-1px);}
+  .pln-paso:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-paso-k{font-size:10.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-paso > b{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--ink);line-height:1.05;}
+  .pln-paso.is-cero > b{color:var(--ink-dim);}
+  .pln-paso-bar{display:block;height:5px;border-radius:3px;background:color-mix(in srgb, var(--ink) 7%, transparent);overflow:hidden;}
+  .pln-paso-bar i{display:block;height:100%;width:var(--w);border-radius:3px;background:var(--p-c);transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) both;animation-delay:calc(var(--i) * 70ms + .15s);}
+  .pln-paso em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-paso-fl{align-self:center;justify-self:center;width:8px;height:8px;border-top:1.5px solid var(--ink-dim);border-right:1.5px solid var(--ink-dim);transform:rotate(45deg);opacity:.55;}
+
+  /* 5 · Pipeline post-propuesta */
+  .pln-pc-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px;}
+  .pln-pc{--c-c:var(--teal);display:flex;flex-direction:column;gap:3px;padding:11px 13px;border-radius:12px;text-align:left;cursor:pointer;
+    border:1px solid var(--line);background:color-mix(in srgb, var(--ink) 2%, transparent);font:inherit;color:inherit;
+    transition:border-color var(--dur-2) var(--ease),background-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease);}
+  .pln-pc.is-negociacion{--c-c:var(--orange);}
+  .pln-pc.is-postpuesto{--c-c:var(--ink-dim);}
+  .pln-pc:hover{border-color:color-mix(in srgb, var(--c-c) 35%, var(--line));}
+  .pln-pc.is-on{border-color:color-mix(in srgb, var(--c-c) 55%, transparent);background:color-mix(in srgb, var(--c-c) 8%, var(--surface));box-shadow:var(--shadow-xs);}
+  .pln-pc:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-pc-k{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;}
+  .pln-pc-v{display:flex;align-items:baseline;gap:9px;}
+  .pln-pc-v b{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--ink);}
+  .pln-pc-v em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+  .pln-pc > span:last-child{font-size:11px;color:var(--ink-dim);}
+  .pln-pc .is-danger{color:var(--danger);font-weight:600;}
+  .pln-post-det{display:flex;flex-direction:column;gap:10px;}
+  .pln-det-top{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;}
+  .pln-det-res{font-size:12px;color:var(--ink-soft);margin-right:auto;}
+  .pln-det-res b{color:var(--ink);font-weight:700;}
+  .pln-det-q{font-size:11.5px;font-weight:600;color:var(--orange);}
+  .pln-orden{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-dim);}
+  .pln-orden select{height:28px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:11.5px;}
+  .pln-dorm{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;
+    border:1px solid color-mix(in srgb, var(--danger) 26%, transparent);background:color-mix(in srgb, var(--danger) 6%, transparent);
+    transition:background-color var(--dur-2) var(--ease);}
+  .pln-dorm:hover{background:color-mix(in srgb, var(--danger) 10%, transparent);}
+  .pln-dorm:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-dorm-ico{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:9px;color:var(--danger);background:color-mix(in srgb, var(--danger) 13%, transparent);}
+  .pln-dorm-ico svg{width:15px;height:15px;}
+  .pln-dorm-t{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .pln-dorm-t b{font-size:13px;color:var(--danger);}
+  .pln-dorm-t span{font-size:11px;color:var(--ink-soft);}
+
+  /* Tabla compacta (en móvil se vuelve tarjeta) */
+  .pln-tabla{display:flex;flex-direction:column;}
+  .pln-th,.pln-tr{display:grid;align-items:center;gap:10px;padding:7px 8px;margin:0 -8px;}
+  .pln-th{padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .pln-th span{font-size:9.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-tr{border-bottom:1px solid var(--line);border-radius:10px;transition:background-color var(--dur-1) var(--ease);}
+  .pln-tr:hover{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .pln-tr:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-td{font-size:12px;color:var(--ink-soft);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-td.pln-num{color:var(--ink);}
+  .pln-tr-an{grid-template-columns:minmax(0,2.1fr) 70px 74px 44px 64px 62px 98px 52px minmax(0,2fr) 60px;}
+  .pln-tr-neg{grid-template-columns:minmax(0,2.1fr) 70px 74px 44px 70px 98px 98px minmax(0,2fr) 60px;}
+  .pln-tr-pos{grid-template-columns:minmax(0,2.2fr) 80px 80px 70px 56px minmax(0,2.2fr) 60px;}
+  .pln-tr-kam{grid-template-columns:minmax(0,1.5fr) 74px 74px 64px 64px 82px 92px minmax(0,1.3fr) minmax(0,1.9fr);}
+  .pln-th.pln-tr-an span:nth-child(n+3):nth-child(-n+4),.pln-th.pln-tr-an span:nth-child(8),
+  .pln-th.pln-tr-neg span:nth-child(n+3):nth-child(-n+4),.pln-th.pln-tr-pos span:nth-child(3),.pln-th.pln-tr-pos span:nth-child(5),
+  .pln-th.pln-tr-kam span:nth-child(n+2):nth-child(-n+7){text-align:right;}
+  .pln-tr.is-dormida{box-shadow:inset 2px 0 0 color-mix(in srgb, var(--danger) 60%, transparent);}
+  .pln-grp{display:flex;align-items:baseline;gap:10px;padding:12px 0 4px;}
+  .pln-grp b{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .pln-grp span{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-dim);}
+  .pln-grp.is-danger b{color:var(--danger);}
+  .pln-grp.is-warn b{color:var(--warn);}
+  .pln-com{display:flex;flex-direction:column;gap:0;width:100%;min-width:0;padding:3px 6px;margin:-3px -6px;border:none;border-radius:7px;background:none;
+    font:inherit;text-align:left;color:var(--ink-soft);cursor:pointer;transition:background-color var(--dur-1) var(--ease);}
+  .pln-com:hover{background:color-mix(in srgb, var(--teal) 9%, transparent);}
+  .pln-com:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-com i{font-style:normal;font-size:9.5px;color:var(--ink-dim);font-family:'IBM Plex Mono',monospace;}
+  .pln-com span{font-size:11.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-com.is-vacio{font-size:11px;color:var(--ink-dim);font-style:italic;}
+  .pln-com.is-vacio:hover{color:var(--teal);}
+
+  /* Forecast de Negociación */
+  .pln-fc{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;}
+  .pln-fc-c{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border-radius:10px;background:color-mix(in srgb, var(--orange) 6%, transparent);}
+  .pln-fc-c.is-danger{background:color-mix(in srgb, var(--danger) 7%, transparent);}
+  .pln-fc-c.is-muted{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .pln-fc-c.is-cero{opacity:.55;}
+  .pln-fc-k{font-size:10.5px;font-weight:700;color:var(--ink-soft);}
+  .pln-fc-k::first-letter{text-transform:uppercase;}
+  .pln-fc-c.is-danger .pln-fc-k{color:var(--danger);}
+  .pln-fc-bar{display:block;height:4px;border-radius:2px;background:color-mix(in srgb, var(--ink) 7%, transparent);overflow:hidden;}
+  .pln-fc-bar i{display:block;height:100%;width:var(--w);border-radius:2px;background:var(--orange);transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) .15s both;}
+  .pln-fc-c.is-danger .pln-fc-bar i{background:var(--danger);}
+  .pln-fc-c b{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--ink);}
+  .pln-fc-c > span:last-child{font-size:10.5px;color:var(--ink-dim);}
+
+  /* 6 · Eficiencia por KAM */
+  .pln-kams{display:flex;flex-direction:column;gap:8px;}
+  .pln-kam{--s-c:var(--line);border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb, var(--ink) 1.5%, transparent);
+    box-shadow:inset 3px 0 0 var(--s-c);transition:border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease);}
+  .pln-kam.is-warn{--s-c:color-mix(in srgb, var(--warn) 75%, transparent);}
+  .pln-kam.is-ok{--s-c:color-mix(in srgb, var(--ok) 55%, transparent);}
+  .pln-kam:hover{border-color:color-mix(in srgb, var(--ink) 16%, transparent);}
+  .pln-kam-main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1.15fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr) 18px;align-items:center;gap:12px;
+    width:100%;padding:11px 14px 11px 16px;border:none;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:12px;}
+  .pln-kam-main:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-kam-nom{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .pln-kam-nom b{font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-dem{font-size:10.5px;font-weight:600;color:var(--ink-dim);}
+  .pln-dem.is-alta{color:var(--ink);}
+  .pln-dem.is-alta::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;background:var(--violet);vertical-align:1px;}
+  .pln-kam-c{display:flex;flex-direction:column;gap:1px;min-width:0;}
+  .pln-kam-c em{font-style:normal;font-size:9.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+  .pln-kam-c b{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-kam-c span{font-size:10.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-kam-c.is-danger b{color:var(--danger);}
+  .pln-senal{display:inline-flex;align-items:center;gap:6px;justify-self:start;max-width:100%;padding:4px 9px;border-radius:7px;font-size:11px;font-weight:600;
+    color:var(--ink-soft);background:color-mix(in srgb, var(--ink) 5%, transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-senal i{font-style:normal;}
+  .pln-senal.is-warn{color:var(--warn);background:color-mix(in srgb, var(--warn) 11%, transparent);}
+  .pln-senal.is-ok{color:var(--ok);background:color-mix(in srgb, var(--ok) 9%, transparent);}
+  .pln-kam-chev svg{width:16px;height:16px;color:var(--ink-dim);transition:transform var(--dur-2) var(--ease);}
+  .pln-kam.is-open .pln-kam-chev svg{transform:rotate(180deg);}
+  .pln-kam-det{padding:0 16px 14px;animation:gerSube .3s var(--ease-emphasized) both;}
+  .pln-kam-det .pln-lec{margin-top:0;}
+  .pln-kam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:12px;}
+  .pln-kam-grid div{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:9px;background:color-mix(in srgb, var(--ink) 3.5%, transparent);min-width:0;}
+  .pln-kam-grid b{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--ink);}
+  .pln-kam-grid span{font-size:10.5px;color:var(--ink-soft);}
+  .pln-kam-grid em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pln-kam-grid .is-danger b{color:var(--danger);}
+  .pln-mini{display:flex;flex-direction:column;}
+  .pln-mini-r{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:12px;align-items:center;padding:6px 8px;margin:0 -8px;border-radius:9px;border-bottom:1px solid var(--line);}
+  .pln-mini-r:last-child{border-bottom:none;}
+  .pln-mini-r:hover{background:color-mix(in srgb, var(--ink) 4%, transparent);}
+  .pln-mini-r .pln-num{font-size:11.5px;color:var(--ink);}
+  .pln-mini-r .pln-num.is-danger{color:var(--danger);}
+  .pln-pipe{display:flex;align-items:center;gap:8px;}
+  .pln-pipe-bar{flex:1;display:block;height:5px;border-radius:3px;background:color-mix(in srgb, var(--ink) 7%, transparent);overflow:hidden;min-width:24px;}
+  .pln-pipe-bar i{display:block;height:100%;width:var(--w);border-radius:3px;background:color-mix(in srgb, var(--teal) 70%, transparent);}
+  .pln-pipe b{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:500;color:var(--ink);}
+  .pln-tr-kam .pln-num small{display:block;font-size:9.5px;color:var(--danger);opacity:.85;}
+  .pln-tr-kam .pln-kam-nom b{font-size:12.5px;}
+
+  /* 7 · Pulso */
+  .pln-pulso{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:12px;}
+  .pln-pu{--u-c:var(--navy);display:flex;flex-direction:column;gap:2px;padding:9px 10px;border-radius:10px;background:color-mix(in srgb, var(--u-c) 6%, transparent);transition:background-color var(--dur-2) var(--ease);}
+  .pln-pu.is-com{--u-c:var(--teal);}
+  .pln-pu:hover{background:color-mix(in srgb, var(--u-c) 12%, transparent);}
+  .pln-pu:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-pu b{font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;color:var(--ink);line-height:1.1;}
+  .pln-pu span{font-size:10.5px;color:var(--ink-soft);line-height:1.3;}
+  .pln-pu em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-dim);}
+  .pln-pu em.is-up{color:var(--ok);}
+  .pln-pu em.is-down{color:var(--ink-soft);}
+
+  /* 8 · Alertas */
+  .pln-alg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+  .pln-al-g{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .pln-al-gt{font-size:9.5px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.08em;padding-bottom:5px;margin-bottom:2px;border-bottom:1px solid var(--line);}
+  .pln-al{--a-c:var(--ink-dim);display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:6px 6px;margin:0 -6px;border-radius:8px;transition:background-color var(--dur-1) var(--ease);}
+  .pln-al:hover{background:color-mix(in srgb, var(--a-c) 9%, transparent);}
+  .pln-al:focus-visible{outline:none;box-shadow:var(--ring);}
+  .pln-al span{font-size:11.5px;color:var(--ink-soft);line-height:1.3;}
+  .pln-al b{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--a-c);}
+  .pln-al.is-danger{--a-c:var(--danger);}
+  .pln-al.is-warn{--a-c:var(--warn);}
+  .pln-al.is-cero b{color:var(--ink-dim);}
+
+  /* Intervención rápida */
+  .pln-qe-box{max-width:480px;}
+  .pln-qe-t{font-size:19px;}
+  .pln-qe-sub{font-size:12px;color:var(--ink-soft);}
+  .pln-qe-body{display:flex;flex-direction:column;gap:12px;}
+  .pln-qe-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;}
+  .pln-qe-grid[hidden]{display:none;}
+  .pln-qe-c{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .pln-qe-c > span{font-size:10px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
+  .pln-qe-c input,.pln-qe-c select,.pln-qe-c textarea{width:100%;min-height:36px;padding:7px 10px;border-radius:9px;border:1px solid var(--line);
+    background:color-mix(in srgb, var(--ink) 3%, var(--surface));color:var(--ink);font:inherit;font-size:13px;box-sizing:border-box;}
+  .pln-qe-c textarea{resize:vertical;min-height:76px;line-height:1.45;}
+  .pln-qe-c input:focus,.pln-qe-c select:focus,.pln-qe-c textarea:focus{outline:none;border-color:var(--teal);box-shadow:var(--ring);}
+  .pln-qe-atajos{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:6px;}
+  .pln-qe-at{height:26px;padding:0 10px;border-radius:var(--radius-pill);border:1px solid var(--line);background:transparent;color:var(--ink-soft);font:inherit;font-size:11.5px;cursor:pointer;
+    transition:border-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease);}
+  .pln-qe-at:hover{border-color:var(--teal);color:var(--teal);}
+  .pln-qe-ult{margin:0;font-size:11px;color:var(--ink-dim);display:flex;flex-direction:column;gap:3px;}
+  .pln-qe-ult span{font-size:12px;color:var(--ink-soft);padding-left:9px;border-left:2px solid var(--line);white-space:pre-wrap;}
+
+  @media (prefers-reduced-motion:reduce){
+    #pln-qe *{animation:none !important;transition:none !important;}
+  }
+
+  /* ---------- Laptop / tablet ---------- */
+  @media (max-width:1380px){
+    .pln-r-kpi{grid-template-columns:repeat(5,minmax(0,1fr));}
+    .pln-kpi .ger-kpi-v{font-size:24px;}
+    .pln-kpi .ger-kpi-ico{display:none;}
+    .pln-kam-main{grid-template-columns:minmax(0,1.2fr) repeat(4,minmax(0,1fr)) 18px;}
+    .pln-kam-main .pln-senal{grid-column:1 / -2;grid-row:2;}
+  }
+  @media (max-width:1280px){
+    .pln-r-op{grid-template-columns:1fr;}
+    .pln-tr-an{grid-template-columns:minmax(0,2fr) 64px 70px 40px 60px 92px 48px minmax(0,1.8fr) 60px;}
+    .pln-tr-an > :nth-child(6),.pln-th.pln-tr-an > :nth-child(6){display:none;}
+  }
+  @media (max-width:1100px){
+    .pln-r-kpi{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .pln-r-fin{grid-template-columns:1fr;}
+    .pln-flujo{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+    .pln-flujo-lado,.pln-paso-fl{display:none;}
+    .pln-paso{grid-row:auto;}
+    .pln-pulso{grid-template-columns:repeat(3,minmax(0,1fr));}
+  }
+
+  /* ---------- Tablas → tarjetas ---------- */
+  @media (max-width:980px){
+    .pln-th{display:none;}
+    .pln-tabla{gap:8px;}
+    .pln-tr{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:6px 12px;padding:10px 12px;margin:0;border:1px solid var(--line);border-radius:12px;}
+    .pln-tr > .pln-id,.pln-tr > .pln-kam-nom{grid-column:1 / -1;}
+    .pln-tr > .pln-td{display:flex !important;flex-direction:column;gap:1px;white-space:normal;text-align:left;}
+    .pln-tr > .pln-td::before{content:attr(data-k);font-size:9px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em;}
+    .pln-tr > .pln-td.pln-num{text-align:left;}
+    .pln-tr > .pln-td-com{grid-column:1 / -1;}
+    .pln-tr > .pln-td-com::before{display:none;}
+    .pln-tr > .pln-acts{grid-column:1 / -1;justify-content:flex-start;margin:2px -4px -4px;}
+    .pln-tr > .pln-kam-nom{flex-direction:row;align-items:baseline;gap:10px;}
+    .pln-tr > .pln-kam-nom::before{display:none;}
+    .pln-tr > .pln-pipe{flex-direction:column;align-items:stretch;}
+    .pln-tr.is-dormida{box-shadow:inset 3px 0 0 color-mix(in srgb, var(--danger) 60%, transparent);}
+    .pln-grp{padding-top:6px;}
+    .pln-kam-main{grid-template-columns:repeat(2,minmax(0,1fr)) 18px;gap:10px 12px;}
+    .pln-kam-main .pln-kam-nom{grid-column:1 / 3;}
+    .pln-kam-main .pln-kam-chev{grid-column:3;grid-row:1;}
+    .pln-kam-main .pln-senal{grid-column:1 / -1;grid-row:auto;}
+  }
+
+  /* ---------- iPhone ---------- */
+  @media (max-width:767px){
+    .ger-subnav{width:100%;margin-bottom:12px;}
+    .ger-subnav-btn{flex:1 1 0;height:36px;font-size:13px;}
+    .pln-head .ger-titulo{display:block;font-size:20px;}
+    .pln-subt{font-size:10.5px;}
+    .pln-head .ger-head-ctrl{display:flex;flex-direction:column;align-items:stretch;gap:8px;}
+    .pln-head .ger-rango{order:2;}
+    .pln-body,.pln-body .ger-row{gap:10px;}
+    .pln-r-kpi{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .pln-r-kpi > :first-child{grid-column:1 / -1;}
+    .pln-kpi{padding:11px 12px;}
+    .pln-kpi .ger-kpi-v{font-size:22px;}
+    .pln-kpi .ger-kpi-sub{white-space:normal;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+    .pln-sec{padding:12px 12px;}
+    .pln-sec-head{align-items:flex-start;}
+    .pln-sec-tit .ger-card-sub{width:100%;}
+    .pln-sec-ctrl{width:100%;}
+    .pln-sec-ctrl .pln-seg{width:100%;overflow-x:auto;}
+    .pln-sec-ctrl .pln-seg .des-per-btn{flex:1 0 auto;min-height:34px;}
+    .pln-foco-r{grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;padding:10px 4px;margin:0;}
+    .pln-foco-r > .pln-tag{grid-column:1;grid-row:1;}
+    .pln-foco-r > .pln-avance{grid-column:2;grid-row:1;justify-self:end;}
+    .pln-foco-r > .pln-id{grid-column:1 / -1;}
+    .pln-foco-r > .pln-foco-resp{grid-column:1;}
+    .pln-foco-r > .pln-foco-f{grid-column:2;justify-self:end;}
+    .pln-foco-r > .pln-acts{grid-column:1 / -1;justify-content:flex-start;margin:0 -4px;}
+    .pln-act{width:34px;height:34px;}
+    .pln-stats{grid-template-columns:repeat(5,minmax(0,1fr));}
+    .pln-stats div + div{padding-left:6px;}
+    .pln-stats b{font-size:16px;}
+    .pln-stats span{font-size:8.5px;}
+    .pln-prod-h,.pln-prod-main{grid-template-columns:minmax(0,1fr) 30px 30px 26px 30px 50px;gap:6px;}
+    .pln-prod-main{padding:10px 4px;}
+    .pln-prod-h{padding:0 4px 5px;}
+    .pln-prod-det{padding-left:4px;}
+    .pln-prod-t{grid-template-columns:minmax(0,1fr) auto auto;}
+    .pln-prod-st{display:none;}
+    .pln-flujo{grid-template-columns:1fr;gap:4px;}
+    .pln-paso{display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1.2fr);grid-template-areas:"k n bar" "k n em";align-items:center;column-gap:10px;row-gap:2px;padding:8px 10px;}
+    .pln-paso-k{grid-area:k;font-size:12px;}
+    .pln-paso > b{grid-area:n;font-size:19px;text-align:right;}
+    .pln-paso-bar{grid-area:bar;}
+    .pln-paso em{grid-area:em;}
+    .pln-pc-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+    .pln-pc{padding:9px 9px;}
+    .pln-pc-k{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pln-pc-v{flex-direction:column;gap:0;}
+    .pln-pc-v b{font-size:19px;}
+    .pln-pc-v em{font-size:10.5px;}
+    .pln-pc > span:last-child{font-size:10px;}
+    .pln-det-top{flex-direction:column;align-items:stretch;}
+    .pln-det-top .pln-seg{width:100%;overflow-x:auto;}
+    .pln-orden select{flex:1;}
+    .pln-dorm{grid-template-columns:auto minmax(0,1fr);}
+    .pln-dorm > .ger-link{grid-column:1 / -1;}
+    .pln-tr{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+    .pln-mini-r{grid-template-columns:minmax(0,1fr) auto auto;}
+    .pln-mini-r > .pln-acts{grid-column:1 / -1;justify-content:flex-start;}
+    .pln-kam-main{padding:11px 12px;}
+    .pln-kam-det{padding:0 12px 12px;}
+    .pln-kam-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .pln-pulso{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .pln-alg{grid-template-columns:1fr;gap:10px;}
+    .pln-qe-grid{grid-template-columns:1fr;}
+    .pln-qe-c input,.pln-qe-c select,.pln-qe-c textarea{font-size:16px;}
+  }
+
+  @media print{
+    #gerencia .ger-subnav{display:none !important;}
+  }
+
   /* Cursor personalizado — isotipo real de Friopacking (recortado del logo embebido),
      28×28, transparente. Solo en punteros finos con hover; se respeta el cursor nativo
      en campos editables/selectores y se desactiva por completo en táctiles. Declarado al
@@ -4663,6 +5194,11 @@
        se calcula con renderGerencia() sobre las mismas oportunidades y
        entregables del panel. Cada bloque abre primero el modal de análisis. -->
   <div class="tab-panel" id="gerencia">
+    <!-- Navegación interna de Gerencia: la arma gerPintarSubnav() desde
+         GER_SUBVISTAS, mostrando solo las subvistas que el rol tiene
+         permitidas. Cada subvista vive en su propio .ger-sv[data-sv]. -->
+    <nav class="ger-subnav" id="ger-subnav" aria-label="Vistas de Gerencia" hidden></nav>
+    <div class="ger-sv" data-sv="gerente" id="ger-sv-gerente">
     <h2 class="print-only-title">Gerencia · lectura ejecutiva</h2>
     <div class="ger-head">
       <div class="ger-head-tit">
@@ -4692,6 +5228,30 @@
       </div>
     </div>
     <div class="ger-body" id="ger-body"></div>
+    </div>
+
+    <!-- ============ GERENCIA · PLANNER — control analítico ============
+         Operación · pipeline · capacidad · conversión. Todo sale de
+         plnModelo() sobre las mismas oportunidades, tareas e historial del
+         panel; las acciones reutilizan el modal de Revisión semanal, la
+         ficha y la bitácora (no hay datos paralelos). -->
+    <div class="ger-sv" data-sv="planner" id="ger-sv-planner" hidden>
+      <div class="ger-head pln-head">
+        <div class="ger-head-tit">
+          <h2 class="ger-titulo">Control Planner</h2>
+          <span class="pln-subt">Operación · Pipeline · Capacidad · Conversión</span>
+        </div>
+        <div class="ger-head-ctrl">
+          <span class="ger-rango" id="pln-rango">—</span>
+          <div class="des-periodo ger-periodo" id="pln-periodo" role="radiogroup" aria-label="Período del Planner">
+            <button type="button" class="des-per-btn" role="radio" data-periodo="hoy" onclick="setPlnPeriodo('hoy')">Hoy</button>
+            <button type="button" class="des-per-btn is-on" role="radio" data-periodo="semana" onclick="setPlnPeriodo('semana')">Semana</button>
+            <button type="button" class="des-per-btn" role="radio" data-periodo="mes" onclick="setPlnPeriodo('mes')">Mes</button>
+          </div>
+        </div>
+      </div>
+      <div class="ger-body pln-body" id="pln-body"></div>
+    </div>
   </div>
 
   <!-- Modal de análisis de Gerencia: resumen primero; "Ver detalles →" lleva a
@@ -4709,6 +5269,36 @@
       <div class="ger-m-foot">
         <button type="button" class="btn-secondary" onclick="gerModalCerrar()">Cerrar</button>
         <button type="button" class="btn-primary" id="ger-m-ir" onclick="gerModalIr()">Ver detalles →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Planner · intervención rápida: comentario (bitácora), próxima fecha de
+       seguimiento y probabilidad de cierre. No es un formulario nuevo: escribe
+       los mismos campos de la ficha y la nota va al mismo Historial. -->
+  <div class="modal-overlay ger-overlay pln-qe-overlay hidden" id="pln-qe" onclick="if(event.target===this) plnQeCerrar()">
+    <div class="modal-box ger-mbox pln-qe-box" role="dialog" aria-modal="true" aria-labelledby="pln-qe-t">
+      <div class="ger-m-head">
+        <div class="ger-m-head-txt">
+          <span class="ger-m-kicker" id="pln-qe-k"></span>
+          <h3 class="ger-m-titulo pln-qe-t" id="pln-qe-t"></h3>
+          <span class="pln-qe-sub" id="pln-qe-sub"></span>
+        </div>
+        <button type="button" class="modal-close" onclick="plnQeCerrar()" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="ger-m-body pln-qe-body">
+        <div class="pln-qe-grid" id="pln-qe-campos">
+          <label class="pln-qe-c"><span>Próximo seguimiento</span><input type="date" id="pln-qe-fecha"></label>
+          <label class="pln-qe-c"><span>Probabilidad de cierre</span><select id="pln-qe-prob"></select></label>
+          <div class="pln-qe-atajos" id="pln-qe-atajos" role="group" aria-label="Atajos de fecha"></div>
+        </div>
+        <label class="pln-qe-c pln-qe-nota"><span id="pln-qe-nota-k">Comentario / motivo</span>
+          <textarea id="pln-qe-txt" rows="3" maxlength="1000" placeholder="¿Por qué sigue en esta etapa? ¿Qué falta para avanzar?"></textarea></label>
+        <p class="pln-qe-ult" id="pln-qe-ult"></p>
+      </div>
+      <div class="ger-m-foot">
+        <button type="button" class="btn-secondary" onclick="plnQeCerrar()">Cancelar</button>
+        <button type="button" class="btn-primary" id="pln-qe-ok" onclick="plnQeGuardar()">Guardar</button>
       </div>
     </div>
   </div>
@@ -5001,19 +5591,22 @@
                 <!-- Importe → EE.MM → OO.CC: el importe es o.importe (m-importe) y los
                      dos siguientes son los valores de No Frío ya existentes
                      (o.valorNoFrioEEMM / o.valorNoFrioOOCC). -->
-                <label class="fx-campo"><span>Importe (USD)</span><input type="number" id="m-importe" class="ficha-input fx-num" min="0" step="0.01" placeholder="Agregar…"></label>
+                <p class="fx-op-titulo fx-span-3" id="ficha-op-principal">Opción 1 <span class="fx-op-badge">Principal</span></p>
+                <label class="fx-campo"><span>Importe (USD) sin IGV</span><input type="number" id="m-importe" class="ficha-input fx-num" min="0" step="0.01" placeholder="Agregar…"></label>
                 <label class="fx-campo"><span>No frío EE.MM (USD)</span><input type="number" id="m-nofrio-eemm" class="ficha-input fx-num" min="0" step="0.01" placeholder="0.00"></label>
                 <label class="fx-campo"><span>No frío OO.CC (USD)</span><input type="number" id="m-nofrio-oocc" class="ficha-input fx-num" min="0" step="0.01" placeholder="0.00"></label>
-                <label class="fx-campo"><span>Margen %</span><input type="number" id="m-margen-comercial" class="ficha-input fx-num" min="0" max="100" step="0.01" placeholder="Agregar…"></label>
-                <label class="fx-campo"><span>Fecha de inicio</span><input type="date" id="m-fecha-inicio" class="ficha-input"></label>
-                <label class="fx-campo"><span>Seguimiento</span><input type="date" id="m-fecha-seguimiento" class="ficha-input"></label>
-                <label class="fx-campo" title="Fecha comprometida con el cliente: una sola para todo el proyecto"><span>Fecha cliente</span><input type="date" id="m-fecha-cliente" class="ficha-input" onchange="fichaFechaClienteProyecto(this.value)"></label>
                 <div class="fx-campo fx-span-3"><span>Sistema / refrigerante</span>
                   <div class="fx-dual" id="ficha-refrig-dual">
                     <select id="m-refrigerante" class="ficha-input" aria-label="Sistema / refrigerante" onchange="wireOtro('m-refrigerante','m-refrigerante-otro');fichaRefrigOtro()"><option value="">Agregar…</option><option value="CO2">CO₂</option><option value="Amoniaco">Amoníaco</option><option value="Amoniaco/Glicol">Amoníaco/Glicol</option><option value="Freon">Freón</option><option value="HVAC">HVAC</option><option value="otro">Otro</option></select>
                     <input type="text" id="m-refrigerante-otro" class="ficha-input otro-input hidden" placeholder="¿Cuál?" aria-label="Otro refrigerante">
                   </div>
                 </div>
+                <div class="fx-span-3 fx-alts" id="ficha-cotizaciones"></div>
+                <p class="fx-separador fx-span-3" aria-hidden="true"></p>
+                <label class="fx-campo"><span>Margen %</span><input type="number" id="m-margen-comercial" class="ficha-input fx-num" min="0" max="100" step="0.01" placeholder="Agregar…"></label>
+                <label class="fx-campo"><span>Fecha de inicio</span><input type="date" id="m-fecha-inicio" class="ficha-input"></label>
+                <label class="fx-campo"><span>Seguimiento</span><input type="date" id="m-fecha-seguimiento" class="ficha-input"></label>
+                <label class="fx-campo" title="Fecha comprometida con el cliente: una sola para todo el proyecto"><span>Fecha cliente</span><input type="date" id="m-fecha-cliente" class="ficha-input" onchange="fichaFechaClienteProyecto(this.value)"></label>
                 <label class="fx-campo fx-span-3"><span>Estado actual</span><select id="m-etapa" class="ficha-chip fx-estado-sel" onchange="fichaPintarChips()"></select></label>
                 <div class="fx-campo fx-span-3"><span>Prioridad</span>
                   <input type="hidden" id="m-prioridad-tablero" value="3">
@@ -5026,7 +5619,8 @@
               <input type="hidden" id="m-segmento-cliente" value="">
               <div class="fx-seg fx-seg-track" id="ficha-seg-agro" role="radiogroup" aria-label="Agro / No agro"></div>
               <div class="fx-filas">
-                <label class="fx-fila"><span>Sector</span><select id="m-sector" class="ficha-input"></select></label>
+                <label class="fx-fila"><span>Sector</span><select id="m-sector" class="ficha-input" onchange="fichaRenderProductos()"></select></label>
+                <div class="fx-fila" id="ficha-productos" hidden></div>
               </div>
               <p class="fx-subtitulo">Cierre</p>
               <div class="fx-filas">
@@ -5038,7 +5632,7 @@
               <div class="fx-filas">
                 <label class="fx-fila"><span>País</span><span class="fx-pais"><span class="fx-pais-flag" id="ficha-pais-flag"></span><select id="m-pais" class="ficha-input" onchange="fichaPaisCambio();fichaRenderCabecera()"></select></span></label>
                 <label class="fx-fila fx-solo-peru"><span>Zona</span><select id="m-zona" class="ficha-input"></select></label>
-                <label class="fx-fila fx-solo-peru"><span>Región</span><select id="m-region" class="ficha-input" onchange="fichaRegionCambio()"></select></label>
+                <label class="fx-fila fx-solo-peru"><span>Departamento</span><select id="m-region" class="ficha-input" onchange="fichaRegionCambio()"></select></label>
               </div>
               <!-- Bitácora: cada nota se guarda como un evento del Historial y el
                    cuadro se limpia para la siguiente. -->
@@ -5485,6 +6079,14 @@ function ensureNuevosCampos(o){
   if(o.sector===undefined) o.sector = '';
   /* País: los registros anteriores con zona o región cargadas son de Perú. */
   if(typeof o.pais!=='string') o.pais = (o.zona || o.region) ? 'peru' : '';
+  /* Fuera de Perú la zona es siempre "Exterior" (derivada, no se guarda en la nube). */
+  if(o.pais && o.pais!=='peru' && !o.zona) o.zona = 'exterior';
+  /* Cotizaciones: [{id, descripcion, importe, estado, principal}]. Vacío = solo
+     el importe de siempre (o.importe), que sigue siendo el principal. */
+  if(!Array.isArray(o.cotizaciones)) o.cotizaciones = [];
+  /* Productos (Frutas / Verduras), selección múltiple. */
+  if(!Array.isArray(o.productos)) o.productos = [];
+  if(typeof o.productosOtro!=='string') o.productosOtro = '';
   /* Incidencias de desempeño (registro manual, ver supabase/21_incidencias.sql). */
   if(!Array.isArray(o.incidencias)) o.incidencias = [];
   if(!Array.isArray(o.apoyos)) o.apoyos = [];
@@ -5779,10 +6381,12 @@ let modalEntregables = [];
 let cargaArea = 'todas';
 let cargaExpandedNames = new Set();
 let cronArea = 'todas';
-let currentTheme = 'dark';
+let currentTheme = 'light';
 let rsView = 'lista';
 let rsExpandedIds = new Set();
 let rsCalWeekOffset = 0;
+/* Dirección de entrada de la grilla al cambiar de semana (ver moveRSWeek). */
+let rsCalSlide = 0, rsCalSlideTimer = null;
 let rsDrawerOppId = null;
 /* Drag & drop de Revisión semanal — id de la oportunidad que se está arrastrando
    entre columnas de Prioridades ({oppId,entId}) o del entregable que se arrastra
@@ -6191,7 +6795,7 @@ let detalleErrorNube = '';
    base rechace TODO el upsert (PGRST204) y ningún cambio suba a la nube; para no
    perder los datos por una columna, se detectan las que faltan y se sigue
    sincronizando sin ellas. Lo único que queda sin persistir es ese campo. */
-const COLUMNAS_OPCIONALES = ['orden_trabajo', 'prioridad_tablero', 'duracion_proyecto', 'fecha_seguimiento', 'contacto', 'zona', 'region', 'sector', 'apoyos', 'semana_revision', 'secuencia_semana', 'fecha_comprometida_cliente', 'pais', 'incidencias'];
+const COLUMNAS_OPCIONALES = ['orden_trabajo', 'prioridad_tablero', 'duracion_proyecto', 'fecha_seguimiento', 'contacto', 'zona', 'region', 'sector', 'apoyos', 'semana_revision', 'secuencia_semana', 'fecha_comprometida_cliente', 'pais', 'incidencias', 'cotizaciones', 'productos', 'productos_otro'];
 /* Igual que COLUMNAS_OPCIONALES, pero para la tabla entregables: "Requiere
    metrado", su responsable y el vínculo con el Metrado autogenerado se agregaron
    por entregable y esta base puede no tener aún esas columnas. */
@@ -6254,7 +6858,8 @@ function oportunidadToRow(o){
     /* Ficha: contacto, segmentación y apoyos del equipo (jsonb con
        [{area, responsable}]). Ver supabase/17_ficha_equipo_historial.sql. */
     contacto: orNull(o.contacto),
-    zona: orNull(o.zona),
+    /* "Exterior" se deriva del país (no es una zona de Perú): no se guarda. */
+    zona: o.zona==='exterior' ? null : orNull(o.zona),
     region: orNull(o.region),
     sector: orNull(o.sector),
     apoyos: Array.isArray(o.apoyos) ? o.apoyos.map(a=>({area:a.area, responsable:a.responsable})) : [],
@@ -6264,6 +6869,11 @@ function oportunidadToRow(o){
     fecha_comprometida_cliente: orNull(o.fechaComprometidaCliente),
     pais: orNull(o.pais),
     incidencias: Array.isArray(o.incidencias) ? o.incidencias : [],
+    /* Cotizaciones alternativas y productos (ver supabase/23_cotizaciones_productos.sql).
+       Vacíos viajan como NULL para no marcar cambios en registros que no los usan. */
+    cotizaciones: Array.isArray(o.cotizaciones) && o.cotizaciones.length ? o.cotizaciones : null,
+    productos: Array.isArray(o.productos) && o.productos.length ? o.productos : null,
+    productos_otro: orNull(o.productosOtro),
     semana_revision: orNull(o.semanaRev),
     secuencia_semana: esOrdenTrabajoValido(o.secSemana) ? Number(o.secSemana) : null,
   };
@@ -6326,6 +6936,9 @@ function rowToOportunidad(r){
       ? (r.fecha_comprometida_cliente ? String(r.fecha_comprometida_cliente).slice(0,10) : '') : undefined,
     pais: Object.prototype.hasOwnProperty.call(r, 'pais') ? (r.pais || '') : undefined,
     incidencias: Object.prototype.hasOwnProperty.call(r, 'incidencias') ? (Array.isArray(r.incidencias) ? r.incidencias : []) : undefined,
+    cotizaciones: Object.prototype.hasOwnProperty.call(r, 'cotizaciones') ? (Array.isArray(r.cotizaciones) ? r.cotizaciones : []) : undefined,
+    productos: Object.prototype.hasOwnProperty.call(r, 'productos') ? (Array.isArray(r.productos) ? r.productos : []) : undefined,
+    productosOtro: Object.prototype.hasOwnProperty.call(r, 'productos_otro') ? (r.productos_otro || '') : undefined,
     semanaRev: r.semana_revision ? String(r.semana_revision).slice(0,10) : '',
     secSemana: esOrdenTrabajoValido(r.secuencia_semana) ? Number(r.secuencia_semana) : null,
     entregables: [],
@@ -6481,6 +7094,12 @@ async function cargarDesdeSupabase(opts){
       const previas = new Map(oportunidades.map(o=>[o.id, o]));
       nuevas.forEach(o=>{ const p = previas.get(o.id); if(p && Array.isArray(p.incidencias)) o.incidencias = p.incidencias; });
     }
+    /* Igual con cotizaciones y productos si faltan sus columnas (23 sin correr). */
+    [['cotizaciones','cotizaciones'],['productos','productos'],['productos_otro','productosOtro']].forEach(([col, campo])=>{
+      if(!columnasFaltantes.has(col)) return;
+      const previas = new Map(oportunidades.map(o=>[o.id, o]));
+      nuevas.forEach(o=>{ const p = previas.get(o.id); if(p && p[campo]!==undefined) o[campo] = p[campo]; });
+    });
     /* Igual con el país si falta su columna (20 sin correr). */
     if(columnasFaltantes.has('pais')){
       const previas = new Map(oportunidades.map(o=>[o.id, o]));
@@ -6612,6 +7231,9 @@ const COLUMNA_OPCIONAL_LABEL = {
   fecha_comprometida_cliente: 'la fecha comprometida con el cliente del proyecto',
   pais: 'el país',
   incidencias: 'las incidencias de desempeño',
+  cotizaciones: 'las cotizaciones alternativas',
+  productos: 'los productos',
+  productos_otro: 'el producto "Otros"',
 };
 function avisarColumnasFaltantes(){
   if(avisoMigracionMostrado || !columnasFaltantes.size) return;
@@ -7626,6 +8248,9 @@ function setRSView(view){
   renderRevisionSemanal();
 }
 function moveRSWeek(delta){
+  /* Dirección del deslizamiento de entrada del calendario: +1 la semana nueva
+     llega desde la derecha (siguiente), -1 desde la izquierda (anterior). */
+  rsCalSlide = delta===0 ? -Math.sign(rsCalWeekOffset) : Math.sign(delta);
   rsCalWeekOffset = delta===0 ? 0 : rsCalWeekOffset + delta;
   rsAnimarEntrada = true;
   renderRevisionSemanal();
@@ -8104,7 +8729,7 @@ function rsCardHtml(o, n, filters){
     <div class="rsw-main">
       <div class="rsw-l1"><span class="rsw-cliente">${escAttr(o.cliente)}</span><span class="rsw-id">ID ${o.id}</span>${bloq ? `<span class="rsw-lock" title="Bloqueado: tiene una tarea bloqueada" aria-label="Bloqueado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>` : ''}${senal ? `<span class="rsw-senal" title="${senal}" aria-label="${senal}"></span>` : ''}</div>
       <div class="rsw-proyecto" title="${escAttr(o.proyecto || '')}">${escAttr(o.proyecto || '—')}</div>
-      <div class="rsw-pie"><span class="rsw-importe">${formatMoneda(o.importe)}</span><span class="rsw-fc${fcTone}" title="${fcTitle}"><span class="rsw-fc-k">Cliente</span>${fc ? formatFechaCorta(fc) : '—'}</span></div>
+      <div class="rsw-pie"><span class="rsw-importe">${formatMoneda(o.importe)}${altCotizacionesHtml(o)}</span><span class="rsw-fc${fcTone}" title="${fcTitle}"><span class="rsw-fc-k">Cliente</span>${fc ? formatFechaCorta(fc) : '—'}</span></div>
     </div>
   </div>`;
 }
@@ -8480,10 +9105,125 @@ function renderRSCalendario(filters, alcance){
     extraHtml += `<div class="cal-block"><p class="cal-block-title">Sin fecha interna (${sinFecha.length})</p><div class="cal-block-list">${sinFecha.map(x=>calCardHtml(x.o, x.e, ctx)).join('')}</div></div>`;
   }
 
-  document.getElementById('rs-calendar').innerHTML = `${avisosHtml}<div class="cal-grid rsc-grid">${gridHtml}</div>${extraHtml}`;
+  const calEl = document.getElementById('rs-calendar');
+  const slideCls = rsCalSlide > 0 ? ' rsc-desde-der' : rsCalSlide < 0 ? ' rsc-desde-izq' : '';
+  calEl.innerHTML = `${avisosHtml}<div class="cal-grid rsc-grid${slideCls}">${gridHtml}</div>${extraHtml}`;
+  if(rsCalSlide){
+    calEl.classList.add('is-deslizando');
+    clearTimeout(rsCalSlideTimer);
+    rsCalSlideTimer = setTimeout(()=>calEl.classList.remove('is-deslizando'), 360);
+  }
+  rsCalSlide = 0;
   rsAjustarAlturaDias();
   document.getElementById('rs-count').textContent = shownCount + (shownCount===1 ? ' tarea' : ' tareas');
 }
+
+/* ============================================================
+   CALENDARIO DESLIZABLE — arrastrar la grilla hacia la derecha muestra la
+   semana anterior y hacia la izquierda la siguiente (mouse, toque o swipe
+   horizontal del touchpad). Con mouse el gesto no arranca sobre una card, para
+   no pisar su drag & drop de fecha. Si la grilla tiene scroll horizontal propio
+   (pantallas angostas), el gesto solo cambia de semana desde el borde.
+   ============================================================ */
+const rsSwipe = {grid:null, x:0, y:0, dx:0, eje:null};
+let rsSwipeSinClickHasta = 0, rsSwipeWheelAcum = 0, rsSwipeWheelHasta = 0, rsSwipeWheelTimer = null;
+function rsSwipeEnBorde(g, dx){
+  const max = g.scrollWidth - g.clientWidth;
+  return max <= 1 || (dx > 0 ? g.scrollLeft <= 0 : g.scrollLeft >= max - 1);
+}
+function rsSwipeInicio(target, x, y){
+  if(rsView!=='calendario') return;
+  const g = target.closest && target.closest('#rs-calendar .rsc-grid');
+  if(!g || target.closest('button, input, select, a')) return;
+  Object.assign(rsSwipe, {grid:g, x, y, dx:0, eje:null});
+}
+/* Devuelve true si el gesto ya es un arrastre horizontal de semana. */
+function rsSwipeMover(x, y){
+  const s = rsSwipe, g = s.grid;
+  if(!g) return false;
+  const dx = x - s.x, dy = y - s.y;
+  if(!s.eje){
+    if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return false;
+    if(Math.abs(dx) <= Math.abs(dy)*1.2 || !rsSwipeEnBorde(g, dx)){ s.grid = null; return false; }
+    s.eje = 'x';
+    hideGlobalTooltip();
+    g.classList.add('is-swipe');
+    g.style.transition = 'none';
+    document.getElementById('rs-calendar').classList.add('is-deslizando');
+  }
+  s.dx = dx;
+  const t = Math.sign(dx) * Math.min(Math.abs(dx) * .45, 90);
+  g.style.transform = `translateX(${t}px)`;
+  g.style.opacity = String(1 - Math.abs(t) / 90 * .35);
+  return true;
+}
+function rsSwipeFin(){
+  const s = rsSwipe, g = s.grid;
+  s.grid = null;
+  if(!g || s.eje!=='x') return;
+  rsSwipeSinClickHasta = Date.now() + 350;
+  g.classList.remove('is-swipe');
+  g.style.transition = 'transform .16s var(--ease), opacity .16s var(--ease)';
+  if(Math.abs(s.dx) >= Math.min(70, g.clientWidth * .12)){
+    const dir = s.dx < 0 ? 1 : -1;
+    g.style.transform = `translateX(${dir > 0 ? -48 : 48}px)`;
+    g.style.opacity = '0';
+    setTimeout(()=>moveRSWeek(dir), 150);
+  }else{
+    g.style.transform = '';
+    g.style.opacity = '';
+    setTimeout(()=>{
+      g.style.transition = '';
+      document.getElementById('rs-calendar').classList.remove('is-deslizando');
+    }, 180);
+  }
+}
+(function rsSwipeInit(){
+  const cal = document.getElementById('rs-calendar');
+  if(!cal) return;
+  // Mouse: solo fuera de las cards (ellas se arrastran para reprogramar).
+  cal.addEventListener('mousedown', ev=>{
+    if(ev.button!==0 || ev.target.closest('.cal-card')) return;
+    rsSwipeInicio(ev.target, ev.clientX, ev.clientY);
+    if(rsSwipe.grid) ev.preventDefault();
+  });
+  document.addEventListener('mousemove', ev=>{ if(rsSwipe.grid) rsSwipeMover(ev.clientX, ev.clientY); });
+  document.addEventListener('mouseup', rsSwipeFin);
+  // Toque: el scroll vertical sigue siendo nativo; solo se toma el gesto horizontal.
+  cal.addEventListener('touchstart', ev=>{
+    if(ev.touches.length!==1){ rsSwipe.grid = null; return; }
+    const t = ev.touches[0];
+    rsSwipeInicio(ev.target, t.clientX, t.clientY);
+  }, {passive:true});
+  cal.addEventListener('touchmove', ev=>{
+    if(!rsSwipe.grid) return;
+    const t = ev.touches[0];
+    if(rsSwipeMover(t.clientX, t.clientY) && ev.cancelable) ev.preventDefault();
+  }, {passive:false});
+  cal.addEventListener('touchend', rsSwipeFin);
+  cal.addEventListener('touchcancel', rsSwipeFin);
+  // Tras un arrastre no se abre la card sobre la que se soltó.
+  cal.addEventListener('click', ev=>{
+    if(Date.now() < rsSwipeSinClickHasta){ ev.stopPropagation(); ev.preventDefault(); }
+  }, true);
+  // Touchpad: swipe horizontal con dos dedos. Un cambio por gesto (se ignora la inercia).
+  cal.addEventListener('wheel', ev=>{
+    const g = ev.target.closest && ev.target.closest('.rsc-grid');
+    if(!g || rsView!=='calendario' || Math.abs(ev.deltaX) <= Math.abs(ev.deltaY)) return;
+    if(!rsSwipeEnBorde(g, -ev.deltaX)) return;
+    ev.preventDefault();
+    clearTimeout(rsSwipeWheelTimer);
+    rsSwipeWheelTimer = setTimeout(()=>{ rsSwipeWheelAcum = 0; }, 220);
+    if(Date.now() < rsSwipeWheelHasta) return;
+    rsSwipeWheelAcum += ev.deltaX;
+    if(Math.abs(rsSwipeWheelAcum) >= 90){
+      const dir = rsSwipeWheelAcum > 0 ? 1 : -1;
+      rsSwipeWheelAcum = 0;
+      rsSwipeWheelHasta = Date.now() + 600;
+      moveRSWeek(dir);
+    }
+  }, {passive:false});
+})();
 
 /* ============================================================
    DRAG & DROP — CALENDARIO SEMANAL (fechaEntrega del entregable)
@@ -8591,16 +9331,31 @@ function rsdRespOptionsHtml(e){
   const catalogo = getResponsableOptionsForArea(e.area);
   let html = `<option value=""${e.responsable ? '' : ' selected'}>Sin responsable</option>`;
   html += catalogo.map(c=>`<option value="${c.value}"${c.value===e.responsable ? ' selected' : ''}>${escAttr(c.label)}</option>`).join('');
-  if(e.responsable && !catalogo.some(c=>c.value===e.responsable)){
+  if(e.responsable && e.responsable!=='otro' && !catalogo.some(c=>c.value===e.responsable)){
     html += `<option value="${escAttr(e.responsable)}" selected>${escAttr(nombreResponsableEntregable(e) || e.responsable)}</option>`;
   }
+  html += `<option value="otro"${e.responsable==='otro' ? ' selected' : ''}>Otro</option>`;
   return html;
 }
 function rsdKamOptionsHtml(v){
   let html = `<option value=""${v.kam ? '' : ' selected'}>Sin asignar</option>`;
   html += KAMS.map(k=>`<option value="${k.value}"${k.value===v.kam ? ' selected' : ''}>${escAttr(k.label)}</option>`).join('');
-  if(v.kam && !KAMS.some(k=>k.value===v.kam)) html += `<option value="${escAttr(v.kam)}" selected>${escAttr(nombreKAM(v) || v.kam)}</option>`;
+  if(v.kam && v.kam!=='otro' && !KAMS.some(k=>k.value===v.kam)) html += `<option value="${escAttr(v.kam)}" selected>${escAttr(nombreKAM(v) || v.kam)}</option>`;
+  html += `<option value="otro"${v.kam==='otro' ? ' selected' : ''}>Otro</option>`;
   return html;
+}
+/* Nombre libre de "Otro" en el modal: se escribe en el borrador sin repintar
+   (para no perder el foco); se guarda con el resto del borrador. */
+function rsDrawerOtro(entId, valor){
+  if(!rsDraft) return;
+  if(entId==null){ rsDraft.kamOtro = valor; return; }
+  const e = rsDraft.entregables.find(x=>x.id===entId);
+  if(!e) return;
+  e.responsableOtro = valor;
+  if(esEntregableMetrado(e)){
+    const origen = rsDraft.entregables.find(x=>x.id===e.metradoOrigenId);
+    if(origen) origen.respMetradosOtro = valor;
+  }
 }
 /* Tarea del modal: bloque compacto (nombre, área · responsable, fecha ·
    estado). Al hacer clic se expande en el mismo lugar con área, responsable,
@@ -8625,7 +9380,7 @@ function rsdTareaHtml(o, e, fc, ro, abiertaId){
     </button>`;
   const edicion = !abierta ? '' : `<div class="rsd-t-edit">
       <label class="rsd-c"><span class="rsd-k">Área</span><select onchange="rsDrawerTarea(${o.id},${e.id},'area',this.value)"${ro || areaFija ? ' disabled' : ''}>${AREAS.map(a=>`<option value="${a.value}"${a.value===e.area ? ' selected' : ''}>${RS_AREA_CORTA[a.value] || a.label}</option>`).join('')}</select></label>
-      <label class="rsd-c"><span class="rsd-k">Responsable</span><select class="${e.responsable ? '' : 'is-vacio'}" onchange="rsDrawerTarea(${o.id},${e.id},'responsable',this.value)"${dis}>${rsdRespOptionsHtml(e)}</select></label>
+      <label class="rsd-c"><span class="rsd-k">Responsable</span><select class="${e.responsable ? '' : 'is-vacio'}" onchange="rsDrawerTarea(${o.id},${e.id},'responsable',this.value)"${dis}>${rsdRespOptionsHtml(e)}</select>${e.responsable==='otro' ? `<input type="text" class="otro-input" value="${escAttr(e.responsableOtro || '')}" placeholder="Nombre del responsable" maxlength="60" aria-label="Nombre del responsable" oninput="rsDrawerOtro(${e.id},this.value)"${dis}>` : ''}</label>
       <label class="rsd-c"><span class="rsd-k">Fecha interna</span><input type="date" class="${posterior || st==='vencida' ? 'is-danger' : ''}" value="${e.fechaEntrega || ''}" onchange="rsDrawerTarea(${o.id},${e.id},'fecha',this.value)"${dis}></label>
       <label class="rsd-c"><span class="rsd-k">Estado</span><select onchange="rsDrawerTarea(${o.id},${e.id},'estado',this.value)"${dis}>${ESTADOS_TAREA.map(x=>`<option value="${x.value}"${x.value===e.estadoTarea ? ' selected' : ''}>${x.label}</option>`).join('')}</select></label>
       ${areaFija && !ro ? '<p class="rsd-nota rsd-c-full">El área depende de su tarea de origen: se cambia desde la ficha completa.</p>' : ''}
@@ -8714,7 +9469,7 @@ function openRSDetailDrawer(id, entId){
 
   document.getElementById('rs-drawer-ident').innerHTML = `
     <div class="rsd-ident"><p class="rsd-cliente">${escAttr(o.cliente)}</p><p class="rsd-proyecto">${escAttr(o.proyecto || '—')}</p></div>
-    <div class="rsd-importe">${formatMoneda(o.importe)}<span>USD</span></div>`;
+    <div class="rsd-importe">${formatMoneda(o.importe)}<span>USD</span>${altCotizacionesHtml(o)}</div>`;
   document.getElementById('rs-drawer-tab-n').textContent = tareas.length ? String(tareas.length) : '';
   ['info','tareas'].forEach(t=>{
     const b = document.getElementById('rs-drawer-tab-' + t);
@@ -8729,7 +9484,7 @@ function openRSDetailDrawer(id, entId){
       <label class="rsd-f"><span class="rsd-k">Fecha cliente</span><input type="date" class="rsd-fc${riesgo ? ' is-danger' : ''}" value="${fc}" onchange="rsDrawerCampo('fechaComprometidaCliente',this.value)"${dis}></label>
       <div class="rsd-f"><span class="rsd-k">Última entrega interna</span><b class="${riesgo ? 'is-danger' : ''}">${ue ? formatFechaCorta(ue) : '—'}</b></div>
       <div class="rsd-f"><span class="rsd-k">Prioridad semanal</span><b class="rsd-pri pri-${col.pri}">${col.titulo}</b></div>
-      <label class="rsd-f"><span class="rsd-k">Comercial / KAM</span><select class="${v.kam ? '' : 'is-vacio'}" onchange="rsDrawerCampo('kam',this.value)"${dis}>${rsdKamOptionsHtml(v)}</select></label>
+      <label class="rsd-f"><span class="rsd-k">Comercial / KAM</span><select class="${v.kam ? '' : 'is-vacio'}" onchange="rsDrawerCampo('kam',this.value)"${dis}>${rsdKamOptionsHtml(v)}</select>${v.kam==='otro' ? `<input type="text" class="otro-input" value="${escAttr(v.kamOtro || '')}" placeholder="Nombre del ejecutivo" maxlength="60" aria-label="Nombre del ejecutivo comercial" oninput="rsDrawerOtro(null,this.value)"${dis}>` : ''}</label>
       <label class="rsd-f"><span class="rsd-k">Fecha de seguimiento</span><input type="date" value="${v.fechaSeguimiento || ''}" onchange="rsDrawerCampo('fechaSeguimiento',this.value)"${dis}></label>
       <div class="rsd-f"><span class="rsd-k">Área activa</span><b>${areas.length ? areas.join(', ') : '—'}</b></div>
       <div class="rsd-f"><span class="rsd-k">Mes de cierre</span><b>${formatMesCierre(o.mesCierre)}</b></div>
@@ -9253,20 +10008,30 @@ function setCargaArea(area){
 function cargaNivel(pct){
   return pct>=70 ? {cls:'alta',emoji:'🔴',label:'Alta'} : pct>=40 ? {cls:'moderada',emoji:'🟠',label:'Moderada'} : {cls:'controlada',emoji:'🟢',label:'Controlada'};
 }
-function renderCarga(){
-  const hoy = todayISO();
-  const flatArea = allEntregablesFlat().filter(x=> x.e.estado==='pendiente' && (cargaArea==='todas' || x.e.area===cargaArea));
-
-  /* ---- Columna izquierda: carga por responsable ---- */
+/* Fuente única de la carga por responsable: la usan Carga laboral y el
+   Planner de Gerencia (Producción del equipo), así las dos leen lo mismo. */
+const CARGA_SIN_ASIGNAR = '(sin asignar)';
+function cargaPendientes(area){
+  return allEntregablesFlat().filter(x=> x.e.estado==='pendiente' && (area==='todas' || x.e.area===area));
+}
+function cargaPorResponsable(flatArea){
   const groups = new Map();
   flatArea.forEach(({e,o})=>{
-    const nombre = nombreResponsableEntregable(e) || '(sin asignar)';
+    const nombre = nombreResponsableEntregable(e) || CARGA_SIN_ASIGNAR;
     if(!groups.has(nombre)) groups.set(nombre, []);
     groups.get(nombre).push({e,o});
   });
   const rows = [...groups.entries()].map(([name, items])=>({name, count: items.length, items}))
     .sort((a,b)=> b.count - a.count);
   const maxCount = rows.length ? Math.max(...rows.map(r=>r.count)) : 1;
+  return {rows, maxCount};
+}
+function renderCarga(){
+  const hoy = todayISO();
+  const flatArea = cargaPendientes(cargaArea);
+
+  /* ---- Columna izquierda: carga por responsable ---- */
+  const {rows, maxCount} = cargaPorResponsable(flatArea);
 
   document.getElementById('carga-list').innerHTML = rows.map(r=>{
     const pct = Math.round((r.count / maxCount) * 100);
@@ -10452,7 +11217,7 @@ function renderDetalle(){
       <td class="col-cliente" data-label="Cliente"><button class="cliente-link" onclick="openEditModal(${o.id})" title="${escAttr(o.cliente)}">${o.cliente}</button></td>
       <td class="proj col-proyecto" data-label="Proyecto" title="${escAttr(o.proyecto)}">${o.proyecto}</td>
       <td class="plain-text col-tecnologia" data-label="Refrigerante">${refrigeranteDisplay(o) || '—'}</td>
-      <td class="mono col-importe" data-label="USD">${formatMoneda(o.importe)}</td>
+      <td class="mono col-importe" data-label="USD">${formatMoneda(o.importe)}${altCotizacionesHtml(o)}</td>
       <td class="col-prioridad" data-label="Prioridad">${prioridadTableroChipHtml(o)}</td>
       <td class="col-etapa" data-label="Etapa">${etapaChipHtml(o)}</td>
       <td class="col-resp-actual" data-label="Área" title="${escAttr(respLabel)}"><span class="dot-label dot-area-${o.responsableActual}"><span class="dot-mark"></span>${respLabel}</span></td>
@@ -10873,7 +11638,7 @@ function entregaRowHtml(o){
       <td class="mono" data-label="ID">#${o.id}</td>
       <td class="col-cliente" data-label="Cliente"><button class="cliente-link" onclick="openEditModal(${o.id})" title="${escAttr(o.cliente)}">${o.cliente}</button></td>
       <td class="proj col-proyecto" data-label="Proyecto" title="${escAttr(o.proyecto)}">${o.proyecto}</td>
-      <td class="mono col-importe" data-label="USD">${formatMoneda(o.importe)}</td>
+      <td class="mono col-importe" data-label="USD">${formatMoneda(o.importe)}${altCotizacionesHtml(o)}</td>
       <td class="plain-text col-kam" data-label="KAM">${nombreKAM(o) || '—'}</td>
       <td class="col-etapa" data-label="Etapa">${etapaChipHtml(o)}</td>
       <td class="mono col-fecha" data-label="Fecha de entrega">${formatFechaCorta(fechaCompletadoRondaActual(o))}</td>
@@ -11041,8 +11806,8 @@ function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 
 function initSelectors(){
   const vacio = '<option value="">Agregar…</option>';
-  document.getElementById('m-zona').innerHTML = vacio + ZONAS.map(z=>`<option value="${z.value}">${z.label}</option>`).join('');
-  document.getElementById('m-region').innerHTML = vacio + REGIONES_PERU.map(r=>`<option value="${escAttr(r)}">${r}</option>`).join('');
+  document.getElementById('m-zona').innerHTML = vacio + ZONAS.map(z=>`<option value="${z.value}">${z.label}</option>`).join('') + '<option value="exterior" hidden>Exterior</option>';
+  document.getElementById('m-region').innerHTML = vacio + REGIONES_PERU.map(r=>`<option value="${escAttr(r)}">${r}</option>`).join('') + '<option value="__na__" hidden>No aplica</option>';
   document.getElementById('m-sector').innerHTML = vacio + SECTORES_AGRO.map(s=>`<option value="${escAttr(s)}">${s}</option>`).join('');
   document.getElementById('m-pais').innerHTML = vacio + PAISES.map(p=>`<option value="${p.value}">${p.label}</option>`).join('');
   /* Cualquier edición de Información general refresca la cabecera (título,
@@ -11279,6 +12044,181 @@ function fichaPoblarSectores(actual){
   sel.dataset.listo = '1';
   fichaSetSelect('m-sector', (abriendo || lista.includes(actual)) ? actual : '');
   fichaMarcarVacio(sel);
+  fichaRenderProductos();
+}
+/* ---------- Productos (solo categoría Frutas / Verduras), selección múltiple ---------- */
+const PRODUCTOS_FV = ['Arándanos','Palta','Mango','Uva','Jengibre','Espárragos','Plátano','Fresa','Otros'];
+let modalProductos = [];
+let modalProductosOtro = '';
+function fichaListaProductos(){ return PRODUCTOS_FV.concat(modalProductos.filter(x=>!PRODUCTOS_FV.includes(x))); }
+function fichaProductosResumen(){
+  return modalProductos.map(t=>t==='Otros' && modalProductosOtro.trim() ? modalProductosOtro.trim() : t).join(', ');
+}
+function fichaRenderProductos(){
+  const cont = document.getElementById('ficha-productos');
+  if(!cont) return;
+  const visible = document.getElementById('m-sector').value==='Frutas / Verduras';
+  cont.hidden = !visible;
+  if(!visible){ cont.innerHTML = ''; return; }
+  /* Valores guardados fuera de la lista se conservan como opción. */
+  const resumen = fichaProductosResumen();
+  cont.innerHTML = `<span>Productos</span>
+    <details class="fx-prod-dd">
+      <summary class="${resumen ? '' : 'is-vacio'}" title="${escAttr(resumen)}">${escAttr(resumen || 'Agregar…')}</summary>
+      <div class="fx-prod-panel" role="group" aria-label="Productos">
+        <div class="fx-prod-grid">${fichaListaProductos().map((t,i)=>
+          `<label class="fx-prod-op"><input type="checkbox"${modalProductos.includes(t) ? ' checked' : ''} onchange="fichaToggleProducto(${i})"><span>${escAttr(t)}</span></label>`).join('')}</div>
+        <input type="text" class="fx-prod-otro" value="${escAttr(modalProductosOtro)}" maxlength="80" placeholder="¿Cuál(es)?" aria-label="Otros productos" oninput="modalProductosOtro=this.value;fichaProductosPintarResumen()"${modalProductos.includes('Otros') ? '' : ' hidden'}>
+      </div>
+    </details>`;
+}
+/* Sin repintar: el desplegable sigue abierto mientras se marcan opciones. */
+function fichaProductosPintarResumen(){
+  const sum = document.querySelector('#ficha-productos summary');
+  if(!sum) return;
+  const resumen = fichaProductosResumen();
+  sum.textContent = resumen || 'Agregar…';
+  sum.title = resumen;
+  sum.classList.toggle('is-vacio', !resumen);
+}
+function fichaToggleProducto(i){
+  const t = fichaListaProductos()[i];
+  const pos = modalProductos.indexOf(t);
+  if(pos>=0) modalProductos.splice(pos, 1); else modalProductos.push(t);
+  fichaProductosPintarResumen();
+  const otro = document.querySelector('#ficha-productos .fx-prod-otro');
+  if(t==='Otros' && otro){ otro.hidden = pos>=0; if(pos<0) otro.focus(); }
+}
+/* Clic fuera del desplegable de Productos: se cierra. */
+document.addEventListener('click', ev=>{
+  const dd = document.querySelector('#ficha-productos details[open]');
+  if(dd && !dd.contains(ev.target)) dd.open = false;
+});
+
+/* ---------- Opciones de cotización (principal + alternativas) ----------
+   Un solo proyecto (una card, un ID, las mismas tareas) con varias opciones
+   excluyentes. El bloque superior de la ficha (Importe, No frío EE.MM / OO.CC,
+   refrigerante) es SIEMPRE la opción principal y escribe los campos de siempre
+   de la oportunidad: es lo único que cuentan pipeline, Gerencia y reportes.
+   Las alternativas viven en o.cotizaciones y nunca se suman. Marcar otra como
+   principal intercambia sus valores con el bloque superior, sin perder datos.
+   o.cotizaciones: [{id, num, principal, importe, valorNoFrioEEMM,
+   valorNoFrioOOCC, refrigerante, refrigeranteOtro}]; vacío = solo la Opción 1. */
+let modalCotizaciones = [];
+let fichaCotAbiertas = new Set();
+function nCotAlternativas(o){ return (o && Array.isArray(o.cotizaciones) ? o.cotizaciones : []).filter(c=>!c.principal).length; }
+function altCotizacionesHtml(o){
+  const n = nCotAlternativas(o);
+  if(!n) return '';
+  const tip = o.cotizaciones.filter(c=>!c.principal).map((c,i)=>'· Opción ' + (c.num || i + 2) + ' — ' + formatMoneda(c.importe)).join('\n');
+  return `<span class="alt-cot" title="${escAttr('Alternativas (no suman al pipeline):\n' + tip)}">+${n} ${n===1 ? 'alternativa' : 'alternativas'}</span>`;
+}
+function fichaCotNormalizar(lista){
+  const out = (lista || []).map((c,i)=>({
+    id: c.id || 'cot-' + Date.now().toString(36) + '-' + i, num: Number(c.num) || i + 1, principal: !!c.principal,
+    importe: Number(c.importe) || 0, valorNoFrioEEMM: Number(c.valorNoFrioEEMM) || 0, valorNoFrioOOCC: Number(c.valorNoFrioOOCC) || 0,
+    refrigerante: c.refrigerante || '', refrigeranteOtro: c.refrigeranteOtro || '',
+  }));
+  if(out.length && out.filter(c=>c.principal).length!==1) out.forEach((c,i)=>{ c.principal = i===0; });
+  return out;
+}
+function fichaCotLeerPrincipal(){
+  const num = id => Math.max(0, parseFloat(document.getElementById(id).value) || 0);
+  const refrigerante = document.getElementById('m-refrigerante').value;
+  return {
+    importe: num('m-importe'), valorNoFrioEEMM: num('m-nofrio-eemm'), valorNoFrioOOCC: num('m-nofrio-oocc'),
+    refrigerante, refrigeranteOtro: refrigerante==='otro' ? document.getElementById('m-refrigerante-otro').value.trim() : '',
+  };
+}
+function fichaCotEscribirPrincipal(c){
+  document.getElementById('m-importe').value = c.importe || '';
+  document.getElementById('m-nofrio-eemm').value = c.valorNoFrioEEMM || '';
+  document.getElementById('m-nofrio-oocc').value = c.valorNoFrioOOCC || '';
+  document.getElementById('m-refrigerante').value = c.refrigerante || '';
+  document.getElementById('m-refrigerante-otro').value = c.refrigeranteOtro || '';
+  document.getElementById('m-refrigerante-otro').classList.toggle('hidden', c.refrigerante!=='otro');
+  document.getElementById('ficha-refrig-dual').classList.toggle('has-otro', c.refrigerante==='otro');
+  ['m-importe','m-nofrio-eemm','m-nofrio-oocc','m-refrigerante'].forEach(id=>fichaMarcarVacio(document.getElementById(id)));
+}
+function fichaCotResumen(c){
+  const r = refrigeranteDisplay(c);
+  return formatMoneda(c.importe) + (r ? ' · ' + r : '');
+}
+function fichaRenderCotizaciones(){
+  const cont = document.getElementById('ficha-cotizaciones');
+  if(!cont) return;
+  const principal = modalCotizaciones.find(c=>c.principal);
+  document.getElementById('ficha-op-principal').innerHTML = `Opción ${principal ? principal.num : 1} <span class="fx-op-badge">Principal</span>`;
+  const ro = !puedeEditar ? ' disabled' : '';
+  const refrigOpts = v => [...document.getElementById('m-refrigerante').options]
+    .map(op=>`<option value="${escAttr(op.value)}"${op.value===v ? ' selected' : ''}>${escAttr(op.textContent)}</option>`).join('');
+  const campo = (c, k, label) => `<label class="fx-campo"><span>${label}</span><input type="number" class="ficha-input fx-num" value="${c[k] || ''}" min="0" step="0.01" placeholder="0.00" oninput="fichaCotCampo('${c.id}','${k}',this.value)"${ro}></label>`;
+  const alts = modalCotizaciones.filter(c=>!c.principal).sort((a,b)=>a.num-b.num).map(c=>{
+    const abierta = fichaCotAbiertas.has(c.id);
+    return `<div class="fx-alt${abierta ? ' is-open' : ''}" data-cot="${c.id}">
+      <button type="button" class="fx-alt-head" aria-expanded="${abierta}" onclick="fichaCotToggle('${c.id}')">
+        <span class="fx-alt-num">Opción ${c.num}</span><span class="fx-alt-resumen">${escAttr(fichaCotResumen(c))}</span><span class="fe-chev" aria-hidden="true"></span>
+      </button>${abierta ? `<div class="fx-alt-body">
+        <div class="fx-alt-campos">
+          ${campo(c, 'importe', 'Importe (USD) sin IGV')}${campo(c, 'valorNoFrioEEMM', 'No frío EE.MM (USD)')}${campo(c, 'valorNoFrioOOCC', 'No frío OO.CC (USD)')}
+          <div class="fx-campo fx-span-3"><span>Sistema / refrigerante</span>
+            <div class="fx-dual${c.refrigerante==='otro' ? ' has-otro' : ''}">
+              <select class="ficha-input" aria-label="Sistema / refrigerante" onchange="fichaCotCampo('${c.id}','refrigerante',this.value,true)"${ro}>${refrigOpts(c.refrigerante)}</select>
+              ${c.refrigerante==='otro' ? `<input type="text" class="ficha-input otro-input" value="${escAttr(c.refrigeranteOtro)}" placeholder="¿Cuál?" aria-label="Otro refrigerante" oninput="fichaCotCampo('${c.id}','refrigeranteOtro',this.value)"${ro}>` : ''}
+            </div>
+          </div>
+        </div>
+        ${ro ? '' : `<div class="fx-alt-pie">
+          <button type="button" class="fe-link" onclick="fichaCotPrincipal('${c.id}')">Marcar como principal</button>
+          <button type="button" class="fe-link fe-link-danger" onclick="fichaCotEliminar('${c.id}')">Eliminar</button>
+        </div>`}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+  cont.innerHTML = alts + (ro ? '' : '<button type="button" class="fe-link fx-alt-add" onclick="fichaCotAgregar()">+ Agregar alternativa</button>');
+}
+function fichaCotToggle(id){
+  if(fichaCotAbiertas.has(id)) fichaCotAbiertas.delete(id); else fichaCotAbiertas.add(id);
+  fichaRenderCotizaciones();
+}
+function fichaCotAgregar(){
+  if(!modalCotizaciones.length) modalCotizaciones.push({id:'cot-' + Date.now().toString(36), num:1, principal:true});
+  const num = Math.max(...modalCotizaciones.map(c=>c.num)) + 1;
+  const id = 'cot-' + Date.now().toString(36) + '-' + num;
+  modalCotizaciones.push({id, num, principal:false, importe:0, valorNoFrioEEMM:0, valorNoFrioOOCC:0, refrigerante:'', refrigeranteOtro:''});
+  fichaCotAbiertas.add(id);
+  fichaRenderCotizaciones();
+  const inp = document.querySelector(`#ficha-cotizaciones [data-cot="${id}"] input`);
+  if(inp) inp.focus();
+}
+function fichaCotCampo(id, campo, valor, repintar){
+  const c = modalCotizaciones.find(x=>x.id===id);
+  if(!c) return;
+  c[campo] = ['importe','valorNoFrioEEMM','valorNoFrioOOCC'].includes(campo) ? Math.max(0, parseFloat(valor) || 0) : valor;
+  if(campo==='refrigerante' && valor!=='otro') c.refrigeranteOtro = '';
+  if(repintar){ fichaRenderCotizaciones(); return; }
+  const res = document.querySelector(`#ficha-cotizaciones [data-cot="${id}"] .fx-alt-resumen`);
+  if(res) res.textContent = fichaCotResumen(c);
+}
+/* La alternativa pasa al bloque superior y la principal anterior queda como
+   alternativa con sus valores intactos. */
+function fichaCotPrincipal(id){
+  const alt = modalCotizaciones.find(x=>x.id===id);
+  const actual = modalCotizaciones.find(x=>x.principal);
+  if(!alt || !actual || alt===actual) return;
+  Object.assign(actual, fichaCotLeerPrincipal(), {principal:false});
+  fichaCotEscribirPrincipal(alt);
+  alt.principal = true;
+  fichaCotAbiertas.delete(id);
+  fichaRenderCotizaciones();
+  fichaRenderCabecera();
+}
+function fichaCotEliminar(id){
+  const i = modalCotizaciones.findIndex(x=>x.id===id && !x.principal);
+  if(i<0) return;
+  modalCotizaciones.splice(i, 1);
+  fichaCotAbiertas.delete(id);
+  fichaRenderCotizaciones();
 }
 /* Bandera junto al país; Zona y Región solo aplican a Perú. */
 function fichaPaisCambio(){
@@ -11286,8 +12226,21 @@ function fichaPaisCambio(){
   const flag = document.getElementById('ficha-pais-flag');
   flag.innerHTML = banderaSvg(pais);
   flag.classList.toggle('is-vacio', !pais);
+  /* Fuera de Perú: Zona = Exterior y Departamento = No aplica, bloqueados. Al
+     volver a Perú se habilitan y recuperan lo que tenían antes. */
   const esPeru = !pais || pais==='peru';
-  document.querySelectorAll('#ficha-panel-info .fx-solo-peru').forEach(el=>{ el.hidden = !esPeru; });
+  const zona = document.getElementById('m-zona'), region = document.getElementById('m-region');
+  [[zona,'exterior'],[region,'__na__']].forEach(([el, na])=>{
+    el.querySelector(`option[value="${na}"]`).hidden = esPeru;
+    if(!esPeru){
+      if(el.value!==na){ el.dataset.prev = el.value; el.value = na; }
+    } else if(el.value===na){
+      el.value = el.dataset.prev && el.dataset.prev!==na ? el.dataset.prev : '';
+    }
+    el.disabled = !esPeru;
+    el.closest('.fx-fila').classList.toggle('is-na', !esPeru);
+    fichaMarcarVacio(el);
+  });
 }
 function fichaMarcarVacio(el){ el.classList.toggle('is-vacio', el.value==='' || el.value==null); }
 /* Alto justo para mostrar el texto completo (sin barra de scroll). */
@@ -11590,7 +12543,7 @@ function fichaResponsableOptionsHtml(area, actual, actualOtro){
   if(miembros.length) html += '<optgroup label="Equipo">' + miembros.map(m=>opt(m.value, m.label)).join('') + '</optgroup>';
   const resto = getResponsableOptionsForArea(area).filter(c=>!enEquipo.has(c.value));
   if(resto.length) html += '<optgroup label="Otras personas">' + resto.map(c=>opt(c.value, c.label)).join('') + '</optgroup>';
-  if(actual==='otro') html += opt('otro', actualOtro || 'Otro');
+  html += opt('otro', 'Otro');
   return html;
 }
 /* "Bloqueada desde": el último evento de bloqueo guardado de esta tarea; si el
@@ -11632,6 +12585,7 @@ function renderFichaDetalle(){
     <div class="fx-detalle-grid is-comercial">
       <label class="fx-campo"><span>Responsable</span>
         <select onchange="fichaTareaResponsable(${id},this.value)">${fichaResponsableOptionsHtml(e.area, e.responsable, e.responsableOtro)}</select>
+        ${e.responsable==='otro' ? `<input type="text" class="ft-resp-otro" value="${escAttr(e.responsableOtro || '')}" maxlength="60" placeholder="Nombre del responsable" aria-label="Nombre del responsable" oninput="fichaTareaRespOtro(${id},this.value)">` : ''}
       </label>
       <label class="fx-campo"><span>${tecnica ? 'Fecha entrega' : 'Fecha'}</span>
         <input type="date" value="${e.fechaEntrega || ''}" onchange="fichaTareaFecha(${id},'fechaEntrega',this.value)">
@@ -11697,6 +12651,16 @@ function fichaTareaTexto(id, campo, valor){
   e[campo] = valor;
   fichaRefrescarFila(id);
 }
+function fichaTareaRespOtro(id, valor){
+  const e = fichaTarea(id);
+  if(!e) return;
+  e.responsableOtro = valor;
+  if(esEntregableMetrado(e)){
+    const origen = modalEntregables.find(x=>x.id===e.metradoOrigenId);
+    if(origen) origen.respMetradosOtro = valor;
+  }
+  fichaRefrescarFila(id);
+}
 function fichaTareaNombre(id, valor){
   const e = fichaTarea(id);
   if(!e) return;
@@ -11722,6 +12686,7 @@ function fichaTareaResponsable(id, valor){
     if(origen){ origen.respMetrados = valor; origen.respMetradosOtro = ''; }
   }
   renderModalEntregables();
+  if(valor==='otro'){ const inp = document.querySelector('#ficha-detalle .ft-resp-otro'); if(inp) inp.focus(); }
 }
 /* Fecha cliente del proyecto (borrador de la ficha; saveModal la guarda en
    o.fechaComprometidaCliente). Es la misma para todas las tareas. */
@@ -11812,8 +12777,8 @@ function fichaNuevaTareaHtml(area){
       }).join('')}</div>
       <div class="ft-nueva-pie">
         <label class="ft-campo-inline">Responsable
-          <select onchange="fichaNuevaTarea.responsable=this.value">${fichaResponsableOptionsHtml(area, fichaNuevaTarea.responsable, '')}</select>
-        </label>
+          <select onchange="fichaNuevaTarea.responsable=this.value;renderModalEntregables()">${fichaResponsableOptionsHtml(area, fichaNuevaTarea.responsable, '')}</select>
+        </label>${fichaNuevaTarea.responsable==='otro' ? `<input type="text" class="ft-resp-otro" value="${escAttr(fichaNuevaTarea.responsableOtro || '')}" maxlength="60" placeholder="Nombre del responsable" aria-label="Nombre del responsable" oninput="fichaNuevaTarea.responsableOtro=this.value">` : ''}
         <span class="ft-nueva-acciones">
           <button type="button" class="fe-link is-dim" onclick="fichaAbrirNuevaTarea('${area}')">Cancelar</button>
           <button type="button" class="ft-crear" onclick="fichaCrearTareas()"${n ? '' : ' disabled'}>${n>1 ? 'Agregar ' + n + ' tareas' : 'Agregar tarea'}</button>
@@ -11831,10 +12796,10 @@ function fichaNuevaTareaToggle(i){
 }
 /* Cada tarea elegida es un registro propio (un entregable), con su responsable,
    fechas y estado: nace Por iniciar y sin fechas. */
-function fichaNuevaTareaRegistro(area, nombre, responsable){
+function fichaNuevaTareaRegistro(area, nombre, responsable, responsableOtro){
   return {
     id: nextEntId++, nombre, area,
-    responsable: responsable || '', responsableOtro: '',
+    responsable: responsable || '', responsableOtro: responsable==='otro' ? (responsableOtro || '') : '',
     etapa: document.getElementById('m-etapa').value,
     prioridad: parseInt(document.getElementById('m-prioridad-tablero').value, 10) || 3,
     fechaEntrega:'', fechaComprometidaCliente:'', fechaCompletado:'',
@@ -11846,8 +12811,8 @@ function fichaNuevaTareaRegistro(area, nombre, responsable){
 }
 function fichaCrearTareas(){
   if(!fichaNuevaTarea || !fichaNuevaTarea.seleccion.length) return;
-  const {area, seleccion, responsable} = fichaNuevaTarea;
-  const creadas = seleccion.map(t=>fichaNuevaTareaRegistro(area, t===FICHA_OTRA_TAREA ? '' : t, responsable));
+  const {area, seleccion, responsable, responsableOtro} = fichaNuevaTarea;
+  const creadas = seleccion.map(t=>fichaNuevaTareaRegistro(area, t===FICHA_OTRA_TAREA ? '' : t, responsable, responsableOtro));
   fichaSumarApoyoSiFalta(area, responsable);
   modalEntregables.push(...creadas);
   const sinNombre = creadas.find(e=>!e.nombre);
@@ -11957,6 +12922,8 @@ function fichaFraseEvento(ev){
   else if(c==='Cambio de prioridad') verbo = 'cambió la prioridad';
   else if(c==='Oportunidad creada') verbo = 'creó la oportunidad';
   else if(c==='Nota') verbo = 'agregó una nota';
+  else if(c==='Cambio de seguimiento') verbo = 'actualizó la fecha de seguimiento';
+  else if(c==='Cambio de probabilidad') verbo = 'actualizó la probabilidad de cierre';
   else verbo = escAttr(c.charAt(0).toLowerCase() + c.slice(1)) + (t ? ' ' + t : '');
   /* Lo que ya dice la frase no se repite como aclaración. */
   let aclaracion = extra;
@@ -12025,6 +12992,21 @@ function fichaRondasHtml(o){
    historial de la oportunidad y a la cola de subida (historialPendiente →
    historial_oportunidades), igual que cualquier otro evento. No toca el resto
    del borrador de la ficha. En una oportunidad nueva se habilita al guardarla. */
+/* Evento escrito a mano (una nota, o un cambio que la foto del historial no
+   compara, como la fecha de seguimiento o la probabilidad desde el Planner):
+   entra al historial de la oportunidad y a la misma cola de subida que el
+   resto. Quien llama hace después persistLocal(). */
+function registrarEventoManual(o, area, cambio, detalle, anterior, nuevo){
+  const ev = {
+    id: idEventoHistorial(), oportunidadId: o.id, ts: new Date().toISOString(),
+    area, cambio, detalle: detalle || '', anterior: anterior || '', nuevo: nuevo || '',
+    usuario: nombreUsuarioHistorial(), entregableId: null,
+  };
+  o.historial = (o.historial || []).concat(ev);
+  historialPendiente = historialPendiente.concat(ev);
+  guardarHistorialPendiente();
+  return ev;
+}
 function fichaUltimaNota(o){
   const notas = ((o && o.historial) || []).filter(ev=>ev.cambio==='Nota');
   return notas.length ? notas[notas.length-1] : null;
@@ -12075,14 +13057,7 @@ function fichaAgregarNota(){
   const txt = document.getElementById('m-nota-bitacora');
   const texto = txt ? txt.value.trim() : '';
   if(!o || !texto) return;
-  const ev = {
-    id: idEventoHistorial(), oportunidadId: o.id, ts: new Date().toISOString(),
-    area: 'comercial', cambio: 'Nota', detalle: texto, anterior: '', nuevo: '',
-    usuario: nombreUsuarioHistorial(), entregableId: null,
-  };
-  o.historial = (o.historial || []).concat(ev);
-  historialPendiente = historialPendiente.concat(ev);
-  guardarHistorialPendiente();
+  registrarEventoManual(o, 'comercial', 'Nota', texto, '', '');
   persistLocal();
   /* La nota recién agregada queda a la vista, sin poder editarse. */
   fichaNotaModo = 'ver';
@@ -12183,10 +13158,18 @@ function fichaPrepararApertura(o){
   fichaNotaPreparar();
   fichaSetSelect('m-zona', o ? o.zona : '');
   fichaSetSelect('m-region', o ? o.region : '');
+  document.getElementById('m-zona').dataset.prev = '';
+  document.getElementById('m-region').dataset.prev = '';
   document.getElementById('m-sector').dataset.listo = '';
   fichaSetSelect('m-pais', o ? o.pais : 'peru');
-  fichaPoblarSectores(o ? o.sector : '');
+  /* Proyecto nuevo: Agro · Frutas / Verduras · Perú (editables). */
+  modalProductos = o ? (o.productos || []).slice() : [];
+  modalProductosOtro = o ? (o.productosOtro || '') : '';
+  fichaPoblarSectores(o ? o.sector : 'Frutas / Verduras');
   fichaPaisCambio();
+  modalCotizaciones = fichaCotNormalizar(o ? o.cotizaciones : []);
+  fichaCotAbiertas = new Set();
+  fichaRenderCotizaciones();
 
   modalEquipo = {
     kam: o ? (o.kam || '') : '', kamOtro: o ? (o.kamOtro || '') : '',
@@ -12398,10 +13381,23 @@ function saveModal(confirmado){
     mesCierre: document.getElementById('m-mes-cierre').value,
     duracionProyecto: (()=>{ const raw = document.getElementById('m-duracion-proyecto').value; const n = parseInt(raw, 10); return raw==='' || isNaN(n) ? null : Math.max(0, n); })(),
     segmentoCliente: document.getElementById('m-segmento-cliente').value,
-    zona: document.getElementById('m-zona').value,
-    region: document.getElementById('m-region').value,
+    ...(()=>{
+      const pais = document.getElementById('m-pais').value;
+      const esPeru = !pais || pais==='peru';
+      return {
+        zona: esPeru ? document.getElementById('m-zona').value : 'exterior',
+        region: esPeru ? document.getElementById('m-region').value : '',
+      };
+    })(),
     sector: document.getElementById('m-sector').value,
     pais: document.getElementById('m-pais').value,
+    productos: modalProductos.slice(),
+    productosOtro: modalProductos.includes('Otros') ? modalProductosOtro.trim() : '',
+    /* La principal lleva siempre los valores del bloque superior (los mismos
+       campos de la oportunidad). Sin alternativas no se guarda lista. */
+    cotizaciones: (modalCotizaciones.some(c=>!c.principal) || modalCotizaciones.some(c=>c.principal && c.num!==1))
+      ? modalCotizaciones.map(c=>c.principal ? Object.assign({}, c, fichaCotLeerPrincipal()) : Object.assign({}, c)).sort((a,b)=>a.num-b.num)
+      : [],
     /* Tríada = los mismos campos que edita la card de Equipo de trabajo. El
        nombre libre de "Otro" solo se guarda mientras el valor sea 'otro'. */
     kam: modalEquipo.kam,
@@ -13645,7 +14641,7 @@ function gerChartSalir(){
   if(plot) plot.classList.remove('is-hover');
 }
 
-function renderGerencia(){
+function renderGerenciaGerente(){
   const body = document.getElementById('ger-body');
   if(!body) return;
   document.querySelectorAll('#ger-periodo .des-per-btn').forEach(b=>{
@@ -14011,6 +15007,11 @@ function gerModalAbrir(tipo, clave){
       (motivos.length ? `<p class="ger-m-sub">Alertas</p><ul class="ger-m-alertas">${motivos.map(m=>`<li class="${m.sev >= 80 ? 'is-danger' : 'is-warn'}">${escAttr(m.txt)}</li>`).join('')}</ul>` : '');
     destino = ()=>gerIrFicha(o.id); destinoTxt = 'Ver ficha completa →';
   }
+  gerModalMostrar({kicker, titulo, html, destino, destinoTxt});
+}
+/* Pinta y abre el modal de análisis. Lo usan Gerente y Planner. */
+function gerModalMostrar({kicker, titulo, html, destino, destinoTxt}){
+  destinoTxt = destinoTxt || 'Ver detalles →';
   document.getElementById('ger-m-kicker').textContent = kicker;
   document.getElementById('ger-m-titulo').innerHTML = titulo;
   document.getElementById('ger-m-body').innerHTML = html;
@@ -14053,6 +15054,1079 @@ function gerDescargarInforme(){
   window.print();
 }
 
+/* ============================================================
+   GERENCIA · SUBVISTAS Y PERMISOS
+   Cada subvista pide su propio permiso (no depende de puedeEditar), así
+   más adelante se puede dar Planner a un rol sin darle Gerente (o
+   viceversa) cambiando solo PERMISOS_POR_ROL — o leyéndolo de la base
+   cuando exista una tabla de permisos. La pestaña Gerencia en sí sigue
+   exigiendo un rol que edita (puedeVerGerencia).
+   ============================================================ */
+const PERMISOS_POR_ROL = {
+  admin:  ['gerencia.gerente', 'gerencia.planner', 'gerencia.operaciones'],
+  editor: ['gerencia.gerente', 'gerencia.planner'],
+  visor:  [],
+};
+function tienePermiso(p){
+  /* usuarioActual se declara más abajo y el primer render llega antes:
+     mientras no exista (o no haya rol confirmado) se niega. */
+  try{
+    if(!rolConfirmado || !usuarioActual) return false;
+    return (PERMISOS_POR_ROL[usuarioActual.rol] || []).includes(p);
+  }catch(e){ return false; }
+}
+/* disponible:false = reservada en la navegación pero todavía sin desarrollar
+   (no se muestra). */
+const GER_SUBVISTAS = [
+  {key:'gerente',     label:'Gerente',     permiso:'gerencia.gerente',     disponible:true},
+  {key:'planner',     label:'Planner',     permiso:'gerencia.planner',     disponible:true},
+  {key:'operaciones', label:'Operaciones', permiso:'gerencia.operaciones', disponible:false},
+];
+const GER_SV_KEY = 'fp-gerencia-subvista';
+let gerSubvista = (function(){ try{ return localStorage.getItem(GER_SV_KEY) || 'gerente'; }catch(e){ return 'gerente'; } })();
+function gerSubvistasVisibles(){ return GER_SUBVISTAS.filter(s=>s.disponible && tienePermiso(s.permiso)); }
+function gerSubvistaActiva(){
+  const vis = gerSubvistasVisibles();
+  return vis.find(s=>s.key===gerSubvista) || vis[0] || null;
+}
+function gerPintarSubnav(vis, activa){
+  const nav = document.getElementById('ger-subnav');
+  if(!nav) return;
+  nav.hidden = vis.length < 2;
+  nav.setAttribute('role', 'tablist');
+  nav.innerHTML = vis.map(s=>{
+    const on = s.key===activa;
+    return `<button type="button" class="ger-subnav-btn${on ? ' is-on' : ''}" role="tab" aria-selected="${on}" onclick="setGerSubvista('${s.key}')">${s.label}</button>`;
+  }).join('');
+}
+function setGerSubvista(k){
+  if(!gerSubvistasVisibles().some(s=>s.key===k)) return;
+  gerSubvista = k;
+  try{ localStorage.setItem(GER_SV_KEY, k); }catch(e){}
+  plnAnimar = true;
+  renderGerencia();
+  sideSincronizar();
+}
+/* Punto de entrada de Gerencia (lo llaman renderAll, los filtros y la
+   pestaña): pinta la navegación y solo la subvista activa. Sin rol
+   confirmado se comporta como siempre (Gerente). */
+function renderGerencia(){
+  const vis = gerSubvistasVisibles();
+  const act = gerSubvistaActiva();
+  const key = act ? act.key : 'gerente';
+  gerPintarSubnav(vis, key);
+  document.querySelectorAll('#gerencia .ger-sv').forEach(el=>{ el.hidden = el.dataset.sv !== key; });
+  if(key==='planner') renderPlanner(); else renderGerenciaGerente();
+}
+
+/* ============================================================
+   GERENCIA · PLANNER — centro de control analítico
+   Conecta PRODUCCIÓN / CAPACIDAD (Arquitectura + Presupuestos) con
+   RESULTADO COMERCIAL (KAM → propuesta → análisis → negociación → venta).
+   Solo lee las mismas oportunidades, tareas e historial del panel; no
+   guarda nada propio. Definiciones (todas sobre campos existentes):
+   · Movimiento = cualquier evento del Historial de la oportunidad (cambios,
+     notas, tareas) o una tarea completada. "Días sin movimiento" se cuenta
+     desde el más reciente; sin historial ni tareas, desde su ingreso; sin
+     nada de eso, "Sin información".
+     Ojo: la fecha de seguimiento y la probabilidad editadas en la ficha o en
+     Revisión semanal no generan evento (la foto del historial no las
+     compara). Editadas desde el Planner sí quedan registradas.
+   · Dormida = en Análisis del cliente o Negociación con ≥ PLN.diasDormida
+     días sin movimiento.
+   · Análisis del cliente: Dormida · Requiere seguimiento (seguimiento
+     vencido, a ≤ PLN.diasSeguimientoProximo días o sin fecha) · Activa (el
+     resto: seguimiento vigente).
+   · Trabajada (período) = tiene una tarea de Arquitectura o Presupuestos en
+     proceso / bloqueada, completada en el período, o eventos de esas áreas
+     en el período. Terminada = completó trabajo técnico en el período y no
+     le quedan tareas técnicas abiertas. Enviada = evento "Envío de
+     propuesta" o tarea de envío completada en el período. Pasó a Análisis /
+     Negociación / Vendida = "Cambio de etapa" del Historial en el período.
+     Es el movimiento del período, no una cohorte.
+   · Probable cierre = Análisis + Negociación con probabilidad ≥ PLN.probAlta
+     y mes de cierre hasta PLN.mesesCierre meses adelante (incluye meses ya
+     pasados que siguen abiertos). Ponderado = importe × probabilidad.
+   · Carga por responsable = la misma de Carga laboral (cargaPorResponsable).
+   · Señal por KAM: ver plnSenalKam(). No es un puntaje ni bloquea nada.
+   ============================================================ */
+const PLN = {
+  diasDormida: 21,            // días sin movimiento para considerar dormida
+  diasSeguimientoProximo: 2,  // seguimiento a ≤ N días → "Requiere seguimiento"
+  probAlta: 60,               // % mínimo para "Probable cierre"
+  mesesCierre: 3,             // mes actual + 2
+  kams: ['jhon_rojas', 'hugo_escobar', 'victor_ramirez'], // KAM de Eficiencia (catálogo KAMS)
+  demandaAltaPct: 35,         // % de las tareas técnicas abiertas → demanda Alta…
+  demandaAltaMin: 3,          // …con al menos N tareas
+  demandaModeradaPct: 15,     // % → demanda Moderada
+  dormidasRevisar: 3,         // dormidas que, con nuevas solicitudes, piden revisar prioridad
+  focoVisibles: 8,
+  filasVisibles: 10,
+};
+/* En iPhone se muestran menos filas por defecto (el resto con «Ver todas»). */
+function plnLimite(n){ return window.matchMedia('(max-width:767px)').matches ? Math.ceil(n * 0.6) : n; }
+const PLN_PERIODOS = {hoy:'Hoy', semana:'Semana actual', mes:'Mes actual', '24h':'Últimas 24 h', '48h':'Últimas 48 h'};
+const PLN_PLEG_KEY = 'fp-planner-plegados';
+let plnPeriodo = 'semana';
+let plnFlujoPer = 'semana';
+let plnProdArea = 'arquitectura';
+let plnProdAbierto = null;
+let plnPost = 'analisis';
+let plnAnCat = 'todas';
+let plnAnOrden = 'riesgo';
+let plnFocoGrupo = 'todo';
+let plnKamVista = 'cards';
+let plnKamAbierto = null;
+let plnAnimar = true;
+let plnUlt = null;
+const plnVerTodo = new Set();
+const plnPlegados = (function(){ try{ return new Set(JSON.parse(localStorage.getItem(PLN_PLEG_KEY) || '[]')); }catch(e){ return new Set(); } })();
+
+/* ---------- Rangos ---------- */
+function plnR(a, b){ return {desdeD:a, hastaD:b, desdeTs:gerTsDia(a), hastaTs:gerTsDia(addDaysISO(b, 1))}; }
+function plnRango(tipo){
+  const hoy = todayISO();
+  if(tipo==='hoy') return plnR(hoy, hoy);
+  if(tipo==='24h' || tipo==='48h'){
+    const ahora = Date.now(), desdeTs = ahora - (tipo==='24h' ? 24 : 48) * 3600e3;
+    return {desdeD:isoLocalDeTs(new Date(desdeTs).toISOString()), hastaD:hoy, desdeTs, hastaTs:ahora + 60e3};
+  }
+  if(tipo==='semana'){ const l = getSemanaActual().lunesISO; return plnR(l, addDaysISO(l, 6)); }
+  const ym = hoy.slice(0, 7);
+  return plnR(ym + '-01', gerFinMes(ym));
+}
+function plnEnD(iso, r){ if(!iso) return false; const d = String(iso).slice(0, 10); return d >= r.desdeD && d <= r.hastaD; }
+function plnEnTs(ts, r){ const t = new Date(ts).getTime(); return !isNaN(t) && t >= r.desdeTs && t < r.hastaTs; }
+function plnIngresoEn(o, r){ const i = gerIngreso(o); return !!i && (i.ts ? plnEnTs(i.ts, r) : plnEnD(i.d, r)); }
+function plnMesMas(ym, n){ const [y, m] = ym.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + n, 1)); return t.getUTCFullYear() + '-' + String(t.getUTCMonth() + 1).padStart(2, '0'); }
+function plnProb(o){
+  const v = o.probabilidadCierre;
+  if(v===null || v===undefined || v==='') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function plnPonderado(lista){ return lista.reduce((s, o)=>s + (Number(o.importe) || 0) * (plnProb(o) || 0) / 100, 0); }
+function plnRangoTexto(r){
+  const hoy = todayISO();
+  const hasta = r.hastaD > hoy ? hoy : r.hastaD;
+  return r.desdeD===hasta ? formatFechaCorta(hasta) : formatFechaCorta(r.desdeD) + ' – ' + formatFechaCorta(hasta);
+}
+
+/* ---------- Lectura por oportunidad ---------- */
+function plnInfo(o, hoy){
+  let ult = 0, nota = null, seg = null;
+  (o.historial || []).forEach(h=>{
+    const t = new Date(h.ts).getTime();
+    if(isNaN(t)) return;
+    if(t > ult) ult = t;
+    if(h.cambio==='Nota' && (!nota || t >= new Date(nota.ts).getTime())) nota = h;
+    if((h.cambio==='Nota' || h.cambio==='Cambio de seguimiento') && (!seg || t >= new Date(seg.ts).getTime())) seg = h;
+  });
+  o.entregables.forEach(e=>{ if(e.fechaCompletado){ const t = gerTsDia(String(e.fechaCompletado).slice(0, 10)); if(t > ult) ult = t; } });
+  if(!ult){ const g = gerIngreso(o); if(g) ult = g.ts ? new Date(g.ts).getTime() : gerTsDia(g.d); }
+  const ultD = ult ? isoLocalDeTs(new Date(ult).toISOString()) : '';
+  const dias = ultD ? Math.max(0, daysBetween(ultD, hoy)) : null;
+  const post = o.etapa==='analisis' || o.etapa==='negociacion';
+  const dormida = post && dias!=null && dias >= PLN.diasDormida;
+  const f = o.fechaSeguimiento || '';
+  const segVencido = !!(f && f < hoy);
+  let cat = '';
+  if(o.etapa==='analisis') cat = dormida ? 'dormida' : (!f || daysBetween(hoy, f) <= PLN.diasSeguimientoProximo ? 'seguimiento' : 'activa');
+  const comentario = nota ? nota.detalle : (o.proximoPaso || (o.accionPendienteCliente ? o.descripcionPendiente : '') || '');
+  /* Riesgo para ordenar: dormida pesa más que un seguimiento vencido o sin fecha. */
+  const riesgo = (dormida ? 2 : 0) + (post && (segVencido || !f) ? 1 : 0);
+  return {ultD, dias, nota, seg, dormida, cat, segVencido, riesgo, comentario, comentarioNota: !!nota};
+}
+function plnTareasRonda(o){
+  const ronda = o.rondaActual || 1;
+  return o.entregables.filter(e=>e.estadoTarea!=='cancelado' && (e.ronda || 1)===ronda);
+}
+
+/* ---------- Flujo del período ---------- */
+function plnFlujo(opps, r){
+  const pasoA = (o, k)=>(o.historial || []).some(h=>h.cambio==='Cambio de etapa' && h.nuevo===etapaLabelDisplay(k) && plnEnTs(h.ts, r));
+  const trabajadas = [], terminadas = [], enviadas = [], entregables = [];
+  opps.forEach(o=>{
+    const tec = o.entregables.filter(e=>e.estadoTarea!=='cancelado' && esAreaTecnica(e.area));
+    const comp = tec.filter(e=>e.estado==='completado' && plnEnD(e.fechaCompletado, r));
+    comp.forEach(e=>entregables.push({o, e}));
+    const evTec = (o.historial || []).some(h=>esAreaTecnica(h.area) && plnEnTs(h.ts, r));
+    if(comp.length || tec.some(esTareaActiva) || evTec) trabajadas.push(o);
+    if(comp.length && !tec.some(e=>e.estado==='pendiente')) terminadas.push(o);
+    if((o.historial || []).some(h=>h.cambio==='Envío de propuesta' && plnEnTs(h.ts, r)) ||
+       o.entregables.some(e=>esTareaEnvioPropuesta(e) && e.estado==='completado' && plnEnD(e.fechaCompletado, r))) enviadas.push(o);
+  });
+  return {trabajadas, terminadas, enviadas, entregables,
+    analisis: opps.filter(o=>pasoA(o, 'analisis')), negociacion: opps.filter(o=>pasoA(o, 'negociacion')), vendidas: opps.filter(o=>pasoA(o, 'cerrado'))};
+}
+
+/* ---------- Foco de hoy: solo excepciones ---------- */
+const PLN_ALERTA = {
+  cliente:    {label:'Fecha cliente vencida', grupo:'operacion', tone:'danger'},
+  bloqueo:    {label:'Bloqueada',             grupo:'operacion', tone:'danger'},
+  vencida:    {label:'Tarea vencida',         grupo:'operacion', tone:'danger'},
+  hoy:        {label:'Entrega hoy',           grupo:'operacion', tone:'warn'},
+  seguimiento:{label:'Seguimiento vencido',   grupo:'comercial', tone:'warn'},
+  seg_hoy:    {label:'Seguimiento hoy',       grupo:'comercial', tone:'info'},
+  dormida:    {label:'Dormida',               grupo:'comercial', tone:'warn'},
+  sinresp:    {label:'Sin responsable',       grupo:'capacidad', tone:'warn'},
+};
+function plnFoco(opps, info, hoy){
+  const out = [];
+  opps.forEach(o=>{
+    if(GER_ETAPAS_INACTIVAS.includes(o.etapa)) return;
+    const inf = info.get(o.id);
+    const pend = o.entregables.filter(e=>e.estado==='pendiente');
+    const al = [];
+    const add = (tipo, sev, extra)=>al.push(Object.assign({tipo, sev}, PLN_ALERTA[tipo], extra));
+    const fc = rsFechaCliente(o);
+    if(fc && fc < hoy && pend.length) add('cliente', 100 + Math.min(daysBetween(fc, hoy), 30), {fecha:fc});
+    pend.filter(e=>e.estadoTarea==='bloqueado').forEach(e=>add('bloqueo', 90, {e, fecha:e.fechaEntrega}));
+    pend.filter(e=>e.estadoTarea!=='bloqueado' && e.fechaEntrega && e.fechaEntrega < hoy)
+      .forEach(e=>add('vencida', 80 + Math.min(daysBetween(e.fechaEntrega, hoy), 15), {e, fecha:e.fechaEntrega}));
+    pend.filter(e=>e.fechaEntrega===hoy).forEach(e=>add('hoy', 60, {e, fecha:hoy}));
+    if(o.etapa==='analisis' || o.etapa==='negociacion'){
+      if(inf.segVencido) add('seguimiento', 70 + Math.min(daysBetween(o.fechaSeguimiento, hoy), 15), {fecha:o.fechaSeguimiento});
+      else if(o.fechaSeguimiento===hoy) add('seg_hoy', 50, {fecha:hoy});
+      if(inf.dormida) add('dormida', 45 + Math.min(inf.dias - PLN.diasDormida, 30) / 10, {fecha:inf.ultD});
+    }
+    pend.filter(e=>esAreaTecnica(e.area) && !e.responsable).forEach(e=>add('sinresp', 55, {e, fecha:e.fechaEntrega}));
+    if(al.length){ al.sort((a, b)=>b.sev - a.sev); out.push({o, alertas:al, top:al[0]}); }
+  });
+  return out.sort((a, b)=>b.top.sev - a.top.sev || (Number(b.o.importe) || 0) - (Number(a.o.importe) || 0));
+}
+
+/* ---------- Eficiencia por KAM ----------
+   Señal de demanda vs avance — NO es un puntaje, no bloquea solicitudes ni
+   evalúa personas: solo orienta al Planner. Se evalúa en este orden y gana la
+   primera que aplica:
+   1. "Revisar prioridad de nuevas solicitudes": tuvo solicitudes nuevas en el
+      período (oportunidades nuevas o tareas técnicas nuevas) mientras
+      acumula ≥ PLN.dormidasRevisar oportunidades dormidas.
+   2. "Alta demanda · Bajo avance comercial": demanda Alta y avance bajo.
+      Avance bajo = nada pasó a Negociación ni se vendió en el período, y
+      además la mitad o más de su pipeline post-propuesta está dormido, o
+      acumula ≥ PLN.dormidasRevisar dormidas, o no tiene nada en Negociación
+      con 3+ en Análisis.
+   3. "Alta demanda · Pipeline saludable": demanda Alta sin avance bajo.
+   4. "<Demanda> · Seguimiento pendiente": algún seguimiento vencido o sin
+      fecha en su pipeline post-propuesta.
+   5. "Pipeline en movimiento": algo pasó a Análisis, Negociación o venta en
+      el período.
+   6. "Sin señales": nada de lo anterior.
+   Demanda = su parte de las tareas técnicas abiertas del equipo:
+   Alta ≥ PLN.demandaAltaPct % (y ≥ PLN.demandaAltaMin tareas),
+   Moderada ≥ PLN.demandaModeradaPct %, si no Baja. */
+function plnSenalKam(k){
+  const post = k.analisis.length + k.negociacion.length;
+  const avanceBajo = (k.F.negociacion.length + k.F.vendidas.length === 0) &&
+    ((post > 0 && k.dormidas.length * 2 >= post) || k.dormidas.length >= PLN.dormidasRevisar || (k.negociacion.length === 0 && k.analisis.length >= 3));
+  const dem = {alta:'Alta demanda', moderada:'Demanda moderada', baja:'Demanda baja'}[k.demanda];
+  if(k.solicitudes.length && k.dormidas.length >= PLN.dormidasRevisar)
+    return {tone:'warn', txt:'Revisar prioridad de nuevas solicitudes',
+      porque:`${gerPlural(k.solicitudes.length, 'solicitud nueva', 'solicitudes nuevas')} en el período mientras ${k.dormidas.length} oportunidades anteriores siguen dormidas (${gerMoneda(gerImporte(k.dormidas))}).`};
+  if(k.demanda==='alta' && avanceBajo)
+    return {tone:'warn', txt:'Alta demanda · Bajo avance comercial',
+      porque:`Usa ${k.share}% de la capacidad técnica abierta, pero en el período nada pasó a Negociación ni se vendió` + (k.dormidas.length ? ` y ${k.dormidas.length} de ${post} oportunidades post-propuesta están dormidas (${gerMoneda(gerImporte(k.dormidas))}).` : '.')};
+  if(k.demanda==='alta')
+    return {tone:'ok', txt:'Alta demanda · Pipeline saludable', porque:`Usa ${k.share}% de la capacidad técnica abierta y su pipeline avanza.`};
+  const segPend = k.analisis.concat(k.negociacion).filter(o=>!o.fechaSeguimiento || o.fechaSeguimiento < todayISO());
+  if(segPend.length)
+    return {tone:'neutral', txt:dem + ' · Seguimiento pendiente', porque:`${gerPlural(segPend.length, 'oportunidad tiene', 'oportunidades tienen')} el seguimiento vencido o sin fecha.`};
+  if(k.F.analisis.length + k.F.negociacion.length + k.F.vendidas.length)
+    return {tone:'ok', txt:'Pipeline en movimiento', porque:'Hubo avances de etapa en el período.'};
+  return {tone:'neutral', txt:'Sin señales', porque:'Sin excepciones en el período.'};
+}
+function plnKams(opps, info, R, pendTec, hoy){
+  const totalTec = pendTec.length;
+  return PLN.kams.map(key=>{
+    const os = opps.filter(o=>o.kam===key);
+    const tec = pendTec.filter(x=>x.o.kam===key);
+    const nuevasTareas = [];
+    os.forEach(o=>o.entregables.forEach(e=>{ if(e.estadoTarea!=='cancelado' && esAreaTecnica(e.area) && plnEnD(e.fechaCreacion || e.creadoEn, R)) nuevasTareas.push({o, e}); }));
+    const nuevas = os.filter(o=>plnIngresoEn(o, R));
+    const analisis = os.filter(o=>o.etapa==='analisis'), negociacion = os.filter(o=>o.etapa==='negociacion');
+    const post = analisis.concat(negociacion);
+    const dormidas = post.filter(o=>info.get(o.id).dormida);
+    const dias = post.map(o=>info.get(o.id).dias).filter(d=>d!=null);
+    const share = totalTec ? Math.round(tec.length * 100 / totalTec) : 0;
+    const k = {
+      key, label: catalogLabel(KAMS, key) || key, os, tec, nuevas, nuevasTareas,
+      solicitudes: gerUnicas(nuevas.concat(nuevasTareas.map(x=>x.o))),
+      arq: tec.filter(x=>x.e.area==='arquitectura').length, ppto: tec.filter(x=>x.e.area==='presupuestos').length,
+      solArq: nuevasTareas.filter(x=>x.e.area==='arquitectura').length, solPpto: nuevasTareas.filter(x=>x.e.area==='presupuestos').length,
+      enTrabajo: gerUnicas(tec.map(x=>x.o)),
+      F: plnFlujo(os, R), analisis, negociacion, dormidas, share,
+      pipeline: gerImporte(post),
+      diasProm: dias.length ? Math.round(dias.reduce((s, d)=>s + d, 0) / dias.length) : null,
+      demanda: share >= PLN.demandaAltaPct && tec.length >= PLN.demandaAltaMin ? 'alta' : (share >= PLN.demandaModeradaPct ? 'moderada' : 'baja'),
+    };
+    k.senal = plnSenalKam(k);
+    return k;
+  });
+}
+
+/* ---------- Modelo ---------- */
+function plnModelo(){
+  const hoy = todayISO();
+  const R = plnRango(plnPeriodo), RF = plnRango(plnFlujoPer);
+  const opps = oportunidades;
+  const info = new Map(opps.map(o=>[o.id, plnInfo(o, hoy)]));
+  const activa = o=>!GER_ETAPAS_INACTIVAS.includes(o.etapa);
+  const vivas = [];
+  opps.forEach(o=>o.entregables.forEach(e=>{ if(e.estadoTarea!=='cancelado') vivas.push({o, e}); }));
+  const pend = vivas.filter(x=>x.e.estado==='pendiente');
+  const pendTec = pend.filter(x=>esAreaTecnica(x.e.area));
+
+  const analisis = opps.filter(o=>o.etapa==='analisis');
+  const negociacion = opps.filter(o=>o.etapa==='negociacion');
+  const postpuesto = opps.filter(o=>o.etapa==='postpuesto');
+  const pipeline = analisis.concat(negociacion);
+  const dormidas = pipeline.filter(o=>info.get(o.id).dormida);
+  const horizonte = plnMesMas(hoy.slice(0, 7), PLN.mesesCierre - 1);
+  const probable = pipeline.filter(o=>plnProb(o)!=null && plnProb(o) >= PLN.probAlta && o.mesCierre && o.mesCierre <= horizonte);
+  const sinDatosCierre = pipeline.filter(o=>plnProb(o)==null || !o.mesCierre);
+
+  const nuevas = opps.filter(o=>plnIngresoEn(o, R));
+  const requiereTec = o=>o.entregables.some(e=>e.estadoTarea!=='cancelado' && esAreaTecnica(e.area)) ||
+    !!(o.arquitecto && o.arquitecto!=='no_requiere') || !!o.presupuestador;
+  const tareasTecNuevas = vivas.filter(x=>esAreaTecnica(x.e.area) && plnEnD(x.e.fechaCreacion || x.e.creadoEn, R));
+
+  /* Pulso: semana en curso hasta hoy vs el mismo tramo de la semana anterior. */
+  const lunes = getSemanaActual().lunesISO;
+  const RW = plnR(lunes, hoy), RP = plnR(addDaysISO(lunes, -7), addDaysISO(hoy, -7));
+  const primerEvento = opps.reduce((m, o)=>(o.historial || []).reduce((mm, h)=>{ const t = new Date(h.ts).getTime(); return isNaN(t) ? mm : Math.min(mm, t); }, m), Infinity);
+
+  /* Alertas resumidas. */
+  const pendActivas = pend.filter(x=>activa(x.o));
+  const tareasVencidas = pendActivas.filter(x=>x.e.fechaEntrega && x.e.fechaEntrega < hoy);
+  const clienteVencida = opps.filter(o=>activa(o) && rsFechaCliente(o) && rsFechaCliente(o) < hoy && o.entregables.some(e=>e.estado==='pendiente'));
+  const segVencidos = pipeline.filter(o=>info.get(o.id).segVencido);
+  const sinEquipo = opps.filter(o=>activa(o) && (
+    o.entregables.some(e=>e.estado==='pendiente' && esAreaTecnica(e.area) && !e.responsable) ||
+    (o.etapa==='cotizacion' && !o.arquitecto && !o.presupuestador)));
+  const cargaAlta = [];
+  ['arquitectura', 'presupuestos'].forEach(area=>{
+    const {rows, maxCount} = cargaPorResponsable(cargaPendientes(area));
+    rows.forEach(r=>{ if(r.name!==CARGA_SIN_ASIGNAR && cargaNivel(Math.round(r.count * 100 / maxCount)).cls==='alta') cargaAlta.push({name:r.name, area, count:r.count, items:r.items}); });
+  });
+
+  const otrosPost = pipeline.filter(o=>!PLN.kams.includes(o.kam));
+  return {
+    hoy, R, RF, RW, RP, opps, info, pend, pendTec,
+    analisis, negociacion, postpuesto, pipeline, dormidas, horizonte, probable, sinDatosCierre,
+    F: plnFlujo(opps, R), FF: plnFlujo(opps, RF), FW: plnFlujo(opps, RW), FP: plnFlujo(opps, RP),
+    historialCubre: primerEvento <= RP.desdeTs,
+    nuevas, nuevasTec: nuevas.filter(requiereTec), tareasTecNuevas,
+    foco: plnFoco(opps, info, hoy),
+    kams: plnKams(opps, info, R, pendTec, hoy), otrosPost,
+    tareasVencidas, clienteVencida, segVencidos, sinEquipo, cargaAlta,
+  };
+}
+
+/* ---------- Piezas de presentación ---------- */
+const PLN_ICO = {
+  comentar:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  seguimiento:'<rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M12 13v3l2 1"/>',
+  reprogramar:'<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5"/><path d="M12 7.5V12l3 2"/>',
+  incidencia:'<path d="M4 21V4h11l-1 4 6 0-2 7h-9"/><path d="M4 15h9"/>',
+  ficha:'<path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
+  asignar:'<circle cx="9" cy="8" r="3.2"/><path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><path d="M19 8v6M16 11h6"/>',
+  chev:'<path d="M6 9l6 6 6-6"/>',
+  pipeline:'<path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  cierre:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+  produccion:'<path d="M3 20h18"/><path d="M6 20V10l4 3V9l4 3V6l4 3v11"/>',
+  riesgo:'<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/>',
+  demanda:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  dormida:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+};
+function plnIco(k){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PLN_ICO[k]}</svg>`; }
+function plnBtn(k, label, js){
+  return `<button type="button" class="pln-act" onclick="event.stopPropagation();${js}" title="${label}" aria-label="${label}">${plnIco(k)}</button>`;
+}
+/* Acciones contextuales: siempre los drawers / modales existentes. */
+function plnAcciones(o, e, tipos){
+  const b = [];
+  const ent = e ? e.id : 'null';
+  if(tipos.includes('asignar')) b.push(plnBtn('asignar', 'Asignar / reasignar', e ? `plnAbrirTarea(${o.id},${ent})` : `plnAbrirEquipo(${o.id})`));
+  if(tipos.includes('comentar')) b.push(plnBtn('comentar', 'Comentar', `plnQeAbrir(${o.id},'comentar')`));
+  if(tipos.includes('seguimiento')) b.push(plnBtn('seguimiento', 'Cambiar seguimiento / probabilidad', `plnQeAbrir(${o.id},'seguimiento')`));
+  if(tipos.includes('reprogramar')) b.push(plnBtn('reprogramar', e ? 'Reprogramar tarea' : 'Reprogramar fecha cliente', `plnAbrirTarea(${o.id},${ent})`));
+  if(tipos.includes('incidencia')) b.push(plnBtn('incidencia', 'Reportar incidencia', `plnIncidencia(${o.id},${ent})`));
+  b.push(plnBtn('ficha', 'Abrir ficha', `plnFicha(${o.id})`));
+  return `<span class="pln-acts">${b.join('')}</span>`;
+}
+function plnSeg(opts, actual, fn, label, cls){
+  return `<div class="des-periodo pln-seg${cls ? ' ' + cls : ''}" role="radiogroup" aria-label="${label}">${opts.map(([v, t, n])=>{
+    const on = v===actual;
+    return `<button type="button" class="des-per-btn${on ? ' is-on' : ''}" role="radio" aria-checked="${on}" onclick="${fn}('${v}')">${t}${n!=null ? `<span class="pln-seg-n">${n}</span>` : ''}</button>`;
+  }).join('')}</div>`;
+}
+function plnSec(key, titulo, sub, ctrl, cuerpo, cls){
+  const pleg = plnPlegados.has(key);
+  return `<section class="ger-card pln-sec${cls ? ' ' + cls : ''}${pleg ? ' is-plegada' : ''}" id="pln-${key}" aria-labelledby="pln-${key}-t">
+    <header class="pln-sec-head">
+      <div class="pln-sec-tit">
+        <h3 class="ger-card-t"><button type="button" class="pln-sec-tg" id="pln-${key}-t" aria-expanded="${!pleg}" aria-controls="pln-${key}-c" onclick="plnPlegar('${key}')">${plnIco('chev')}<span>${titulo}</span></button></h3>
+        ${sub ? `<span class="ger-card-sub">${sub}</span>` : ''}
+      </div>
+      ${ctrl && !pleg ? `<div class="pln-sec-ctrl">${ctrl}</div>` : ''}
+    </header>
+    <div class="pln-sec-c" id="pln-${key}-c"${pleg ? ' hidden' : ''}>${cuerpo}</div>
+  </section>`;
+}
+function plnTxt(s){ return escAttr(s == null ? '' : s); }
+/* Fila o tarjeta clicable que además contiene botones: el teclado solo la
+   activa cuando el foco está en ella (no roba el Enter de sus botones). */
+function plnAccion(js){
+  return ` role="button" tabindex="0" onclick="${js}" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();${js}}"`;
+}
+function plnGuardarPlegados(){ try{ localStorage.setItem(PLN_PLEG_KEY, JSON.stringify([...plnPlegados])); }catch(e){} }
+function plnIdHtml(o, sub){
+  return `<span class="pln-id"><b><em>L-${o.id}</em> ${plnTxt(o.cliente || '—')}</b><span>${plnTxt(sub != null ? sub : (o.proyecto || '—'))}</span></span>`;
+}
+function plnDias(n){ return n==null ? '—' : n + ' d'; }
+function plnMesTxt(v){ return v ? formatMesCierre(v) : '—'; }
+function plnSegTxt(o, hoy){
+  const f = o.fechaSeguimiento;
+  if(!f) return {txt:'Sin fecha', tone:'warn'};
+  const d = daysBetween(hoy, f);
+  if(d < 0) return {txt:'Vencido · ' + formatFechaCorta(f), tone:'danger'};
+  if(d === 0) return {txt:'Hoy', tone:'warn'};
+  if(d <= PLN.diasSeguimientoProximo) return {txt:formatFechaCorta(f), tone:'info'};
+  return {txt:formatFechaCorta(f), tone:''};
+}
+function plnComentarioHtml(o, inf, vacio){
+  const t = inf.comentario;
+  const js = `plnQeAbrir(${o.id},'comentar')`;
+  if(!t) return `<button type="button" class="pln-com is-vacio" onclick="event.stopPropagation();${js}">${vacio || 'Sin motivo registrado · agregar'}</button>`;
+  const quien = inf.nota ? `<i>${formatFechaCorta(isoLocalDeTs(inf.nota.ts))}${inf.nota.usuario ? ' · ' + plnTxt(rsNombreCorto(inf.nota.usuario)) : ''}</i>` : '<i>Próximo paso</i>';
+  return `<button type="button" class="pln-com" title="${plnTxt(t)}" onclick="event.stopPropagation();${js}">${quien}<span>${plnTxt(t)}</span></button>`;
+}
+function plnAvanceHtml(o){
+  const t = plnTareasRonda(o);
+  if(!t.length) return '<span class="pln-avance is-cero">—</span>';
+  const ok = t.filter(e=>e.estado==='completado').length;
+  return `<span class="pln-avance" title="${ok} de ${t.length} tareas de la ronda"><span class="pln-av-bar"><i style="--w:${Math.round(ok * 100 / t.length)}%"></i></span><em>${ok}/${t.length}</em></span>`;
+}
+function plnKpi(tone, ico, k, v, unidad, sub, js, extra){
+  return `<div class="ger-card ger-kpi pln-kpi is-${tone}"${plnAccion(js)}>
+    <span class="ger-kpi-top"><span class="ger-kpi-k">${k}</span><span class="ger-kpi-ico">${plnIco(ico)}</span></span>
+    <span class="ger-kpi-v">${v}${unidad ? `<span class="pln-kpi-u">${unidad}</span>` : ''}</span>
+    ${extra || '<span class="ger-prog"></span>'}
+    <span class="ger-kpi-sub">${sub}</span>
+  </div>`;
+}
+
+/* ---------- Render ---------- */
+function renderPlanner(){
+  const body = document.getElementById('pln-body');
+  const panel = document.getElementById('gerencia');
+  if(!body || !panel || !panel.classList.contains('active')) return;
+  document.querySelectorAll('#pln-periodo .des-per-btn').forEach(b=>{
+    const on = b.dataset.periodo===plnPeriodo;
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-checked', String(on));
+  });
+  const M = plnModelo();
+  plnUlt = M;
+  document.getElementById('pln-rango').textContent = PLN_PERIODOS[plnPeriodo] + ' · ' + plnRangoTexto(M.R);
+  const animar = plnAnimar;
+  plnAnimar = false;
+  body.classList.toggle('is-quieto', !animar);
+  body.innerHTML = `
+    <div class="ger-row pln-r-kpi">${plnKpisHtml(M)}</div>
+    <div class="ger-row pln-r-op">${plnFocoHtml(M)}${plnProdHtml(M)}</div>
+    ${plnFlujoHtml(M)}
+    ${plnPostHtml(M)}
+    ${plnKamHtml(M)}
+    <div class="ger-row pln-r-fin">${plnPulsoHtml(M)}${plnAlertasHtml(M)}</div>`;
+  if(animar) gerContar(body);
+}
+/* Repintado por un control interno: sin la animación de entrada. */
+function plnRepintar(){ renderPlanner(); }
+function setPlnPeriodo(p){ if(!PLN_PERIODOS[p]) return; plnPeriodo = p; plnAnimar = true; renderPlanner(); }
+function setPlnFlujoPer(p){ if(!PLN_PERIODOS[p]) return; plnFlujoPer = p; plnRepintar(); }
+function setPlnProdArea(a){ plnProdArea = a; plnProdAbierto = null; plnRepintar(); }
+function setPlnPost(k){ plnPost = k; plnRepintar(); }
+function setPlnAnCat(c){ plnAnCat = c; plnRepintar(); }
+function setPlnAnOrden(v){ plnAnOrden = v; plnRepintar(); }
+function setPlnFocoGrupo(g){ plnFocoGrupo = g; plnRepintar(); }
+function setPlnKamVista(v){ plnKamVista = v; plnRepintar(); }
+function plnKamToggle(k){ plnKamAbierto = plnKamAbierto===k ? null : k; plnRepintar(); }
+function plnProdToggle(n){ plnProdAbierto = plnProdAbierto===n ? null : n; plnRepintar(); }
+function plnVerTodoToggle(k){ if(plnVerTodo.has(k)) plnVerTodo.delete(k); else plnVerTodo.add(k); plnRepintar(); }
+function plnPlegar(key){
+  if(plnPlegados.has(key)) plnPlegados.delete(key); else plnPlegados.add(key);
+  plnGuardarPlegados();
+  plnRepintar();
+}
+/* Lleva a una sección del Planner (desplegándola) tras fijar su estado. */
+function plnIr(key, preparar){
+  if(preparar) preparar();
+  if(plnPlegados.delete(key)) plnGuardarPlegados();
+  plnRepintar();
+  const el = document.getElementById('pln-' + key);
+  if(el){
+    const suave = !window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    el.scrollIntoView({block:'start', behavior: suave ? 'smooth' : 'auto'});
+    el.classList.remove('is-destacada'); void el.offsetWidth; el.classList.add('is-destacada');
+  }
+}
+
+/* 1 · KPIs */
+function plnKpisHtml(M){
+  const per = PLN_PERIODOS[plnPeriodo].toLowerCase();
+  const imp = gerImporte(M.pipeline), impAn = gerImporte(M.analisis);
+  const seg = M.pipeline.length ? `<span class="ger-seg" aria-hidden="true"><i style="--w:${(impAn * 100 / Math.max(1, imp)).toFixed(1)}%;--c:var(--teal)" title="Análisis"></i><i style="--w:${((imp - impAn) * 100 / Math.max(1, imp)).toFixed(1)}%;--c:var(--orange)" title="Negociación"></i></span>` : '';
+  const conDatos = M.pipeline.length - M.sinDatosCierre.length;
+  const impProb = gerImporte(M.probable);
+  const kpiProb = conDatos === 0
+    ? plnKpi('neutral', 'cierre', 'Probable cierre', '<span class="pln-sininfo">Sin información</span>', '', 'sin probabilidad ni mes de cierre cargados', `plnModal('kpi','probable')`)
+    : plnKpi('ok', 'cierre', 'Probable cierre', gerNum('pk-prob', impProb, 'money'), '',
+      `${gerPlural(M.probable.length, 'oportunidad', 'oportunidades')} · pond. ${gerMoneda(plnPonderado(M.probable))}${M.sinDatosCierre.length ? ` · ${M.sinDatosCierre.length} sin datos` : ''}`,
+      `plnModal('kpi','probable')`, `<span class="ger-prog" aria-hidden="true"><i style="--w:${(impProb * 100 / Math.max(1, imp)).toFixed(1)}%"></i></span>`);
+  const impDorm = gerImporte(M.dormidas);
+  return [
+    plnKpi('teal', 'pipeline', 'Pipeline activo', gerNum('pk-pip', imp, 'money'), '', `${gerPlural(M.pipeline.length, 'oportunidad', 'oportunidades')} · análisis + negociación`, `plnModal('kpi','pipeline')`, seg),
+    kpiProb,
+    plnKpi('navy', 'produccion', 'Producción', gerNum('pk-trab', M.F.trabajadas.length), 'trabajadas',
+      `${gerPlural(M.F.entregables.length, 'entregable completado', 'entregables completados')} · ${per}`, `plnModal('kpi','produccion')`,
+      `<span class="ger-prog" aria-hidden="true"><i style="--w:${(M.F.trabajadas.length ? Math.min(100, M.F.terminadas.length * 100 / M.F.trabajadas.length) : 0).toFixed(1)}%"></i></span>`),
+    plnKpi(M.dormidas.length ? 'danger' : 'ok', 'riesgo', 'Pipeline en riesgo', gerNum('pk-dorm', M.dormidas.length), M.dormidas.length === 1 ? 'dormida' : 'dormidas',
+      M.dormidas.length ? `${gerMoneda(impDorm)} · ≥ ${PLN.diasDormida} días sin movimiento` : `nada con ≥ ${PLN.diasDormida} días sin movimiento`, `plnModal('kpi','riesgo')`,
+      `<span class="ger-prog" aria-hidden="true"><i style="--w:${(impDorm * 100 / Math.max(1, imp)).toFixed(1)}%"></i></span>`),
+    plnKpi('violet', 'demanda', 'Demanda comercial', gerNum('pk-dem', M.nuevas.length), M.nuevas.length === 1 ? 'nueva' : 'nuevas',
+      `${M.nuevasTec.length} requieren ARQ / PPTO · ${M.tareasTecNuevas.length} tareas técnicas · ${per}`, `plnModal('kpi','demanda')`,
+      `<span class="ger-prog" aria-hidden="true"><i style="--w:${(M.nuevas.length ? M.nuevasTec.length * 100 / M.nuevas.length : 0).toFixed(1)}%"></i></span>`),
+  ].join('');
+}
+
+/* 2 · Foco de hoy */
+function plnFocoHtml(M){
+  const grupos = [['todo', 'Todo'], ['operacion', 'Operación'], ['comercial', 'Comercial'], ['capacidad', 'Capacidad']];
+  const de = g=>g==='todo' ? M.foco : M.foco.filter(x=>x.alertas.some(a=>a.grupo===g)).map(x=>Object.assign({}, x, {top:x.alertas.find(a=>a.grupo===g)}));
+  const lista = de(plnFocoGrupo);
+  const todo = plnVerTodo.has('foco');
+  const vis = todo ? lista : lista.slice(0, plnLimite(PLN.focoVisibles));
+  const ctrl = plnSeg(grupos.map(([v, t])=>[v, t, de(v).length]), plnFocoGrupo, 'setPlnFocoGrupo', 'Tipo de alerta', 'pln-seg-sm');
+  const fila = x=>{
+    const a = x.top, o = x.o, e = a.e;
+    const resp = e ? (nombreResponsableEntregable(e) || 'Sin responsable') : (nombreKAM(o) || 'Sin comercial');
+    let fecha = a.fecha ? formatFechaCorta(a.fecha) : '—';
+    if(a.tipo==='vencida' || a.tipo==='cliente' || a.tipo==='seguimiento') fecha += ` · hace ${gerDiasTxt(daysBetween(a.fecha, M.hoy))}`;
+    if(a.tipo==='hoy' || a.tipo==='seg_hoy') fecha = 'Hoy';
+    if(a.tipo==='dormida') fecha = `${gerDiasTxt(M.info.get(o.id).dias)} sin mov.`;
+    const acc = {
+      cliente:['reprogramar', 'comentar'], bloqueo:['comentar', 'reprogramar', 'incidencia'], vencida:['comentar', 'reprogramar', 'incidencia'],
+      hoy:['comentar', 'reprogramar', 'incidencia'], seguimiento:['comentar', 'seguimiento'], seg_hoy:['comentar', 'seguimiento'],
+      dormida:['comentar', 'seguimiento'], sinresp:['asignar', 'comentar'],
+    }[a.tipo];
+    const mas = x.alertas.length - 1;
+    const sub = (e ? (e.nombre || 'Tarea') + ' · ' + (RS_AREA_CORTA[e.area] || '') : (o.proyecto || '—')) + (a.tipo==='bloqueo' && e && e.bloqueoOrigen ? ' · ' + textoBloqueo(e) : '');
+    return `<div class="pln-foco-r"${plnAccion(`plnModalOpp(${o.id})`)}>
+      <span class="pln-tag is-${a.tone}">${a.label}${mas ? `<b title="${plnTxt(x.alertas.slice(1).map(z=>z.label).join(' · '))}">+${mas}</b>` : ''}</span>
+      ${plnIdHtml(o, sub)}
+      <span class="pln-foco-resp" data-k="Responsable">${plnTxt(resp)}</span>
+      <span class="pln-foco-f is-${a.tone}" data-k="Fecha">${fecha}</span>
+      ${plnAvanceHtml(o)}
+      ${plnAcciones(o, e, acc)}
+    </div>`;
+  };
+  const cuerpo = lista.length ? `<div class="pln-foco-l">${vis.map(fila).join('')}</div>
+      ${lista.length > plnLimite(PLN.focoVisibles) ? `<button type="button" class="ger-link pln-mas-btn" onclick="plnVerTodoToggle('foco')">${todo ? 'Ver menos' : 'Ver las ' + lista.length + ' alertas →'}</button>` : ''}`
+    : `<div class="pln-vacio is-ok">${plnFocoGrupo==='todo' ? 'Sin excepciones hoy: nada vencido, bloqueado ni dormido.' : 'Sin alertas de este tipo.'}</div>`;
+  return plnSec('foco', 'Foco de hoy', 'Acciones que requieren intervención', ctrl, cuerpo, 'pln-foco');
+}
+
+/* 3 · Producción y capacidad (fuente: Carga laboral) */
+function plnProdHtml(M){
+  const area = plnProdArea;
+  const flat = cargaPendientes(area).filter(x=>x.e.estadoTarea!=='cancelado');
+  const {rows, maxCount} = cargaPorResponsable(flat);
+  const hoy = M.hoy, dom = getSemanaActual().domingoISO;
+  const fe = x=>x.e.fechaEntrega || '';
+  const nVenc = flat.filter(x=>fe(x) && fe(x) < hoy).length;
+  const stats = [
+    [gerUnicas(flat.map(x=>x.o)).length, 'Proyectos'],
+    [flat.length, 'Pendientes'],
+    [flat.filter(x=>fe(x)===hoy).length, 'Hoy'],
+    [flat.filter(x=>fe(x) >= hoy && fe(x) <= dom).length, 'Semana'],
+    [nVenc, 'Vencidos', nVenc ? 'danger' : ''],
+  ];
+  const ctrl = plnSeg([['arquitectura', 'Arquitectura'], ['presupuestos', 'Presupuestos']], area, 'setPlnProdArea', 'Área', 'pln-seg-sm');
+  const filas = rows.map(r=>{
+    const sinResp = r.name===CARGA_SIN_ASIGNAR;
+    const pct = Math.round(r.count * 100 / maxCount);
+    const nivel = cargaNivel(pct);
+    const abierta = plnProdAbierto===r.name;
+    const v = r.items.filter(x=>fe(x) && fe(x) < hoy).length, h = r.items.filter(x=>fe(x)===hoy).length;
+    const proys = gerUnicas(r.items.map(x=>x.o));
+    const det = !abierta ? '' : `<div class="pln-prod-det">${proys.map(o=>{
+      const ts = r.items.filter(x=>x.o.id===o.id).sort((a, b)=>(fe(a) || '9999').localeCompare(fe(b) || '9999'));
+      return `<div class="pln-prod-p">${plnIdHtml(o)}
+        <div class="pln-prod-ts">${ts.map(x=>{
+          const st = rsTareaEstado(x.e);
+          return `<div class="pln-prod-t"><span>${plnTxt(x.e.nombre || 'Tarea')}</span><em class="${st==='vencida' ? 'is-danger' : (st==='proxima' ? 'is-warn' : '')}">${x.e.fechaEntrega ? formatFechaCorta(x.e.fechaEntrega) : 'Sin fecha'}</em><span class="pln-prod-st">${ESTADO_TAREA_LABEL[x.e.estadoTarea] || 'Pendiente'}</span>${plnAcciones(o, x.e, ['asignar'])}</div>`;
+        }).join('')}</div></div>`;
+    }).join('')}</div>`;
+    return `<div class="pln-prod-r${sinResp ? ' is-sinresp' : ''}${abierta ? ' is-open' : ''}">
+      <button type="button" class="pln-prod-main" aria-expanded="${abierta}" onclick="plnProdToggle('${plnTxt(r.name).replace(/'/g, "\\'")}')">
+        <span class="pln-prod-n">${sinResp ? 'Sin asignar' : plnTxt(r.name)}</span>
+        <span class="pln-num" data-k="Proyectos">${proys.length}</span>
+        <span class="pln-num" data-k="Pendientes">${r.count}</span>
+        <span class="pln-num${h ? ' is-warn' : ' is-cero'}" data-k="Hoy">${h}</span>
+        <span class="pln-num${v ? ' is-danger' : ' is-cero'}" data-k="Vencidos">${v}</span>
+        <span class="pln-carga is-${sinResp ? 'sinresp' : nivel.cls}" title="${sinResp ? 'Tareas sin responsable' : 'Carga ' + nivel.label.toLowerCase() + ' (relativa al responsable con más pendientes)'}"><i style="--w:${pct}%"></i></span>
+      </button>${det}
+    </div>`;
+  }).join('');
+  const cuerpo = `<div class="pln-stats">${stats.map(([n, k, t])=>`<div class="${t ? 'is-' + t : ''}"><b>${n}</b><span>${k}</span></div>`).join('')}</div>
+    ${rows.length ? `<div class="pln-prod-h" aria-hidden="true"><span>Responsable</span><span>Proy.</span><span>Pend.</span><span>Hoy</span><span>Venc.</span><span>Carga</span></div><div class="pln-prod-l">${filas}</div>` : '<div class="pln-vacio">Sin pendientes en esta área.</div>'}
+    <button type="button" class="ger-link pln-mas-btn" onclick="gerIrCarga('${area}')">Ver en Carga laboral →</button>`;
+  return plnSec('prod', 'Producción del equipo', '¿En qué trabaja el equipo y hay capacidad?', ctrl, cuerpo, 'pln-prod');
+}
+
+/* 4 · Flujo de propuestas */
+const PLN_PASOS = [
+  {k:'trabajadas', label:'Trabajadas'}, {k:'terminadas', label:'Terminadas'}, {k:'enviadas', label:'Enviadas al cliente'},
+  {k:'analisis', label:'Análisis'}, {k:'negociacion', label:'Negociación'}, {k:'vendidas', label:'Vendidas'},
+];
+function plnFlujoHtml(M){
+  const F = M.FF;
+  const max = Math.max(1, ...PLN_PASOS.map(p=>F[p.k].length));
+  const ctrl = plnSeg([['24h', '24 h'], ['48h', '48 h'], ['semana', 'Semana'], ['mes', 'Mes']], plnFlujoPer, 'setPlnFlujoPer', 'Período del flujo', 'pln-seg-sm');
+  const op = F.trabajadas.length, com = F.negociacion.length + F.vendidas.length;
+  let lec;
+  if(op >= 5 && com === 0) lec = {tone:'warn', txt:`<b>Mucho trabajo operativo, poco avance comercial:</b> ${op} oportunidades trabajadas y ninguna pasó a Negociación ni se vendió en el período.`};
+  else if(F.terminadas.length > F.enviadas.length && F.terminadas.length) lec = {tone:'neutral', txt:`${gerPlural(F.terminadas.length - F.enviadas.length, 'propuesta terminada aún no registra', 'propuestas terminadas aún no registran')} envío al cliente.`};
+  else if(com) lec = {tone:'ok', txt:`${gerPlural(com, 'oportunidad avanzó', 'oportunidades avanzaron')} a Negociación o venta en el período.`};
+  else lec = {tone:'neutral', txt:'Sin avances comerciales registrados en el período.'};
+  const pasos = PLN_PASOS.map((p, i)=>{
+    const l = F[p.k], n = l.length;
+    const com2 = i >= 3;
+    return `<div class="pln-paso${com2 ? ' is-com' : ''}${n ? '' : ' is-cero'}" style="--i:${i}"${plnAccion(`plnModal('flujo','${p.k}')`)}>
+      <span class="pln-paso-k">${p.label}</span>
+      <b>${n}</b>
+      <span class="pln-paso-bar" aria-hidden="true"><i style="--w:${Math.max(n ? 4 : 0, n * 100 / max).toFixed(1)}%"></i></span>
+      <em>${i >= 2 && n ? gerMoneda(gerImporte(l)) : (i===0 && F.entregables.length ? gerPlural(F.entregables.length, 'entregable', 'entregables') : '&nbsp;')}</em>
+    </div>`;
+  }).join('<span class="pln-paso-fl" aria-hidden="true"></span>');
+  const cuerpo = `<div class="pln-flujo"><span class="pln-flujo-lado is-op">Operación</span><span class="pln-flujo-lado is-com">Comercial</span>${pasos}</div>
+    <p class="pln-lec is-${lec.tone}">${lec.txt}</p>`;
+  return plnSec('flujo', 'Flujo de propuestas', 'Producido → enviado → avance · ' + PLN_PERIODOS[plnFlujoPer].toLowerCase(), ctrl, cuerpo, 'pln-flujo-sec');
+}
+
+/* 5 · Pipeline post-propuesta (+ Análisis / Dormidas / Negociación) */
+const PLN_AN_CAT = {
+  dormida:     {label:'Dormidas',              tone:'danger'},
+  seguimiento: {label:'Requiere seguimiento',  tone:'warn'},
+  activa:      {label:'Activas',               tone:'ok'},
+};
+function plnOrdenar(lista, M, orden){
+  const inf = o=>M.info.get(o.id);
+  const imp = o=>Number(o.importe) || 0;
+  const cmp = {
+    riesgo:(a, b)=>inf(b).riesgo - inf(a).riesgo || (inf(b).dias || 0) - (inf(a).dias || 0) || imp(b) - imp(a),
+    dias:(a, b)=>(inf(b).dias || 0) - (inf(a).dias || 0) || imp(b) - imp(a),
+    importe:(a, b)=>imp(b) - imp(a),
+    seguimiento:(a, b)=>(a.fechaSeguimiento || '0000').localeCompare(b.fechaSeguimiento || '0000') || imp(b) - imp(a),
+    cierre:(a, b)=>(a.mesCierre || '9999').localeCompare(b.mesCierre || '9999') || imp(b) - imp(a),
+  }[orden] || (()=>0);
+  return lista.slice().sort(cmp);
+}
+function plnFilasLimit(key, filas){
+  const todo = plnVerTodo.has(key);
+  const vis = todo ? filas : filas.slice(0, plnLimite(PLN.filasVisibles));
+  return vis.join('') + (filas.length > plnLimite(PLN.filasVisibles) ? `<button type="button" class="ger-link pln-mas-btn" onclick="plnVerTodoToggle('${key}')">${todo ? 'Ver menos' : 'Ver las ' + filas.length + ' →'}</button>` : '');
+}
+function plnFilaAn(o, M){
+  const inf = M.info.get(o.id), s = plnSegTxt(o, M.hoy), p = plnProb(o);
+  return `<div class="pln-tr pln-tr-an is-${inf.cat}"${plnAccion(`plnModalOpp(${o.id})`)}>
+    ${plnIdHtml(o)}
+    <span class="pln-td" data-k="KAM">${plnTxt(rsNombreCorto(nombreKAM(o)) || '—')}</span>
+    <span class="pln-td pln-num" data-k="Importe">${Number(o.importe) > 0 ? gerMoneda(o.importe) : '—'}</span>
+    <span class="pln-td pln-num" data-k="Prob.">${p==null ? '—' : p + '%'}</span>
+    <span class="pln-td" data-k="Mes cierre">${plnMesTxt(o.mesCierre)}</span>
+    <span class="pln-td" data-k="Últ. seguimiento">${inf.seg ? formatFechaCorta(isoLocalDeTs(inf.seg.ts)) : '—'}</span>
+    <span class="pln-td${s.tone ? ' is-' + s.tone : ''}" data-k="Próx. seguimiento">${s.txt}</span>
+    <span class="pln-td pln-num${inf.dormida ? ' is-danger' : ''}" data-k="Sin mov.">${plnDias(inf.dias)}</span>
+    <span class="pln-td pln-td-com" data-k="Motivo">${plnComentarioHtml(o, inf)}</span>
+    ${plnAcciones(o, null, ['comentar', 'seguimiento'])}
+  </div>`;
+}
+function plnPostHtml(M){
+  const estados = [
+    {k:'analisis', label:etapaLabelDisplay('analisis'), l:M.analisis, extra: M.analisis.filter(o=>M.info.get(o.id).dormida).length},
+    {k:'negociacion', label:etapaLabelDisplay('negociacion'), l:M.negociacion},
+    {k:'postpuesto', label:etapaLabelDisplay('postpuesto'), l:M.postpuesto},
+  ];
+  const tarjetas = `<div class="pln-pc-row" role="tablist" aria-label="Estado post-propuesta">${estados.map(s=>{
+    const on = plnPost===s.k;
+    let pie = '';
+    if(s.k==='analisis') pie = s.extra ? `<span class="is-danger">${s.extra} dormidas</span>` : '<span>sin dormidas</span>';
+    if(s.k==='negociacion') pie = `<span>pond. ${gerMoneda(plnPonderado(s.l))}</span>`;
+    if(s.k==='postpuesto') pie = '<span>en pausa</span>';
+    return `<button type="button" class="pln-pc is-${s.k}${on ? ' is-on' : ''}" role="tab" aria-selected="${on}" onclick="setPlnPost('${s.k}')">
+      <span class="pln-pc-k">${s.label}</span>
+      <span class="pln-pc-v"><b>${s.l.length}</b><em>${s.l.length ? gerMoneda(gerImporte(s.l)) : '—'}</em></span>
+      ${pie}
+    </button>`;
+  }).join('')}</div>`;
+  let det = '';
+  if(plnPost==='analisis') det = plnAnalisisHtml(M);
+  else if(plnPost==='negociacion') det = plnNegociacionHtml(M);
+  else det = plnPostpuestoHtml(M);
+  return plnSec('post', 'Pipeline post-propuesta', 'Lo que ya está con el cliente', '', tarjetas + `<div class="pln-post-det">${det}</div>`, 'pln-post');
+}
+function plnAnalisisHtml(M){
+  const por = c=>M.analisis.filter(o=>M.info.get(o.id).cat===c);
+  const dorm = por('dormida');
+  const cats = ['dormida', 'seguimiento', 'activa'];
+  const ctrl = plnSeg([['todas', 'Todas', M.analisis.length]].concat(cats.map(c=>[c, PLN_AN_CAT[c].label, por(c).length])), plnAnCat, 'setPlnAnCat', 'Estado en análisis', 'pln-seg-sm');
+  const orden = `<label class="pln-orden"><span>Orden</span><select onchange="setPlnAnOrden(this.value)">${[['riesgo', 'Mayor riesgo'], ['dias', 'Días sin movimiento'], ['importe', 'Importe'], ['seguimiento', 'Próximo seguimiento'], ['cierre', 'Mes de cierre']].map(([v, t])=>`<option value="${v}"${v===plnAnOrden ? ' selected' : ''}>${t}</option>`).join('')}</select></label>`;
+  const impAn = gerImporte(M.analisis), impD = gerImporte(dorm);
+  const banner = dorm.length ? `<div class="pln-dorm"${plnAccion(`setPlnAnCat('dormida')`)}>
+      <span class="pln-dorm-ico">${plnIco('dormida')}</span>
+      <span class="pln-dorm-t"><b>${gerPlural(dorm.length, 'oportunidad dormida', 'oportunidades dormidas')} · ${gerMoneda(impD)}</b>
+      <span>≥ ${PLN.diasDormida} días sin movimiento · ${impAn ? Math.round(impD * 100 / impAn) : 0}% del importe en análisis · promedio ${Math.round(dorm.reduce((s, o)=>s + (M.info.get(o.id).dias || 0), 0) / dorm.length)} días</span></span>
+      <span class="ger-link">Ver dormidas →</span>
+    </div>` : '';
+  const head = `<div class="pln-th pln-tr-an" aria-hidden="true"><span>Cliente · proyecto</span><span>KAM</span><span>Importe</span><span>Prob.</span><span>Mes cierre</span><span>Últ. seg.</span><span>Próx. seg.</span><span>Sin mov.</span><span>Comentario / motivo</span><span></span></div>`;
+  const grupo = c=>{
+    const l = plnOrdenar(por(c), M, plnAnOrden);
+    if(!l.length) return '';
+    return `<div class="pln-grp is-${PLN_AN_CAT[c].tone}"><b>${PLN_AN_CAT[c].label}</b><span>${l.length} · ${gerMoneda(gerImporte(l))}</span></div>` +
+      plnFilasLimit('an-' + c, l.map(o=>plnFilaAn(o, M)));
+  };
+  const tabla = M.analisis.length
+    ? head + (plnAnCat==='todas' ? cats.map(grupo).join('') : (grupo(plnAnCat) || '<div class="pln-vacio">Sin oportunidades en este estado.</div>'))
+    : '<div class="pln-vacio">No hay oportunidades en Análisis del cliente.</div>';
+  return `<div class="pln-det-top"><span class="pln-det-res"><b>${gerPlural(M.analisis.length, 'oportunidad', 'oportunidades')}</b> · ${gerMoneda(impAn)}</span>${ctrl}${orden}</div>
+    ${banner}<div class="pln-tabla">${tabla}</div>`;
+}
+function plnNegociacionHtml(M){
+  const l = plnOrdenar(M.negociacion, M, 'cierre');
+  const ym = M.hoy.slice(0, 7);
+  const meses = [0, 1, 2].map(i=>plnMesMas(ym, i));
+  const cols = [
+    {k:'pasado', label:'Mes ya vencido', test:o=>o.mesCierre && o.mesCierre < ym, tone:'danger'},
+    ...meses.map(m=>({k:m, label:formatMesCierre(m), test:o=>o.mesCierre===m})),
+    {k:'despues', label:'Posterior', test:o=>o.mesCierre && o.mesCierre > meses[2]},
+    {k:'sin', label:'Sin mes', test:o=>!o.mesCierre, tone:'muted'},
+  ].map(c=>Object.assign(c, {l:l.filter(c.test)})).filter(c=>c.l.length || meses.includes(c.k));
+  const maxI = Math.max(1, ...cols.map(c=>gerImporte(c.l)));
+  const forecast = `<div class="pln-fc" aria-label="Forecast por mes de cierre">${cols.map(c=>`<div class="pln-fc-c${c.tone ? ' is-' + c.tone : ''}${c.l.length ? '' : ' is-cero'}">
+      <span class="pln-fc-k">${c.label}</span>
+      <span class="pln-fc-bar" aria-hidden="true"><i style="--w:${(gerImporte(c.l) * 100 / maxI).toFixed(1)}%"></i></span>
+      <b>${c.l.length ? gerMoneda(gerImporte(c.l)) : '—'}</b>
+      <span>${c.l.length ? `${c.l.length} · pond. ${gerMoneda(plnPonderado(c.l))}` : 'sin oportunidades'}</span>
+    </div>`).join('')}</div>`;
+  const head = `<div class="pln-th pln-tr-neg" aria-hidden="true"><span>Cliente · proyecto</span><span>KAM</span><span>Importe</span><span>Prob.</span><span>Mes cierre</span><span>Próx. fecha</span><span>Últ. mov.</span><span>Pendiente para cerrar</span><span></span></div>`;
+  const filas = l.map(o=>{
+    const inf = M.info.get(o.id), s = plnSegTxt(o, M.hoy), p = plnProb(o);
+    const mesTone = o.mesCierre && o.mesCierre < ym ? ' is-danger' : '';
+    return `<div class="pln-tr pln-tr-neg${inf.dormida ? ' is-dormida' : ''}"${plnAccion(`plnModalOpp(${o.id})`)}>
+      ${plnIdHtml(o)}
+      <span class="pln-td" data-k="KAM">${plnTxt(rsNombreCorto(nombreKAM(o)) || '—')}</span>
+      <span class="pln-td pln-num" data-k="Importe">${Number(o.importe) > 0 ? gerMoneda(o.importe) : '—'}</span>
+      <span class="pln-td pln-num" data-k="Prob.">${p==null ? '—' : p + '%'}</span>
+      <span class="pln-td${mesTone}" data-k="Mes cierre">${plnMesTxt(o.mesCierre)}</span>
+      <span class="pln-td${s.tone ? ' is-' + s.tone : ''}" data-k="Próx. fecha">${s.txt}</span>
+      <span class="pln-td${inf.dormida ? ' is-danger' : ''}" data-k="Últ. mov.">${inf.ultD ? formatFechaCorta(inf.ultD) + ' · ' + plnDias(inf.dias) : '—'}</span>
+      <span class="pln-td pln-td-com" data-k="Pendiente">${plnComentarioHtml(o, inf, '¿Qué falta para cerrar? · agregar')}</span>
+      ${plnAcciones(o, null, ['comentar', 'seguimiento'])}
+    </div>`;
+  });
+  return `<div class="pln-det-top"><span class="pln-det-res"><b>${gerPlural(l.length, 'oportunidad', 'oportunidades')}</b> · ${gerMoneda(gerImporte(l))} · ponderado ${gerMoneda(plnPonderado(l))}</span><span class="pln-det-q">¿Qué falta para cerrar?</span></div>
+    ${l.length ? forecast + `<div class="pln-tabla">${head}${plnFilasLimit('neg', filas)}</div>` : '<div class="pln-vacio">No hay oportunidades en Negociación.</div>'}`;
+}
+function plnPostpuestoHtml(M){
+  const l = plnOrdenar(M.postpuesto, M, 'importe');
+  const head = `<div class="pln-th pln-tr-pos" aria-hidden="true"><span>Cliente · proyecto</span><span>KAM</span><span>Importe</span><span>Últ. mov.</span><span>Sin mov.</span><span>Comentario / motivo</span><span></span></div>`;
+  const filas = l.map(o=>{
+    const inf = M.info.get(o.id);
+    return `<div class="pln-tr pln-tr-pos"${plnAccion(`plnModalOpp(${o.id})`)}>
+      ${plnIdHtml(o)}
+      <span class="pln-td" data-k="KAM">${plnTxt(rsNombreCorto(nombreKAM(o)) || '—')}</span>
+      <span class="pln-td pln-num" data-k="Importe">${Number(o.importe) > 0 ? gerMoneda(o.importe) : '—'}</span>
+      <span class="pln-td" data-k="Últ. mov.">${inf.ultD ? formatFechaCorta(inf.ultD) : '—'}</span>
+      <span class="pln-td pln-num" data-k="Sin mov.">${plnDias(inf.dias)}</span>
+      <span class="pln-td pln-td-com" data-k="Motivo">${plnComentarioHtml(o, inf)}</span>
+      ${plnAcciones(o, null, ['comentar', 'seguimiento'])}
+    </div>`;
+  });
+  return `<div class="pln-det-top"><span class="pln-det-res"><b>${gerPlural(l.length, 'oportunidad', 'oportunidades')}</b> · ${gerMoneda(gerImporte(l))}</span></div>
+    ${l.length ? `<div class="pln-tabla">${head}${plnFilasLimit('pos', filas)}</div>` : '<div class="pln-vacio">No hay oportunidades pospuestas.</div>'}`;
+}
+
+/* 6 · Eficiencia de pipeline y recursos por KAM */
+function plnKamHtml(M){
+  const per = PLN_PERIODOS[plnPeriodo].toLowerCase();
+  const ctrl = plnSeg([['cards', 'Por KAM'], ['tabla', 'Comparativa']], plnKamVista, 'setPlnKamVista', 'Vista', 'pln-seg-sm');
+  const demTxt = {alta:'Alta', moderada:'Moderada', baja:'Baja'};
+  const senal = k=>`<span class="pln-senal is-${k.senal.tone}" title="${plnTxt(k.senal.porque)}">${k.senal.tone==='warn' ? '<i aria-hidden="true">⚠</i>' : ''}${k.senal.txt}</span>`;
+  let cuerpo;
+  if(plnKamVista==='tabla'){
+    const maxP = Math.max(1, ...M.kams.map(k=>k.pipeline));
+    cuerpo = `<div class="pln-tabla"><div class="pln-th pln-tr-kam" aria-hidden="true"><span>KAM</span><span>Solicitudes</span><span>En trabajo</span><span>Enviadas</span><span>Análisis</span><span>Negociación</span><span>Dormidas</span><span>Pipeline</span><span>Señal</span></div>
+      ${M.kams.map(k=>`<div class="pln-tr pln-tr-kam"${plnAccion(`plnKamAbierto='${k.key}';setPlnKamVista('cards')`)}>
+        <span class="pln-td pln-kam-nom"><b>${plnTxt(k.label)}</b><span class="pln-dem is-${k.demanda}">Demanda ${demTxt[k.demanda].toLowerCase()}</span></span>
+        <span class="pln-td pln-num" data-k="Solicitudes">${k.solicitudes.length}</span>
+        <span class="pln-td pln-num" data-k="En trabajo">${k.enTrabajo.length}</span>
+        <span class="pln-td pln-num" data-k="Enviadas">${k.F.enviadas.length}</span>
+        <span class="pln-td pln-num" data-k="Análisis">${k.analisis.length}</span>
+        <span class="pln-td pln-num" data-k="Negociación">${k.negociacion.length}</span>
+        <span class="pln-td pln-num${k.dormidas.length ? ' is-danger' : ' is-cero'}" data-k="Dormidas">${k.dormidas.length}${k.dormidas.length ? `<small>${gerMoneda(gerImporte(k.dormidas))}</small>` : ''}</span>
+        <span class="pln-td pln-pipe" data-k="Pipeline"><span class="pln-pipe-bar" aria-hidden="true"><i style="--w:${(k.pipeline * 100 / maxP).toFixed(1)}%"></i></span><b>${k.pipeline ? gerMoneda(k.pipeline) : '—'}</b></span>
+        <span class="pln-td" data-k="Señal">${senal(k)}</span>
+      </div>`).join('')}</div>`;
+  } else {
+    cuerpo = `<div class="pln-kams">${M.kams.map(k=>{
+      const abierta = plnKamAbierto===k.key;
+      const det = !abierta ? '' : `<div class="pln-kam-det">
+        <p class="pln-lec is-${k.senal.tone}"><b>${k.senal.txt}.</b> ${plnTxt(k.senal.porque)}</p>
+        <div class="pln-kam-grid">${[
+          ['Oportunidades nuevas', k.nuevas.length, per], ['Solicitudes a Arquitectura', k.solArq, per], ['Solicitudes a Presupuestos', k.solPpto, per],
+          ['Proyectos en trabajo', k.enTrabajo.length, 'hoy'], ['Tareas ARQ / PPTO abiertas', k.arq + ' / ' + k.ppto, k.share + '% del equipo'],
+          ['Propuestas terminadas', k.F.terminadas.length, per], ['Propuestas enviadas', k.F.enviadas.length, per],
+          ['En análisis', k.analisis.length, gerMoneda(gerImporte(k.analisis))], ['En negociación', k.negociacion.length, gerMoneda(gerImporte(k.negociacion))],
+          ['Vendidas', k.F.vendidas.length, per], ['Pipeline total', k.pipeline ? gerMoneda(k.pipeline) : '—', 'análisis + negociación'],
+          ['Dormidas', k.dormidas.length, k.dormidas.length ? gerMoneda(gerImporte(k.dormidas)) : '—', k.dormidas.length ? 'danger' : ''],
+          ['Días prom. sin movimiento', k.diasProm==null ? '—' : k.diasProm, 'post-propuesta'],
+        ].map(([t, v, s, tone])=>`<div class="${tone ? 'is-' + tone : ''}"><b>${v}</b><span>${t}</span><em>${s}</em></div>`).join('')}</div>
+        ${k.dormidas.length ? `<p class="pln-sub">Dormidas · más días sin movimiento primero</p><div class="pln-mini">${plnOrdenar(k.dormidas, M, 'riesgo').slice(0, 5).map(o=>`<div class="pln-mini-r"${plnAccion(`plnModalOpp(${o.id})`)}>${plnIdHtml(o)}<span class="pln-num">${gerMoneda(o.importe)}</span><span class="pln-num is-danger">${plnDias(M.info.get(o.id).dias)}</span>${plnAcciones(o, null, ['comentar', 'seguimiento'])}</div>`).join('')}</div>` : ''}
+        ${k.solicitudes.length ? `<p class="pln-sub">Solicitudes nuevas · ${per}</p><div class="pln-mini">${k.solicitudes.slice(0, 6).map(o=>`<div class="pln-mini-r"${plnAccion(`plnModalOpp(${o.id})`)}>${plnIdHtml(o, (o.proyecto || '—') + ' · ' + etapaLabelDisplay(o.etapa))}<span class="pln-num">${Number(o.importe) > 0 ? gerMoneda(o.importe) : '—'}</span>${plnAcciones(o, null, ['comentar'])}</div>`).join('')}</div>` : ''}
+      </div>`;
+      return `<div class="pln-kam is-${k.senal.tone}${abierta ? ' is-open' : ''}">
+        <button type="button" class="pln-kam-main" aria-expanded="${abierta}" onclick="plnKamToggle('${k.key}')">
+          <span class="pln-kam-nom"><b>${plnTxt(k.label)}</b><span class="pln-dem is-${k.demanda}">Demanda ${demTxt[k.demanda].toLowerCase()}</span></span>
+          <span class="pln-kam-c"><em>Capacidad en uso</em><b>ARQ ${k.arq} · PPTO ${k.ppto}</b><span>${k.solicitudes.length ? '+' + gerPlural(k.solicitudes.length, 'solicitud nueva', 'solicitudes nuevas') : 'sin solicitudes nuevas'}</span></span>
+          <span class="pln-kam-c"><em>Pipeline</em><b>${k.pipeline ? gerMoneda(k.pipeline) : '—'}</b><span>Enviadas ${k.F.enviadas.length} · Vendidas ${k.F.vendidas.length}</span></span>
+          <span class="pln-kam-c"><em>Post-propuesta</em><b>An ${k.analisis.length} · Neg ${k.negociacion.length}</b><span>${k.diasProm==null ? 'sin datos de movimiento' : 'prom. ' + k.diasProm + ' d sin mov.'}</span></span>
+          <span class="pln-kam-c${k.dormidas.length ? ' is-danger' : ''}"><em>Dormidas</em><b>${k.dormidas.length}${k.dormidas.length ? ' · ' + gerMoneda(gerImporte(k.dormidas)) : ''}</b><span>≥ ${PLN.diasDormida} días</span></span>
+          ${senal(k)}
+          <span class="pln-kam-chev">${plnIco('chev')}</span>
+        </button>${det}
+      </div>`;
+    }).join('')}</div>`;
+  }
+  const nota = M.otrosPost.length ? `<p class="pln-nota">Otros comerciales: ${gerPlural(M.otrosPost.length, 'oportunidad', 'oportunidades')} post-propuesta (${gerMoneda(gerImporte(M.otrosPost))}) fuera de esta comparación.</p>` : '';
+  return plnSec('kam', 'Eficiencia de pipeline y recursos', 'Demanda generada → capacidad utilizada → resultado comercial · ' + per, ctrl, cuerpo + nota, 'pln-kam-sec');
+}
+
+/* 7 · Pulso de la semana */
+function plnPulsoHtml(M){
+  const W = M.FW, P = M.FP;
+  const met = [
+    ['trabajadas', 'Oportunidades trabajadas'], ['entregables', 'Entregables completados'], ['enviadas', 'Propuestas enviadas'],
+    ['analisis', 'Pasaron a análisis'], ['negociacion', 'Pasaron a negociación'], ['vendidas', 'Vendidas'],
+  ];
+  const op = W.trabajadas.length, av = W.negociacion.length + W.vendidas.length;
+  let lec;
+  if(op >= 3 && av === 0 && W.enviadas.length * 3 <= op) lec = {tone:'warn', txt:'<b>Más ocupados que avanzando:</b> hay actividad operativa, pero nada pasó a Negociación ni se vendió esta semana.'};
+  else if(av) lec = {tone:'ok', txt:`<b>Avanzando:</b> ${gerPlural(av, 'oportunidad pasó', 'oportunidades pasaron')} a Negociación o venta esta semana.`};
+  else if(W.enviadas.length || W.analisis.length) lec = {tone:'neutral', txt:'<b>En movimiento:</b> salen propuestas, todavía sin avances de cierre.'};
+  else lec = {tone:'neutral', txt:'Semana sin movimiento comercial registrado todavía.'};
+  const cuerpo = `<p class="pln-lec is-${lec.tone}">${lec.txt}</p>
+    <div class="pln-pulso">${met.map(([k, t], i)=>{
+      const n = W[k].length, d = M.historialCubre ? n - P[k].length : null;
+      return `<div class="pln-pu${i >= 3 ? ' is-com' : ''}"${plnAccion(`plnModal('pulso','${k}')`)}><b>${n}</b><span>${t}</span>${d==null ? '' : `<em class="${d > 0 ? 'is-up' : (d < 0 ? 'is-down' : '')}">${d === 0 ? '=' : (d > 0 ? '↑ ' : '↓ ') + Math.abs(d)}</em>`}</div>`;
+    }).join('')}</div>
+    <p class="pln-nota">${M.historialCubre ? 'Variación vs el mismo tramo de la semana anterior (' + plnRangoTexto(M.RP) + ').' : 'Sin historial suficiente para comparar con la semana anterior.'}</p>`;
+  return plnSec('pulso', 'Pulso de la semana', '¿Estamos avanzando o solo ocupados? · ' + plnRangoTexto(M.RW), '', cuerpo, 'pln-pulso-sec');
+}
+
+/* 8 · Alertas resumidas */
+function plnAlertasHtml(M){
+  const g = [
+    {t:'Operación', items:[['tvenc', 'Tareas vencidas', M.tareasVencidas.length, 'danger'], ['cvenc', 'Fecha cliente vencida', M.clienteVencida.length, 'danger']]},
+    {t:'Comercial', items:[['svenc', 'Seguimientos vencidos', M.segVencidos.length, 'warn'], ['dorm', 'Oportunidades dormidas', M.dormidas.length, 'warn']]},
+    {t:'Capacidad', items:[['sineq', 'Proyectos sin equipo', M.sinEquipo.length, 'warn'], ['calta', 'Responsables con carga alta', M.cargaAlta.length, 'warn']]},
+  ];
+  const cuerpo = `<div class="pln-alg">${g.map(x=>`<div class="pln-al-g"><span class="pln-al-gt">${x.t}</span>${x.items.map(([k, t, n, tone])=>`
+      <div class="pln-al${n ? ' is-' + tone : ' is-cero'}"${plnAccion(`plnModal('alerta','${k}')`)}><span>${t}</span><b>${n}</b></div>`).join('')}</div>`).join('')}</div>`;
+  return plnSec('alertas', 'Alertas', 'Resumen por frente', '', cuerpo, 'pln-alertas');
+}
+
+/* ---------- Detalle (modal de Gerencia) ---------- */
+function plnModalOpp(id){ gerModalAbrir('opp', id); }
+function plnModal(tipo, clave){
+  const M = plnUlt || plnModelo();
+  const fila = (o, der, tone, sub)=>gerModalFila(o, der, tone, sub);
+  const filaImp = o=>fila(o, Number(o.importe) > 0 ? gerMoneda(o.importe) : 'Sin importe', '', (o.proyecto || '—') + ' · ' + (rsNombreCorto(nombreKAM(o)) || 'Sin comercial'));
+  const porImp = l=>l.slice().sort((a, b)=>(Number(b.importe) || 0) - (Number(a.importe) || 0));
+  const per = PLN_PERIODOS[plnPeriodo];
+  let kicker = 'Planner', titulo = '', html = '', destino = null, destinoTxt = 'Ver en el Planner →';
+  if(tipo==='kpi'){
+    if(clave==='pipeline'){
+      titulo = 'Pipeline activo';
+      html = gerResumenHtml([[M.pipeline.length, 'oportunidades'], [gerMoneda(gerImporte(M.pipeline)), 'importe'], [gerMoneda(plnPonderado(M.pipeline)), 'ponderado']]) +
+        `<p class="ger-m-sub">${etapaLabelDisplay('analisis')} · ${M.analisis.length} · ${gerMoneda(gerImporte(M.analisis))}</p>` + gerModalLista(porImp(M.analisis).map(filaImp), 6) +
+        `<p class="ger-m-sub">${etapaLabelDisplay('negociacion')} · ${M.negociacion.length} · ${gerMoneda(gerImporte(M.negociacion))}</p>` + gerModalLista(porImp(M.negociacion).map(filaImp), 6);
+      destino = ()=>plnIr('post', ()=>{ plnPost = 'analisis'; });
+    } else if(clave==='probable'){
+      titulo = 'Probable cierre';
+      html = `<p class="ger-m-sub">Análisis + Negociación con probabilidad ≥ ${PLN.probAlta}% y mes de cierre hasta ${formatMesCierre(M.horizonte)}.</p>` +
+        gerResumenHtml([[gerMoneda(gerImporte(M.probable)), 'importe'], [gerMoneda(plnPonderado(M.probable)), 'ponderado'], [M.sinDatosCierre.length, 'sin prob. o mes', M.sinDatosCierre.length ? 'warn' : '']]) +
+        gerModalLista(plnOrdenar(M.probable, M, 'cierre').map(o=>fila(o, gerMoneda(o.importe) + ' · ' + plnProb(o) + '%', 'ok', (o.proyecto || '—') + ' · ' + formatMesCierre(o.mesCierre))), 10) +
+        (M.sinDatosCierre.length ? `<p class="ger-m-sub">Sin probabilidad o mes de cierre (completar en la ficha)</p>` + gerModalLista(porImp(M.sinDatosCierre).map(o=>fila(o, 'Prob. ' + formatProbabilidadCierre(plnProb(o)) + ' · ' + plnMesTxt(o.mesCierre), 'warn')), 6) : '');
+      destino = ()=>plnIr('post', ()=>{ plnPost = 'negociacion'; });
+    } else if(clave==='produccion'){
+      titulo = 'Producción · ' + per;
+      html = gerResumenHtml([[M.F.trabajadas.length, 'trabajadas'], [M.F.terminadas.length, 'terminadas'], [M.F.entregables.length, 'entregables']]) +
+        `<p class="ger-m-sub">Entregables de Arquitectura y Presupuestos completados</p>` +
+        gerModalLista(M.F.entregables.slice().sort((a, b)=>a.e.fechaCompletado > b.e.fechaCompletado ? -1 : 1).map(x=>fila(x.o, formatFechaCorta(x.e.fechaCompletado), 'ok', (x.e.nombre || 'Tarea') + ' · ' + (nombreResponsableEntregable(x.e) || 'Sin responsable'))), 10);
+      destino = ()=>plnIr('prod');
+    } else if(clave==='riesgo'){
+      titulo = 'Pipeline en riesgo';
+      html = `<p class="ger-m-sub">En Análisis o Negociación con ${PLN.diasDormida} días o más sin movimiento.</p>` +
+        gerResumenHtml([[M.dormidas.length, 'dormidas', M.dormidas.length ? 'danger' : ''], [gerMoneda(gerImporte(M.dormidas)), 'importe']]) +
+        gerModalLista(plnOrdenar(M.dormidas, M, 'riesgo').map(o=>fila(o, plnDias(M.info.get(o.id).dias) + ' · ' + gerMoneda(o.importe), 'danger', (o.proyecto || '—') + ' · ' + etapaLabelDisplay(o.etapa))), 12);
+      destino = ()=>plnIr('post', ()=>{ plnPost = 'analisis'; plnAnCat = 'dormida'; });
+    } else if(clave==='demanda'){
+      titulo = 'Demanda comercial · ' + per;
+      html = gerResumenHtml([[M.nuevas.length, 'oportunidades nuevas'], [M.nuevasTec.length, 'requieren ARQ / PPTO'], [M.tareasTecNuevas.length, 'tareas técnicas nuevas']]) +
+        gerModalLista(porImp(M.nuevas).map(filaImp), 10);
+      destino = ()=>plnIr('kam');
+    }
+  } else if(tipo==='flujo' || tipo==='pulso'){
+    const F = tipo==='flujo' ? M.FF : M.FW;
+    const p = PLN_PASOS.find(x=>x.k===clave) || {label:'Entregables completados'};
+    kicker = tipo==='flujo' ? 'Flujo de propuestas · ' + PLN_PERIODOS[plnFlujoPer] : 'Pulso de la semana';
+    if(clave==='entregables'){
+      titulo = 'Entregables completados';
+      html = gerModalLista(F.entregables.map(x=>fila(x.o, formatFechaCorta(x.e.fechaCompletado), 'ok', (x.e.nombre || 'Tarea') + ' · ' + (RS_AREA_CORTA[x.e.area] || ''))), 12);
+    } else {
+      titulo = clave==='analisis' ? 'Pasaron a Análisis' : (clave==='negociacion' ? 'Pasaron a Negociación' : p.label);
+      html = gerResumenHtml([[F[clave].length, 'oportunidades'], [gerMoneda(gerImporte(F[clave])), 'importe']]) + gerModalLista(porImp(F[clave]).map(filaImp), 12);
+    }
+  } else if(tipo==='alerta'){
+    kicker = 'Alertas';
+    if(clave==='tvenc'){
+      titulo = 'Tareas vencidas';
+      html = gerModalLista(M.tareasVencidas.slice().sort((a, b)=>a.e.fechaEntrega < b.e.fechaEntrega ? -1 : 1).map(x=>fila(x.o, 'hace ' + gerDiasTxt(daysBetween(x.e.fechaEntrega, M.hoy)), 'danger', (x.e.nombre || 'Tarea') + ' · ' + (nombreResponsableEntregable(x.e) || 'Sin responsable'))), 12);
+      destino = ()=>plnIr('foco', ()=>{ plnFocoGrupo = 'operacion'; });
+    } else if(clave==='cvenc'){
+      titulo = 'Fecha cliente vencida';
+      html = gerModalLista(M.clienteVencida.map(o=>fila(o, 'hace ' + gerDiasTxt(daysBetween(rsFechaCliente(o), M.hoy)), 'danger')), 12);
+      destino = ()=>plnIr('foco', ()=>{ plnFocoGrupo = 'operacion'; });
+    } else if(clave==='svenc'){
+      titulo = 'Seguimientos vencidos';
+      html = gerModalLista(M.segVencidos.map(o=>fila(o, plnSegTxt(o, M.hoy).txt, 'danger', (o.proyecto || '—') + ' · ' + (rsNombreCorto(nombreKAM(o)) || 'Sin comercial'))), 12);
+      destino = ()=>plnIr('post', ()=>{ plnPost = 'analisis'; plnAnCat = 'seguimiento'; });
+    } else if(clave==='dorm'){
+      return plnModal('kpi', 'riesgo');
+    } else if(clave==='sineq'){
+      titulo = 'Proyectos sin equipo';
+      html = `<p class="ger-m-sub">Tareas técnicas sin responsable, o en cotización sin arquitecto ni presupuestador.</p>` +
+        gerModalLista(M.sinEquipo.map(o=>fila(o, etapaLabelDisplay(o.etapa), 'warn')), 12);
+      destino = ()=>plnIr('foco', ()=>{ plnFocoGrupo = 'capacidad'; });
+    } else if(clave==='calta'){
+      titulo = 'Responsables con carga alta';
+      html = `<p class="ger-m-sub">Mismo criterio de Carga laboral: 70% o más de los pendientes del responsable más cargado del área.</p>` +
+        (M.cargaAlta.length ? `<div class="ger-m-lista">${M.cargaAlta.map(r=>`<div class="ger-m-fila is-plana"><span class="ger-fila-id"><b>${plnTxt(r.name)}</b><span>${RS_AREA_CORTA[r.area]}</span></span><span class="ger-m-der is-warn">${r.count} pendientes</span></div>`).join('')}</div>` : '<div class="ger-vacio">Sin registros.</div>');
+      destino = ()=>plnIr('prod');
+    }
+  }
+  gerModalMostrar({kicker, titulo, html, destino, destinoTxt});
+}
+
+/* ---------- Acciones (siempre sobre los mecanismos existentes) ---------- */
+function plnAbrirTarea(oppId, entId){
+  gerModalCerrar();
+  if(entId==null) openRSDetailDrawer(oppId); else openRSDetailDrawer(oppId, entId);
+}
+function plnIncidencia(oppId, entId){
+  gerModalCerrar();
+  if(!puedeEditar){ avisarSoloLectura(); return; }
+  plnAbrirTarea(oppId, entId);
+  incAbrirForm('rs', entId);
+}
+function plnAbrirEquipo(oppId){
+  gerModalCerrar();
+  if(!puedeEditar){ openRSDetailDrawer(oppId); return; }
+  openEditModal(oppId);
+  fichaSetTab('equipo');
+}
+function plnFicha(oppId){ gerModalCerrar(); gerIrFicha(oppId); }
+
+/* Intervención rápida: comentario, seguimiento y probabilidad. */
+let plnQe = null;
+let plnQeFoco = null;
+function plnQeAbrir(oppId, modo){
+  if(!puedeEditar){ avisarSoloLectura(); return; }
+  const o = oportunidades.find(x=>x.id===oppId);
+  if(!o) return;
+  gerModalCerrar();
+  plnQe = {oppId, modo};
+  const conCampos = modo!=='comentar';
+  document.getElementById('pln-qe-k').textContent = 'L-' + o.id + ' · ' + etapaLabelDisplay(o.etapa);
+  document.getElementById('pln-qe-t').textContent = conCampos ? 'Seguimiento y probabilidad' : 'Comentario';
+  document.getElementById('pln-qe-sub').textContent = (o.cliente || '—') + ' · ' + (o.proyecto || '—') + (nombreKAM(o) ? ' · ' + nombreKAM(o) : '');
+  document.getElementById('pln-qe-campos').hidden = !conCampos;
+  document.getElementById('pln-qe-fecha').value = o.fechaSeguimiento || '';
+  const p = plnProb(o);
+  const opts = PROBABILIDADES_CIERRE.slice();
+  if(p!=null && !opts.includes(p)) opts.push(p);
+  document.getElementById('pln-qe-prob').innerHTML = `<option value="">Sin dato</option>` + opts.sort((a, b)=>a - b).map(v=>`<option value="${v}"${v===p ? ' selected' : ''}>${v}%</option>`).join('');
+  const hoy = todayISO();
+  document.getElementById('pln-qe-atajos').innerHTML = [['Mañana', 1], ['+3 días', 3], ['+1 semana', 7], ['+2 semanas', 14]]
+    .map(([t, n])=>`<button type="button" class="pln-qe-at" onclick="document.getElementById('pln-qe-fecha').value='${addDaysISO(hoy, n)}'">${t}</button>`).join('');
+  document.getElementById('pln-qe-nota-k').textContent = conCampos ? 'Comentario (opcional)' : 'Comentario / motivo';
+  document.getElementById('pln-qe-txt').value = '';
+  const n = fichaUltimaNota(o);
+  document.getElementById('pln-qe-ult').innerHTML = n ? `Último comentario · ${fichaDiaHistorial(n.ts)} · ${plnTxt(n.usuario || 'Sistema')}<span>${plnTxt(n.detalle)}</span>` : 'Sin comentarios todavía. Queda en la bitácora de la oportunidad.';
+  const ov = document.getElementById('pln-qe');
+  if(ov.classList.contains('hidden')) plnQeFoco = document.activeElement;
+  ov.classList.remove('hidden');
+  const box = ov.querySelector('.ger-mbox');
+  box.style.animation = 'none'; void box.offsetWidth; box.style.animation = '';
+  setTimeout(()=>{ const el = document.getElementById(conCampos ? 'pln-qe-fecha' : 'pln-qe-txt'); if(el) el.focus({preventScroll:true}); }, 30);
+}
+function plnQeCerrar(){
+  const ov = document.getElementById('pln-qe');
+  if(!ov || ov.classList.contains('hidden')) return;
+  ov.classList.add('hidden');
+  plnQe = null;
+  if(plnQeFoco && document.contains(plnQeFoco)) plnQeFoco.focus({preventScroll:true});
+}
+function plnQeGuardar(){
+  if(!plnQe) return;
+  if(!puedeEditar){ avisarSoloLectura(); return; }
+  const o = oportunidades.find(x=>x.id===plnQe.oppId);
+  if(!o){ plnQeCerrar(); return; }
+  const cambios = [];
+  if(plnQe.modo!=='comentar'){
+    const fecha = document.getElementById('pln-qe-fecha').value || '';
+    if(fecha !== (o.fechaSeguimiento || '')){
+      registrarEventoManual(o, 'comercial', 'Cambio de seguimiento', '', o.fechaSeguimiento ? formatFechaCorta(o.fechaSeguimiento) : '—', fecha ? formatFechaCorta(fecha) : '—');
+      o.fechaSeguimiento = fecha;
+      cambios.push('seguimiento');
+    }
+    const v = document.getElementById('pln-qe-prob').value;
+    const nueva = v==='' ? null : Number(v), previa = plnProb(o);
+    if(nueva !== previa){
+      registrarEventoManual(o, 'comercial', 'Cambio de probabilidad', '', formatProbabilidadCierre(previa), formatProbabilidadCierre(nueva));
+      o.probabilidadCierre = nueva;
+      cambios.push('probabilidad');
+    }
+  }
+  const txt = document.getElementById('pln-qe-txt').value.trim();
+  if(txt){ registrarEventoManual(o, 'comercial', 'Nota', txt, '', ''); cambios.push('comentario'); }
+  if(!cambios.length){ plnQeCerrar(); return; }
+  persistLocal();
+  plnQeCerrar();
+  renderAll();
+  showToast(cambios.length === 1 && cambios[0]==='comentario' ? 'Comentario agregado a la bitácora.' : 'Cambios guardados.', 'ok');
+}
+document.addEventListener('keydown', ev=>{
+  const ov = document.getElementById('pln-qe');
+  if(!ov || ov.classList.contains('hidden')) return;
+  if(ev.key==='Escape'){ ev.stopPropagation(); plnQeCerrar(); }
+  else if(ev.key==='Enter' && (ev.ctrlKey || ev.metaKey)){ ev.preventDefault(); plnQeGuardar(); }
+}, true);
+
 /* ---------- Pestañas principales ---------- */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
@@ -14064,7 +16138,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.getElementById(btn.dataset.tab).classList.add('active');
     positionTabIndicator();
     if(btn.dataset.tab === 'cronograma') requestAnimationFrame(renderGantt);
-    if(btn.dataset.tab === 'gerencia') renderGerencia();
+    if(btn.dataset.tab === 'gerencia'){ plnAnimar = true; renderGerencia(); }
     renderKPIs();
     hideGlobalTooltip();
   });
@@ -14097,6 +16171,7 @@ let sideResizeTimer = null;
    momento (incluso antes de que termine el arranque). */
 function sideSincronizar(){
   const panel = document.querySelector('.tab-panel.active');
+  const gerSv = typeof gerSubvistaActiva === 'function' ? gerSubvistaActiva() : null;
   const tab = panel ? panel.id : 'revision';
   const subCarga = cargaVista === 'equipo' ? 'equipo' : 'carga';
   const items = document.querySelectorAll('.app-sidebar .tab-btn');
@@ -14113,6 +16188,7 @@ function sideSincronizar(){
   });
   let nombre = activo.dataset.sideLabel;
   if(tab === 'carga' && cargaVista === 'desempeno') nombre = 'Desempeño';
+  if(tab === 'gerencia' && gerSv) nombre = 'Gerencia · ' + gerSv.label;
   const n = document.getElementById('view-context-name');
   const m = document.getElementById('side-mobilebar-title');
   if(n) n.textContent = nombre;
@@ -14225,7 +16301,7 @@ requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.cla
 
 /* ---------- Init ---------- */
 initSelectors();
-applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+applyTheme(localStorage.getItem(THEME_KEY) || 'light');
 ordenTrabajoMigradoEnCarga = false;
 const habiaStorage = loadFromStorage();
 const originalesRecuperadas = recuperarFechasOriginales(oportunidades);
@@ -14272,7 +16348,9 @@ let appIniciada = false;  // evita recargar datos/realtime en cada TOKEN_REFRESH
    así que el panel no ofrece botones que el servidor después va a rechazar. */
 const ROLES_QUE_EDITAN = ['admin', 'editor'];
 
-function puedeVerGerencia(){ return rolConfirmado && puedeEditar; }
+/* Gerencia: la pestaña se ve si el rol edita y tiene al menos una subvista
+   permitida (ver PERMISOS_POR_ROL / GER_SUBVISTAS). */
+function puedeVerGerencia(){ return rolConfirmado && puedeEditar && gerSubvistasVisibles().length > 0; }
 function aplicarPermisosDeRol(){
   document.body.classList.toggle('solo-lectura', !puedeEditar);
   document.getElementById('btn-usuarios').style.display = esAdmin() ? '' : 'none';
@@ -14288,6 +16366,8 @@ function aplicarPermisosDeRol(){
     const btnRev = document.querySelector('.app-sidebar .tab-btn[data-tab="revision"]');
     if(btnRev) btnRev.click();
   }
+  /* Subvistas de Gerencia según permisos (se repinta la navegación interna). */
+  renderGerencia();
   /* El N° de la secuencia en Carga laboral lleva el atributo `disabled` según
      el rol dentro del HTML ya pintado. El primer render ocurre antes de que
      llegue el perfil, así que se repinta una vez que el rol está confirmado; el
