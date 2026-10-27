@@ -108,6 +108,46 @@
     background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;font-size:12.5px;
   }
   .rol-status{font-size:11px;color:var(--ink-dim);margin-left:8px;}
+  /* Permisos del perfil operativo restringido: áreas y acciones marcables. */
+  .permisos{margin-top:14px;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--card-surface);}
+  .permisos-grupo + .permisos-grupo{margin-top:12px;}
+  .permisos-titulo{display:block;font-size:11px;font-weight:600;color:var(--ink-soft);margin-bottom:7px;letter-spacing:.03em;text-transform:uppercase;}
+  .permisos-opciones{display:flex;flex-wrap:wrap;gap:8px;}
+  .permiso-chk{
+    display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;cursor:pointer;
+    border:1px solid var(--line);border-radius:var(--radius-pill);background:var(--surface);font-size:12.5px;
+    transition:border-color .16s var(--ease),background-color .16s var(--ease);
+  }
+  .permiso-chk:has(input:checked){border-color:var(--teal);background:var(--ok-bg);}
+  .permiso-chk input{accent-color:var(--teal);margin:0;}
+  .permisos .hint{margin-top:10px;}
+  .permisos-resumen{font-size:12px;color:var(--ink-soft);}
+  .btn-mini{
+    height:30px;padding:0 12px;margin-left:8px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--surface-alt);color:var(--ink);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;
+  }
+  .btn-mini:hover{border-color:var(--teal);}
+  tr.fila-permisos td{padding-top:0;}
+  .btn-mini.peligro{color:var(--danger);}
+  .btn-mini.peligro:hover{border-color:var(--danger);background:var(--danger-bg);}
+  .acciones-celda{white-space:nowrap;}
+  .acciones-celda .btn-mini:first-child{margin-left:0;}
+  /* Campo de contraseña con botón "ojito" para mostrar / ocultar. */
+  .pass-wrap{position:relative;display:block;}
+  .pass-wrap input{padding-right:40px;}
+  .pass-ojo{
+    position:absolute;right:4px;top:50%;transform:translateY(-50%);
+    width:32px;height:30px;display:grid;place-items:center;border:none;background:none;
+    color:var(--ink-dim);cursor:pointer;border-radius:var(--radius-sm);
+  }
+  .pass-ojo:hover{color:var(--ink);}
+  .pass-ojo:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ok-bg);}
+  .pass-ojo svg{width:18px;height:18px;}
+  .pass-ojo .ojo-cerrado{display:none;}
+  .pass-ojo.is-visible .ojo-abierto{display:none;}
+  .pass-ojo.is-visible .ojo-cerrado{display:block;}
+  .fila-pass{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;}
+  .fila-pass .field{flex:1;min-width:200px;max-width:320px;}
   .empty-state, .access-denied{text-align:center;color:var(--ink-soft);padding:30px 10px;font-size:13px;}
   .access-denied h2{font-family:'Space Grotesk',sans-serif;color:var(--ink);}
 </style>
@@ -135,6 +175,95 @@ const SUPABASE_URL = 'https://tfzanbbdvzullwlauxia.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_q-RLhPZqhDtnPHhmkkXaHA_d7FRXHC6';
 let db = null;
 let rolesDisponibles = [];
+/* Sin la columna usuario.permisos (supabase/25 sin correr) la lista igual
+   carga, pero no se pueden asignar permisos. */
+let hayColumnaPermisos = true;
+
+/* PERFIL OPERATIVO RESTRINGIDO — ver supabase/25_perfil_operativo_restringido.sql.
+   Solo ese rol lleva permisos propios: qué áreas ve y qué acciones puede hacer
+   en ellas. admin / editor / visor siguen funcionando por rol, sin permisos. */
+const ROL_RESTRINGIDO = 'operativo_restringido';
+const AREAS_PERMISO = [
+  {value:'comercial',    label:'Comercial'},
+  {value:'arquitectura', label:'Arquitectura'},
+  {value:'presupuestos', label:'Presupuestos e Ingeniería'},
+];
+/* Pestañas que puede abrir. Desempeño muestra solo lo de sus áreas. */
+const VISTAS_PERMISO = [
+  {value:'revision',  label:'Revisión semanal'},
+  {value:'carga',     label:'Carga laboral'},
+  {value:'desempeno', label:'Desempeño'},
+];
+const ACCIONES_PERMISO = [
+  {value:'ver',               label:'Ver'},
+  {value:'crear',             label:'Crear tareas'},
+  {value:'editar',            label:'Editar tareas'},
+  {value:'completar_tareas',  label:'Completar tareas'},
+  {value:'actualizar_avance', label:'Actualizar avances'},
+];
+const PERMISOS_INICIALES = {areas:[], vistas:['revision', 'carga'], acciones:{ver:true}};
+let permisosPorUsuario = {};
+
+function rolDescripcion(rolId){
+  const r = rolesDisponibles.find(function(x){ return x.identificador === Number(rolId); });
+  return r ? r.descripcion : '';
+}
+
+/* Bloque de casillas. "clave" distingue el formulario de alta de cada fila. */
+function permisosHtml(clave, permisos){
+  const p = permisos || PERMISOS_INICIALES;
+  const acciones = p.acciones || {};
+  const vistas = Array.isArray(p.vistas) ? p.vistas : PERMISOS_INICIALES.vistas;
+  const chk = function(tipo, op, marcado){
+    return '<label class="permiso-chk"><input type="checkbox" data-permiso="' + tipo + '" value="' + op.value + '"' + (marcado ? ' checked' : '') + '>' + escapeHtml(op.label) + '</label>';
+  };
+  return '<div class="permisos" data-permisos="' + escapeHtml(clave) + '">' +
+    '<div class="permisos-grupo"><span class="permisos-titulo">Áreas que ve</span><div class="permisos-opciones">' +
+      AREAS_PERMISO.map(function(a){ return chk('area', a, (p.areas || []).indexOf(a.value) !== -1); }).join('') +
+    '</div></div>' +
+    '<div class="permisos-grupo"><span class="permisos-titulo">Vistas</span><div class="permisos-opciones">' +
+      VISTAS_PERMISO.map(function(v){ return chk('vista', v, vistas.indexOf(v.value) !== -1); }).join('') +
+    '</div></div>' +
+    '<div class="permisos-grupo"><span class="permisos-titulo">Acciones permitidas</span><div class="permisos-opciones">' +
+      ACCIONES_PERMISO.map(function(a){ return chk('accion', a, acciones[a.value] === true); }).join('') +
+    '</div></div>' +
+    '<p class="hint">Ve solo las vistas marcadas, con las tareas de sus áreas y sin importes. Las acciones distintas de <b>Ver</b> quedan guardadas y la base ya las respeta; en el panel se irán habilitando a medida que se conecten.</p>' +
+  '</div>';
+}
+
+function leerPermisos(clave){
+  const caja = document.querySelector('[data-permisos="' + clave + '"]');
+  const areas = [], vistas = [], acciones = {};
+  caja.querySelectorAll('input[data-permiso="area"]').forEach(function(i){ if(i.checked) areas.push(i.value); });
+  caja.querySelectorAll('input[data-permiso="vista"]').forEach(function(i){ if(i.checked) vistas.push(i.value); });
+  caja.querySelectorAll('input[data-permiso="accion"]').forEach(function(i){ acciones[i.value] = i.checked; });
+  return {areas: areas, vistas: vistas, acciones: acciones};
+}
+
+function permisosValidos(p){
+  if(!p.areas.length) return 'Marcá al menos un área.';
+  if(!p.acciones.ver) return 'Sin "Ver" la persona no puede consultar nada.';
+  if(!p.vistas.length) return 'Marcá al menos una vista.';
+  if(p.vistas.indexOf('desempeno') !== -1 && p.vistas.indexOf('carga') === -1) return 'Desempeño se abre desde Carga laboral: marcá también Carga laboral.';
+  return '';
+}
+
+function permisosResumen(p){
+  if(!p || !p.areas || !p.areas.length) return 'Sin permisos asignados';
+  const areas = p.areas.map(function(a){ const x = AREAS_PERMISO.find(function(y){ return y.value === a; }); return x ? x.label : a; }).join(' + ');
+  const acciones = ACCIONES_PERMISO.filter(function(a){ return p.acciones && p.acciones[a.value] === true; }).map(function(a){ return a.label; });
+  const vistas = (Array.isArray(p.vistas) ? p.vistas : PERMISOS_INICIALES.vistas)
+    .map(function(v){ const x = VISTAS_PERMISO.find(function(y){ return y.value === v; }); return x ? x.label : v; });
+  return areas + ' · ' + vistas.join(', ') + ' · ' + (acciones.length ? acciones.join(', ') : 'sin acciones');
+}
+
+/* Usuario sugerido: primer nombre + primer apellido, sin tildes ni espacios
+   ("Thalía Pérez Ruiz" → "thalia.perez"). Se puede cambiar a mano. */
+function usuarioSugerido(nombre){
+  const partes = String(nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-zs]/g, '').trim().split(/s+/).filter(Boolean);
+  return partes.slice(0, 2).join('.');
+}
 
 /* Igual que en login.html: Supabase Auth identifica por correo, así que el
    usuario que se elija acá se convierte en "usuario@friopacking.pe" para
@@ -147,6 +276,26 @@ const DOMINIO_USUARIOS = 'friopacking.pe';
 function correoDesdeUsuario(entrada){
   const v = String(entrada || '').trim().toLowerCase();
   return v.includes('@') ? v : v + '@' + DOMINIO_USUARIOS;
+}
+
+/* id de la cuenta del admin que usa esta vista: no puede eliminarse a sí mismo. */
+let miUid = null;
+
+/* Input de contraseña con el botón para verla. */
+function passHtml(id){
+  return '<span class="pass-wrap"><input type="password" id="' + id + '" minlength="6" required autocomplete="new-password">' +
+    '<button type="button" class="pass-ojo" onclick="alternarVerPass(this)" aria-label="Mostrar contraseña" title="Mostrar contraseña">' +
+      '<svg class="ojo-abierto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      '<svg class="ojo-cerrado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.2A10.6 10.6 0 0 1 12 4c6.5 0 10 8 10 8a17.6 17.6 0 0 1-2.2 3.2M6.6 6.6C3.9 8.4 2 12 2 12s3.5 8 10 8a9.7 9.7 0 0 0 5.4-1.6M3 3l18 18M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>' +
+    '</button></span>';
+}
+function alternarVerPass(btn){
+  const input = btn.parentNode.querySelector('input');
+  const ver = input.type === 'password';
+  input.type = ver ? 'text' : 'password';
+  btn.classList.toggle('is-visible', ver);
+  const txt = ver ? 'Ocultar contraseña' : 'Mostrar contraseña';
+  btn.setAttribute('aria-label', txt); btn.title = txt;
 }
 
 function escapeHtml(s){
@@ -180,16 +329,22 @@ async function cargarUsuarios(){
   /* Sin columna "user": la tabla `usuario` de la base no la tiene (ver el
      encabezado de supabase/12_roles_permisos.sql). Se muestra `activo`, que
      sí existe, para distinguir a alguien dado de baja. */
-  const {data, error} = await db.from('usuario').select('identificador, nombre, usuario_login, rol_id, roles(descripcion)').order('nombre');
+  let {data, error} = await db.from('usuario').select('identificador, nombre, usuario_login, rol_id, permisos, roles(descripcion)').order('nombre');
+  if(error){
+    const r = await db.from('usuario').select('identificador, nombre, usuario_login, rol_id, roles(descripcion)').order('nombre');
+    if(!r.error){ hayColumnaPermisos = false; data = r.data; error = null; }
+  }
   const tbody = document.getElementById('tabla-usuarios-body');
   if(error){
-    tbody.innerHTML = '<tr><td colspan="3"><p class="msg error">No se pudo cargar la lista de usuarios: ' + escapeHtml(error.message) + '</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><p class="msg error">No se pudo cargar la lista de usuarios: ' + escapeHtml(error.message) + '</p></td></tr>';
     return;
   }
   if(!data || !data.length){
-    tbody.innerHTML = '<tr><td colspan="3"><p class="empty-state">Todavía no hay usuarios cargados.</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><p class="empty-state">Todavía no hay usuarios cargados.</p></td></tr>';
     return;
   }
+  permisosPorUsuario = {};
+  data.forEach(function(u){ permisosPorUsuario[u.identificador] = u.permisos || null; });
   tbody.innerHTML = data.map(function(u){
     /* El identificador es un uuid, no un número: va entre comillas dentro del
        onchange. Sin las comillas, 2cb308f1-6236-... se interpreta como una
@@ -199,8 +354,96 @@ async function cargarUsuarios(){
       '<td>' + escapeHtml(u.nombre) + '</td>' +
       '<td>' + escapeHtml(u.usuario_login || '—') + '</td>' +
       '<td><select onchange="handleCambiarRol(&quot;' + id + '&quot;, this)">' + opcionesRol(u.rol_id) + '</select><span class="rol-status" id="rol-status-' + id + '"></span></td>' +
+      '<td id="permisos-celda-' + id + '">' + permisosCeldaHtml(u.identificador, rolDescripcion(u.rol_id)) + '</td>' +
+      '<td class="acciones-celda">' +
+        '<button type="button" class="btn-mini" onclick="abrirCambioPass(&quot;' + id + '&quot;)">Contraseña</button>' +
+        (u.identificador === miUid ? '' :
+          '<button type="button" class="btn-mini peligro" onclick="eliminarUsuario(&quot;' + id + '&quot;, this)" data-nombre="' + escapeHtml(u.nombre) + '">Eliminar</button>') +
+      '</td>' +
     '</tr>';
   }).join('');
+}
+
+function permisosCeldaHtml(id, rol){
+  if(rol !== ROL_RESTRINGIDO) return '<span class="permisos-resumen">Según el rol</span>';
+  if(!hayColumnaPermisos) return '<span class="permisos-resumen">Falta correr supabase/25</span>';
+  return '<span class="permisos-resumen">' + escapeHtml(permisosResumen(permisosPorUsuario[id])) + '</span>' +
+    '<button type="button" class="btn-mini" onclick="abrirEditorPermisos(&quot;' + escapeHtml(id) + '&quot;)">Editar</button>';
+}
+
+function abrirEditorPermisos(id){
+  const previa = document.getElementById('fila-permisos-' + id);
+  if(previa){ previa.remove(); return; }
+  const fila = document.querySelector('tr[data-id="' + id + '"]');
+  const tr = document.createElement('tr');
+  tr.className = 'fila-permisos';
+  tr.id = 'fila-permisos-' + id;
+  tr.innerHTML = '<td colspan="5">' + permisosHtml(id, permisosPorUsuario[id]) +
+    '<div class="form-actions"><button type="button" class="btn-submit" onclick="guardarPermisos(&quot;' + escapeHtml(id) + '&quot;, this)">Guardar permisos</button>' +
+    '<span class="rol-status" id="permisos-status-' + escapeHtml(id) + '"></span></div></td>';
+  fila.after(tr);
+}
+
+async function guardarPermisos(id, btn){
+  const status = document.getElementById('permisos-status-' + id);
+  const p = leerPermisos(id);
+  const invalido = permisosValidos(p);
+  if(invalido){ status.textContent = invalido; return; }
+  btn.disabled = true; status.textContent = 'Guardando…';
+  const {error} = await db.from('usuario').update({permisos: p}).eq('identificador', id);
+  btn.disabled = false;
+  if(error){ console.error('No se pudieron guardar los permisos:', error); status.textContent = 'Error al guardar'; return; }
+  permisosPorUsuario[id] = p;
+  document.getElementById('permisos-celda-' + id).innerHTML = permisosCeldaHtml(id, ROL_RESTRINGIDO);
+  document.getElementById('fila-permisos-' + id).remove();
+}
+
+/* Cambio de contraseña: fila desplegable bajo el usuario. La contraseña actual
+   no se puede mostrar (Supabase la guarda cifrada); solo se reemplaza. */
+function abrirCambioPass(id){
+  const previa = document.getElementById('fila-pass-' + id);
+  if(previa){ previa.remove(); return; }
+  const fila = document.querySelector('tr[data-id="' + id + '"]');
+  const tr = document.createElement('tr');
+  tr.className = 'fila-permisos';
+  tr.id = 'fila-pass-' + id;
+  tr.innerHTML = '<td colspan="5"><div class="permisos"><div class="fila-pass">' +
+      '<label class="field"><span>Nueva contraseña</span>' + passHtml('pass-' + id) + '</label>' +
+      '<button type="button" class="btn-submit" onclick="guardarContrasena(&quot;' + escapeHtml(id) + '&quot;, this)">Guardar contraseña</button>' +
+      '<span class="rol-status" id="pass-status-' + escapeHtml(id) + '"></span>' +
+    '</div><p class="hint">La contraseña actual no se puede ver: se guarda cifrada. Escribí la nueva y pasásela a la persona.</p></div></td>';
+  fila.after(tr);
+  document.getElementById('pass-' + id).focus();
+}
+
+async function guardarContrasena(id, btn){
+  const input = document.getElementById('pass-' + id);
+  const status = document.getElementById('pass-status-' + id);
+  if(input.value.length < 6){ status.textContent = 'Mínimo 6 caracteres.'; return; }
+  btn.disabled = true; status.textContent = 'Guardando…';
+  const {error} = await db.rpc('admin_cambiar_contrasena', {p_uid: id, p_password: input.value});
+  btn.disabled = false;
+  if(error){
+    console.error('No se pudo cambiar la contraseña:', error);
+    status.textContent = /admin_cambiar_contrasena/.test(error.message || '') ? 'Falta correr supabase/27' : (error.message || 'Error al guardar');
+    return;
+  }
+  status.textContent = 'Contraseña cambiada ✓';
+  setTimeout(function(){ const f = document.getElementById('fila-pass-' + id); if(f) f.remove(); }, 1500);
+}
+
+async function eliminarUsuario(id, btn){
+  const nombre = btn.dataset.nombre || 'este usuario';
+  if(!confirm('¿Eliminar a ' + nombre + '? Se borra su cuenta y ya no podrá entrar. No se puede deshacer.')) return;
+  btn.disabled = true; btn.textContent = 'Eliminando…';
+  const {error} = await db.rpc('admin_eliminar_usuario', {p_uid: id});
+  if(error){
+    console.error('No se pudo eliminar el usuario:', error);
+    alert(/admin_eliminar_usuario/.test(error.message || '') ? 'Falta correr supabase/27_admin_contrasena_eliminar.sql en Supabase.' : (error.message || 'No se pudo eliminar el usuario.'));
+    btn.disabled = false; btn.textContent = 'Eliminar';
+    return;
+  }
+  cargarUsuarios();
 }
 
 async function handleCambiarRol(id, select){
@@ -210,6 +453,16 @@ async function handleCambiarRol(id, select){
   status.textContent = error ? 'Error al guardar' : 'Guardado ✓';
   if(error) console.error('No se pudo cambiar el rol:', error);
   setTimeout(function(){ status.textContent = ''; }, 2500);
+  if(error) return;
+  /* Al pasar al perfil restringido se abren sus permisos para asignarlos:
+     sin áreas, la persona entra y no ve nada. */
+  const rol = rolDescripcion(select.value);
+  document.getElementById('permisos-celda-' + id).innerHTML = permisosCeldaHtml(id, rol);
+  const abierta = document.getElementById('fila-permisos-' + id);
+  if(abierta) abierta.remove();
+  if(rol === ROL_RESTRINGIDO && hayColumnaPermisos && !(permisosPorUsuario[id] && (permisosPorUsuario[id].areas || []).length)){
+    abrirEditorPermisos(id);
+  }
 }
 
 async function handleCrearUsuario(ev){
@@ -222,6 +475,13 @@ async function handleCrearUsuario(ev){
   const btn = document.getElementById('btn-crear-usuario');
   const msg = document.getElementById('crear-usuario-msg');
   msg.hidden = true;
+  const restringido = rolDescripcion(rolId) === ROL_RESTRINGIDO;
+  const permisos = restringido ? leerPermisos('nuevo') : null;
+  const invalido = permisos ? permisosValidos(permisos) : '';
+  if(invalido){
+    msg.className = 'msg error'; msg.textContent = invalido; msg.hidden = false;
+    return;
+  }
   btn.disabled = true; btn.textContent = 'Creando…';
 
   try{
@@ -251,6 +511,7 @@ async function handleCrearUsuario(ev){
       usuario_login: usuarioLogin,
       nombre: nombre,
       rol_id: rolId,
+      ...(permisos ? {permisos: permisos} : {}),
     });
     if(errPerfil) throw errPerfil;
 
@@ -258,6 +519,10 @@ async function handleCrearUsuario(ev){
     msg.textContent = 'Usuario creado. Si el proyecto tiene "Confirm email" activado en Supabase, la persona debe confirmar su correo antes de poder ingresar.';
     msg.hidden = false;
     document.getElementById('form-crear-usuario').reset();
+    usuarioEditadoAMano = false;
+    const ojo = document.querySelector('#form-crear-usuario .pass-ojo.is-visible');
+    if(ojo) alternarVerPass(ojo);
+    actualizarPermisosNuevo();
     cargarUsuarios();
   }catch(e){
     console.error('Error al crear usuario:', e);
@@ -275,11 +540,12 @@ function renderPanelAdmin(){
       '<h2>Crear usuario</h2>' +
       '<form id="form-crear-usuario">' +
         '<div class="form-grid">' +
-          '<label class="field"><span>Nombre completo</span><input type="text" id="nuevo-nombre" required></label>' +
+          '<label class="field"><span>Nombre y apellido</span><input type="text" id="nuevo-nombre" placeholder="Ej.: Thalía Pérez" required></label>' +
           '<label class="field"><span>Usuario</span><input type="text" id="nuevo-usuario" autocapitalize="none" spellcheck="false" required></label>' +
-          '<label class="field"><span>Contraseña</span><input type="password" id="nuevo-password" minlength="6" required></label>' +
+          '<label class="field"><span>Contraseña</span>' + passHtml('nuevo-password') + '</label>' +
           '<label class="field"><span>Rol</span><select id="nuevo-rol" required>' + opcionesRol(null) + '</select></label>' +
         '</div>' +
+        '<div id="nuevo-permisos" hidden>' + permisosHtml('nuevo', null) + '</div>' +
         '<div class="form-actions">' +
           '<button type="submit" class="btn-submit" id="btn-crear-usuario">Crear usuario</button>' +
         '</div>' +
@@ -289,12 +555,26 @@ function renderPanelAdmin(){
     '</div>' +
     '<div class="card">' +
       '<h2>Usuarios existentes</h2>' +
-      '<table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th></tr></thead><tbody id="tabla-usuarios-body">' +
-        '<tr><td colspan="3"><p class="empty-state">Cargando…</p></td></tr>' +
+      '<table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Permisos</th><th>Acciones</th></tr></thead><tbody id="tabla-usuarios-body">' +
+        '<tr><td colspan="5"><p class="empty-state">Cargando…</p></td></tr>' +
       '</tbody></table>' +
     '</div>';
   document.getElementById('form-crear-usuario').addEventListener('submit', handleCrearUsuario);
+  /* El usuario se arma solo desde el nombre hasta que alguien lo edite. */
+  document.getElementById('nuevo-nombre').addEventListener('input', function(){
+    if(!usuarioEditadoAMano) document.getElementById('nuevo-usuario').value = usuarioSugerido(this.value);
+  });
+  document.getElementById('nuevo-usuario').addEventListener('input', function(){ usuarioEditadoAMano = !!this.value; });
+  document.getElementById('nuevo-rol').addEventListener('change', actualizarPermisosNuevo);
+  actualizarPermisosNuevo();
   cargarUsuarios();
+}
+
+let usuarioEditadoAMano = false;
+/* Las casillas de permisos solo aparecen con el rol operativo_restringido. */
+function actualizarPermisosNuevo(){
+  const sel = document.getElementById('nuevo-rol');
+  document.getElementById('nuevo-permisos').hidden = !sel || rolDescripcion(sel.value) !== ROL_RESTRINGIDO;
 }
 
 async function verificarAccesoYRenderizar(session){
@@ -302,6 +582,7 @@ async function verificarAccesoYRenderizar(session){
   if(error){ console.error('No se pudo verificar el rol:', error); renderAccesoDenegado(); return; }
   const rol = data && data.roles ? data.roles.descripcion : '';
   if(rol !== 'admin'){ renderAccesoDenegado(); return; }
+  miUid = session.user.id;
   await cargarRoles();
   renderPanelAdmin();
 }

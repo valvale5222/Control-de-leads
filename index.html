@@ -452,6 +452,17 @@
      bloqueo real está en los dragstart; esto solo evita el cursor de agarre). */
   body.solo-lectura .rs-card[draggable="true"],
   body.solo-lectura .cal-card[draggable="true"]{cursor:default;}
+  /* PERFIL OPERATIVO RESTRINGIDO (Presupuestos e Ingeniería): sin importes,
+     KAM ni filtros de otras áreas. Presentación; el filtro real está en la
+     base (supabase/25_perfil_operativo_restringido.sql). */
+  body.perfil-restringido .rsw-importe,
+  body.perfil-restringido .rsw-col-importe,
+  body.perfil-restringido .rsw-sort,
+  body.perfil-restringido #rs-f-area,
+  body.perfil-restringido #rs-f-kam{display:none !important;}
+  [data-abre-ficha]{cursor:pointer;}
+  [data-abre-ficha]:hover .cp-proy-cli,[data-abre-ficha]:hover b{text-decoration:underline;}
+  [data-abre-ficha]:focus-visible{outline:none;box-shadow:var(--ring);border-radius:6px;}
   .readonly-badge{
     display:none;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
     background:var(--surface-alt);border:1px solid var(--line);
@@ -1118,6 +1129,463 @@
   }
   :root[data-theme="light"] .hito-cliente{font-weight:700;}
   :root[data-theme="light"] .hito-sub{font-size:10.5px;}
+
+  /* CARGA POR PERSONA — Fila 1: Ranking (izq.) · Detalle (der.).
+     Fila 2 de ancho completo: Hitos de la semana (55%) · Orden de proyectos (45%).
+     Reusa panel, msel y tokens de la plataforma; acentos teal · azul · ámbar · coral. */
+  .cp-filtros{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .cp-filtros .msel-btn{min-width:140px;max-width:210px;}
+  .cp-select{
+    background:var(--surface);border:1px solid var(--line);color:var(--ink);height:38px;
+    font-family:'Inter',sans-serif;font-size:12.5px;padding:0 12px;border-radius:10px;outline:none;cursor:pointer;
+  }
+  .cp-select:focus{border-color:var(--teal);box-shadow:var(--ring);}
+  #carga-vista-carga{
+    --cp-teal:var(--teal);--cp-blue:var(--navy);--cp-amber:var(--warn);--cp-coral:var(--danger);
+    --cp-hair:color-mix(in srgb, var(--line) 80%, transparent);
+    --cp-inset:color-mix(in srgb, var(--ink) 4%, var(--surface-alt));
+    --cp-lift:0 1px 2px rgba(10,18,45,.05),0 4px 14px -6px rgba(10,18,45,.12);
+  }
+  #carga-vista-carga .workload-panel{
+    border-radius:16px;padding:16px 16px 16px;
+    box-shadow:0 1px 0 color-mix(in srgb, #fff 6%, transparent) inset,0 1px 2px rgba(10,18,45,.04),0 10px 30px -18px rgba(10,18,45,.22);
+  }
+  .cp-grid{display:grid;grid-template-columns:minmax(310px,.82fr) minmax(0,1.6fr);gap:16px;align-items:stretch;margin-bottom:16px;}
+  .cp-resumen,.cp-det-panel{min-width:0;}
+  .cp-det-panel{display:flex;flex-direction:column;}
+  .cp-det-panel > #cp-detalle-body{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;}
+  .cp-row2{display:grid;grid-template-columns:minmax(0,11fr) minmax(0,9fr);gap:16px;align-items:stretch;margin-bottom:10px;}
+  .cp-row2 > .workload-panel{min-width:0;display:flex;flex-direction:column;}
+  .cp-panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;min-width:0;}
+  .cp-panel-tit{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .cp-grid .workload-panel-title,.cp-row2 .workload-panel-title{font-size:14.5px;margin:0;letter-spacing:-.01em;}
+  .cp-panel-sub{font-size:12px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cp-count{
+    flex:0 0 auto;display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:var(--radius-pill);
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600;color:var(--ink-soft);
+    background:color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  @media (max-width:1100px){ .cp-grid{grid-template-columns:1fr;} }
+  @media (max-width:900px){ .cp-row2{grid-template-columns:1fr;} }
+  .cp-empty{padding:22px 8px;text-align:center;font-size:13px;color:var(--ink-dim);}
+
+  /* Entrada discreta: solo al abrir la vista (clase cp-anim, la pone renderCarga una vez). */
+  @keyframes cpIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  @keyframes cpGrow{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+  .cp-anim .cp-per,.cp-anim .cp-hito,.cp-anim .cp-seq-item{animation:cpIn .42s var(--ease-emphasized,var(--ease)) both;}
+  .cp-anim .cp-per:nth-child(2),.cp-anim .cp-hito:nth-child(2),.cp-anim .cp-seq-item:nth-child(2){animation-delay:.04s;}
+  .cp-anim .cp-per:nth-child(3),.cp-anim .cp-hito:nth-child(3),.cp-anim .cp-seq-item:nth-child(3){animation-delay:.08s;}
+  .cp-anim .cp-per:nth-child(4),.cp-anim .cp-hito:nth-child(4),.cp-anim .cp-seq-item:nth-child(4){animation-delay:.12s;}
+  .cp-anim .cp-per:nth-child(n+5),.cp-anim .cp-hito:nth-child(n+5),.cp-anim .cp-seq-item:nth-child(n+5){animation-delay:.16s;}
+  .cp-anim .cp-cap-fill{animation:cpGrow .8s var(--ease-emphasized,var(--ease)) .1s both;}
+  .cp-det-anim{animation:cpIn .3s var(--ease) both;}
+  @media (prefers-reduced-motion:reduce){
+    .cp-anim .cp-per,.cp-anim .cp-hito,.cp-anim .cp-seq-item,.cp-anim .cp-cap-fill,.cp-det-anim{animation:none;}
+  }
+
+  /* Niveles de carga: teal (disponible) · azul (moderado) · ámbar (al límite) · coral (sobrecargado) */
+  .nivel-disp{--cp-nv:var(--teal);}
+  .nivel-mod{--cp-nv:var(--navy);}
+  .nivel-limite{--cp-nv:var(--warn);}
+  .nivel-sobre{--cp-nv:var(--danger);}
+
+  /* ---- Ranking ---- */
+  .cp-res-sum{font-size:12px;color:var(--ink-dim);white-space:nowrap;}
+  .cp-res-sum b{color:var(--danger);font-weight:600;}
+  /* Tarjetas de alto fijo → siempre 5 visibles y scroll interno. Seleccionar
+     solo cambia colores/sombra (mismos bordes y alto): nada se mueve. */
+  .cp-resumen{--cp-card:86px;--cp-gap:8px;}
+  .cp-lista{
+    height:calc(var(--cp-card) * 5 + var(--cp-gap) * 4);overflow-y:auto;
+    margin:0 -6px;padding:2px 6px;overscroll-behavior:contain;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;
+  }
+  .cp-per{
+    position:relative;display:flex;flex-direction:column;justify-content:center;gap:10px;box-sizing:border-box;
+    width:100%;height:var(--cp-card);overflow:hidden;text-align:left;font:inherit;color:inherit;cursor:pointer;
+    background:var(--card-surface);border:1px solid var(--cp-hair);border-radius:13px;
+    padding:11px 14px 12px 16px;margin-bottom:var(--cp-gap);box-shadow:var(--shadow-xs);
+    transition:background-color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .cp-per:last-child{margin-bottom:0;}
+  /* Acento lateral del nivel: crece al seleccionar (microanimación sin mover el layout). */
+  .cp-per::before{
+    content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--cp-nv,var(--line));
+    transform:scaleY(.4);opacity:0;
+    transition:transform var(--dur-3) var(--ease-emphasized,var(--ease)),opacity var(--dur-2) var(--ease),top var(--dur-3) var(--ease),bottom var(--dur-3) var(--ease);
+  }
+  .cp-per:hover{background:var(--card-surface-hover);box-shadow:var(--cp-lift);border-color:color-mix(in srgb, var(--cp-nv) 22%, var(--line));}
+  .cp-per:hover::before{transform:scaleY(.7);opacity:.7;}
+  .cp-per.is-sel{
+    border-color:color-mix(in srgb, var(--teal) 55%, transparent);
+    background:linear-gradient(100deg, color-mix(in srgb, var(--teal) 9%, var(--card-surface)), var(--card-surface) 70%);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 13%, transparent),var(--cp-lift);
+  }
+  .cp-per.is-sel::before{transform:scaleY(1);opacity:1;top:10px;bottom:10px;background:var(--teal);}
+  .cp-per:focus-visible{outline:none;box-shadow:var(--ring);}
+  .cp-per-top{display:flex;align-items:center;gap:12px;min-width:0;}
+  .cp-per-id{display:flex;flex-direction:column;min-width:0;flex:1 1 auto;gap:1px;}
+  .cp-per-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15.5px;line-height:1.25;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cp-per-sub{font-size:12px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cp-per-carga{flex:0 0 auto;display:flex;align-items:baseline;gap:4px;line-height:1;}
+  .cp-per-carga b{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.02em;}
+  .cp-per-unid{font-size:11.5px;color:var(--ink-dim);white-space:nowrap;}
+  /* Barra de carga: pendientes de la semana (sin cifras visibles); la marca
+     vertical es el umbral "Al límite". */
+  .cp-cap{display:flex;align-items:center;gap:12px;}
+  .cp-cap-bar{position:relative;flex:1 1 auto;}
+  .cp-cap-track{
+    height:8px;border-radius:var(--radius-pill);overflow:hidden;
+    background:color-mix(in srgb, var(--ink) 7%, transparent);
+    box-shadow:inset 0 1px 2px rgba(10,18,45,.10);
+  }
+  .cp-cap-fill{
+    height:100%;border-radius:inherit;transform-origin:left center;
+    background:linear-gradient(90deg, color-mix(in srgb, var(--cp-nv) 50%, var(--surface)), var(--cp-nv));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 0 8px -1px color-mix(in srgb, var(--cp-nv) 45%, transparent);
+    transition:width var(--dur-3) var(--ease-emphasized,var(--ease));
+  }
+  .cp-cap-lim{
+    position:absolute;top:-3px;width:2px;height:14px;border-radius:1px;margin-left:-1px;pointer-events:none;
+    background:var(--ink);opacity:.28;
+  }
+  .cp-per-nivel{
+    flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-width:96px;justify-content:flex-end;
+    font-size:11.5px;font-weight:600;color:color-mix(in srgb, var(--cp-nv) 85%, var(--ink));white-space:nowrap;
+  }
+  .cp-per-nivel::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--cp-nv);box-shadow:0 0 0 3px color-mix(in srgb, var(--cp-nv) 18%, transparent);}
+
+  /* ---- Prioridad: sirena (Prioritario) · ámbar (Importante) · neutro (Programado) ---- */
+  .cp-prio{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;}
+  .cp-prio svg{width:17px;height:17px;}
+  .cp-prio.prioritario{color:var(--danger);}
+  .cp-prio.prioritario svg{animation:cpSirena 2.4s var(--ease) infinite;}
+  .cp-prio-dot{width:9px;height:9px;border-radius:50%;background:var(--ink-dim);opacity:.45;}
+  .cp-prio.importante .cp-prio-dot{background:var(--warn);opacity:1;box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent);}
+  .cp-prio-txt{font-size:12.5px;font-weight:600;}
+  @keyframes cpSirena{0%,70%,100%{opacity:1;}80%{opacity:.45;}90%{opacity:1;}}
+  @media (prefers-reduced-motion:reduce){ .cp-prio.prioritario svg{animation:none;} }
+
+  /* ---- Detalle: encabezado + franja semanal + entregables plegables ---- */
+  .cp-det-vacio{padding:40px 10px;text-align:center;font-size:13.5px;color:var(--ink-dim);}
+  .cp-det-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+  .cp-det-tit{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .cp-det-name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:21px;line-height:1.2;color:var(--ink);letter-spacing:-.015em;}
+  .cp-estado{
+    display:inline-flex;align-items:center;gap:6px;height:23px;padding:0 10px;border-radius:var(--radius-pill);
+    font-size:11.5px;font-weight:600;color:color-mix(in srgb, var(--cp-nv) 85%, var(--ink));
+    background:color-mix(in srgb, var(--cp-nv) 12%, transparent);
+    border:1px solid color-mix(in srgb, var(--cp-nv) 22%, transparent);
+  }
+  .cp-estado::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--cp-nv);}
+  .cp-det-sub{margin-top:5px;font-size:13px;color:var(--ink-dim);}
+  .cp-det-sub b{color:var(--ink);font-weight:600;}
+
+  /* Franja semanal: riel hundido con días en relieve suave; hoy elevado. */
+  .cp-cal{
+    display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:6px;margin-bottom:16px;
+    border-radius:15px;border:1px solid var(--cp-hair);
+    background:linear-gradient(180deg, color-mix(in srgb, var(--navy) 5%, var(--cp-inset)), var(--cp-inset));
+    box-shadow:inset 0 1px 3px rgba(10,18,45,.07),inset 0 -1px 0 color-mix(in srgb, #fff 5%, transparent);
+  }
+  .cp-cal-dia{
+    position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px 9px;border-radius:11px;
+    border:1px solid transparent;background:transparent;font:inherit;color:inherit;cursor:default;min-width:0;
+    transition:background-color .25s var(--ease),box-shadow .25s var(--ease),transform .25s var(--ease-emphasized,var(--ease)),border-color .25s var(--ease);
+    -webkit-tap-highlight-color:transparent;
+  }
+  /* Días con trabajo: superficie levemente elevada */
+  .cp-cal-dia.tiene{
+    cursor:pointer;border-color:var(--cp-hair);
+    background:linear-gradient(180deg, color-mix(in srgb, var(--surface) 70%, transparent), color-mix(in srgb, var(--surface) 35%, transparent));
+    box-shadow:0 1px 2px rgba(10,18,45,.04);
+  }
+  .cp-cal-dia.tiene:hover{
+    transform:translateY(-2px);background:var(--surface);
+    border-color:color-mix(in srgb, var(--teal) 28%, var(--line));
+    box-shadow:0 2px 4px rgba(10,18,45,.05),0 10px 20px -12px rgba(10,18,45,.3);
+  }
+  .cp-cal-dia.tiene:active{transform:translateY(0) scale(.98);}
+  .cp-cal-dia:focus-visible{outline:none;box-shadow:var(--ring);}
+  .cp-cal-dn{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);}
+  .cp-cal-num{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;line-height:1.1;letter-spacing:-.02em;color:var(--ink-soft);}
+  .cp-cal-n{
+    display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:24px;height:18px;padding:0 7px;margin-top:2px;
+    border-radius:var(--radius-pill);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;
+    color:var(--ink-dim);opacity:.4;transition:background-color .25s var(--ease),color .25s var(--ease);
+  }
+  .cp-cal-dia.tiene .cp-cal-num{color:var(--ink);}
+  .cp-cal-dia.tiene .cp-cal-n{
+    opacity:1;color:var(--teal);
+    background:color-mix(in srgb, var(--teal) 12%, transparent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--teal) 18%, transparent);
+  }
+  .cp-cal-dia.tiene.carga-alta .cp-cal-n{
+    color:color-mix(in srgb, var(--warn) 85%, var(--ink));
+    background:color-mix(in srgb, var(--warn) 15%, transparent);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--warn) 22%, transparent);
+  }
+  .cp-cal-dia.finde:not(.tiene) .cp-cal-dn,.cp-cal-dia.finde:not(.tiene) .cp-cal-num{opacity:.5;}
+  .cp-cal-dia.is-pasado:not(.is-hoy) .cp-cal-num{color:var(--ink-dim);}
+  /* Hoy: relieve elegante (superficie clara, borde teal suave, sombra doble y filo superior) */
+  .cp-cal-dia.is-hoy{
+    background:linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--teal) 6%, var(--surface)));
+    border-color:color-mix(in srgb, var(--teal) 38%, transparent);
+    box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent),0 1px 2px rgba(10,18,45,.06),0 8px 18px -10px color-mix(in srgb, var(--teal) 55%, rgba(10,18,45,.4));
+    transform:translateY(-1px);
+  }
+  .cp-cal-dia.is-hoy::after{content:"";position:absolute;top:-1px;left:32%;right:32%;height:3px;border-radius:0 0 3px 3px;background:linear-gradient(90deg, var(--teal), var(--navy));}
+  .cp-cal-dia.is-hoy .cp-cal-dn{color:var(--teal);}
+  .cp-cal-dia.is-hoy .cp-cal-num{color:var(--ink);}
+  .cp-cal-sirena{position:absolute;top:4px;right:5px;font-size:10px;line-height:1;opacity:.9;filter:drop-shadow(0 1px 2px rgba(195,94,87,.35));}
+
+  .cp-ent-label{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 8px;}
+  .cp-ent-label::after{content:"";flex:1 1 auto;height:1px;background:var(--cp-hair);}
+  /* Lista con scroll interno; ocupa el alto que deja el ranking (cambiar de
+     persona no mueve la página). */
+  .cp-scroll{
+    position:relative;flex:1 1 auto;height:0;min-height:300px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;
+    margin:0 -6px;padding:2px 6px 4px;-webkit-overflow-scrolling:touch;
+  }
+  .cp-row{
+    position:relative;border:1px solid var(--cp-hair);border-radius:12px;background:var(--card-surface);margin-bottom:6px;
+    transition:border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease),background-color var(--dur-2) var(--ease);
+  }
+  .cp-row::before{content:"";position:absolute;left:-1px;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:transparent;}
+  .cp-row.is-proximo::before{background:var(--warn);}
+  .cp-row.is-vencido::before{background:var(--danger);}
+  .cp-row:last-child{margin-bottom:0;}
+  .cp-row:hover{border-color:color-mix(in srgb, var(--teal) 25%, var(--line));box-shadow:var(--cp-lift);}
+  .cp-row.is-open{border-color:color-mix(in srgb, var(--teal) 35%, var(--line));box-shadow:0 2px 4px rgba(10,18,45,.04),0 12px 28px -14px rgba(10,18,45,.25);}
+  .cp-row.is-flash{animation:cpFlash 1.2s var(--ease);}
+  @keyframes cpFlash{0%,60%{box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 30%, transparent);}100%{box-shadow:none;}}
+  .cp-row-head{
+    display:grid;grid-template-columns:50px minmax(0,1fr) auto 30px 18px;align-items:center;gap:12px;
+    padding:9px 12px 9px 10px;cursor:pointer;border-radius:12px;outline:none;-webkit-tap-highlight-color:transparent;
+  }
+  .cp-row-head:focus-visible{box-shadow:var(--ring);}
+  /* Fecha como mini-calendario: día grande, mes corto */
+  .cp-row-fecha{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;height:44px;border-radius:10px;
+    background:var(--cp-inset);border:1px solid var(--cp-hair);line-height:1;
+  }
+  .cp-row-fecha b{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--ink);}
+  .cp-row-fecha small{margin-top:3px;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);}
+  .cp-row.is-proximo .cp-row-fecha{background:color-mix(in srgb, var(--warn) 10%, var(--cp-inset));border-color:color-mix(in srgb, var(--warn) 28%, transparent);}
+  .cp-row.is-proximo .cp-row-fecha b{color:color-mix(in srgb, var(--warn) 85%, var(--ink));}
+  .cp-row.is-vencido .cp-row-fecha{background:color-mix(in srgb, var(--danger) 9%, var(--cp-inset));border-color:color-mix(in srgb, var(--danger) 26%, transparent);}
+  .cp-row.is-vencido .cp-row-fecha b{color:var(--danger);}
+  .cp-row-main{display:flex;flex-direction:column;min-width:0;gap:3px;}
+  .cp-row-ent{font-size:14px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cp-row-ent .cp-row-sir{margin-right:5px;font-size:12px;}
+  .cp-row-proy{font-size:12.5px;color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cp-row-proy .cp-id{font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+  .cp-row-ref{
+    display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:var(--radius-pill);white-space:nowrap;
+    font-size:11.5px;font-weight:500;color:var(--ink-soft);background:color-mix(in srgb, var(--navy) 9%, transparent);
+  }
+  .cp-row-ref.vacio{background:none;color:var(--ink-dim);}
+  .cp-row-star{
+    width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;
+    background:none;border:none;padding:0;font-size:16px;line-height:1;cursor:pointer;
+    color:var(--ink-dim);opacity:.45;
+    transition:opacity var(--dur-1) var(--ease),color var(--dur-1) var(--ease),background-color var(--dur-1) var(--ease),transform var(--dur-2) var(--ease-emphasized,var(--ease));
+  }
+  .cp-row-star:hover:not(:disabled){opacity:1;background:color-mix(in srgb, var(--warn) 12%, transparent);}
+  .cp-row-star:active:not(:disabled){transform:scale(.85);}
+  .cp-row-star.on{color:var(--warn);opacity:1;}
+  .cp-row-star:disabled{cursor:default;}
+  .cp-row-chev{display:inline-flex;color:var(--ink-dim);transition:transform var(--dur-3) var(--ease-emphasized,var(--ease));}
+  .cp-row-chev svg{width:16px;height:16px;}
+  .is-open > .cp-row-head .cp-row-chev{transform:rotate(180deg);color:var(--teal);}
+  /* Acordeón: anima el alto con grid-rows (0fr → 1fr) y funde el contenido */
+  .cp-acc{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s var(--ease-emphasized,var(--ease));}
+  .is-open > .cp-acc{grid-template-rows:1fr;}
+  .cp-acc-in{overflow:hidden;min-height:0;}
+  /* Panel interior: superficie hundida, tres líneas con separadores finos */
+  .cp-acc-body{
+    margin:0 10px 10px;border-radius:11px;display:flex;flex-direction:column;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--ink) 2%, var(--cp-inset)), var(--cp-inset));
+    border:1px solid var(--cp-hair);box-shadow:inset 0 1px 3px rgba(10,18,45,.06);
+    opacity:0;transform:translateY(-4px);
+    transition:opacity .24s var(--ease),transform .3s var(--ease-emphasized,var(--ease));
+  }
+  .is-open > .cp-acc .cp-acc-body{opacity:1;transform:none;}
+  .cp-acc-line{display:grid;grid-template-columns:1fr;gap:8px 16px;align-items:start;padding:10px 12px;}
+  .cp-acc-line + .cp-acc-line{border-top:1px solid var(--cp-hair);}
+  /* Línea 1: Avance · Fecha interna · Complejidad · Prioridad */
+  .cp-acc-top{grid-template-columns:minmax(220px,1.7fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);}
+  .cp-acc-body{container-type:inline-size;}
+  @container (max-width:640px){ .cp-acc-top{grid-template-columns:repeat(3,minmax(0,1fr));} .cp-acc-avance{grid-column:1 / -1;} }
+  @container (max-width:400px){ .cp-acc-top{grid-template-columns:repeat(2,minmax(0,1fr));} .cp-acc-top > .cp-acc-f:nth-child(2){grid-column:1 / -1;} }
+  .cp-acc-f{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .cp-acc-k{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);white-space:nowrap;}
+  .cp-acc-k b{margin-left:4px;font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:0;color:var(--teal);}
+  .cp-acc-v{
+    display:flex;flex-direction:column;justify-content:center;height:30px;box-sizing:border-box;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--ink);line-height:1.15;white-space:nowrap;
+  }
+  .cp-acc-v small{font-family:'Inter',sans-serif;font-size:10.5px;font-weight:500;color:var(--ink-dim);}
+  .cp-acc-v.vencido,.cp-acc-v.vencido small{color:var(--danger);}
+  .cp-acc-v.proximo small{color:color-mix(in srgb, var(--warn) 85%, var(--ink));}
+  /* Selects compactos con chevron propio */
+  .cp-plain{
+    -webkit-appearance:none;appearance:none;width:100%;height:30px;box-sizing:border-box;
+    background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238B97A5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center/13px;
+    border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 2px rgba(10,18,45,.04);
+    color:var(--ink);font-family:'Inter',sans-serif;font-size:13px;padding:0 26px 0 9px;outline:none;cursor:pointer;
+    text-overflow:ellipsis;
+    transition:border-color .2s var(--ease),box-shadow .2s var(--ease),background-color .2s var(--ease);
+  }
+  .cp-plain:hover:not(:disabled){border-color:color-mix(in srgb, var(--teal) 40%, var(--line));box-shadow:0 2px 6px -2px rgba(10,18,45,.12);}
+  .cp-plain:focus{border-color:var(--teal);box-shadow:var(--ring);}
+  .cp-plain:disabled{cursor:default;opacity:.75;}
+  .cp-plain option{color:var(--ink);background:var(--surface);}
+  .cp-plain.pri-prioritario{border-color:color-mix(in srgb, var(--danger) 35%, var(--line));}
+  .cp-plain.pri-importante{border-color:color-mix(in srgb, var(--warn) 40%, var(--line));}
+  /* Avance: control segmentado 0–100 en pasos de 20 + barra de progreso mínima */
+  .cp-seg-av{
+    display:flex;width:100%;padding:2px;gap:2px;border-radius:8px;box-sizing:border-box;
+    background:var(--surface);border:1px solid var(--line);box-shadow:inset 0 1px 2px rgba(10,18,45,.04);
+  }
+  .cp-seg-av button{
+    flex:1 1 0;min-width:0;height:24px;padding:0 2px;border:none;border-radius:6px;background:transparent;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-dim);cursor:pointer;
+    transition:background-color .22s var(--ease),color .22s var(--ease),box-shadow .22s var(--ease);
+  }
+  .cp-seg-av button.past{color:var(--teal);}
+  .cp-seg-av button:hover:not(:disabled):not(.on){color:var(--ink);background:color-mix(in srgb, var(--ink) 6%, transparent);}
+  .cp-seg-av button.on{background:linear-gradient(180deg, color-mix(in srgb, var(--teal) 80%, #fff), var(--teal));color:#fff;font-weight:600;box-shadow:0 1px 3px color-mix(in srgb, var(--teal) 40%, transparent);}
+  .cp-seg-av button:disabled{cursor:default;}
+  .cp-av-bar{display:block;height:2px;border-radius:2px;margin-top:1px;background:color-mix(in srgb, var(--ink) 7%, transparent);overflow:hidden;}
+  .cp-av-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg, color-mix(in srgb, var(--teal) 45%, transparent), var(--teal));transition:width .35s var(--ease-emphasized,var(--ease));}
+  .cp-input{
+    width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-family:'Inter',sans-serif;font-size:13px;padding:7px 10px;outline:none;
+    box-shadow:0 1px 2px rgba(10,18,45,.04);
+    transition:border-color .2s var(--ease),box-shadow .2s var(--ease);
+  }
+  .cp-textarea{resize:vertical;min-height:36px;line-height:1.45;display:block;}
+  .cp-input:focus{border-color:var(--teal);box-shadow:var(--ring);}
+  .cp-input:disabled{opacity:.7;cursor:default;}
+  .cp-acc-imp{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:8px;padding-bottom:9px;}
+  .cp-imp{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--danger);line-height:1.4;min-width:0;}
+  .cp-imp-dot{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent);}
+  .cp-imp-ok{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-dim);}
+  .cp-imp-ok::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--teal);opacity:.55;}
+  /* Bloqueado: pulso rojo tenue y pausado en el borde (solo sombra, el contenido no se mueve) */
+  .cp-row.is-bloqueado{border-color:color-mix(in srgb, var(--danger) 35%, var(--line));animation:cpPulsoBloq 3.2s ease-in-out infinite;}
+  @keyframes cpPulsoBloq{
+    0%,100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--danger) 0%, transparent);}
+    50%{box-shadow:0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent);}
+  }
+  @media (prefers-reduced-motion:reduce){ .cp-row.is-bloqueado{animation:none;box-shadow:0 0 0 2px color-mix(in srgb, var(--danger) 14%, transparent);} }
+  .cp-link{font-size:13px;color:var(--teal);cursor:pointer;align-self:flex-start;}
+  .cp-cx.alta{color:var(--danger);} .cp-cx.media{color:var(--warn);} .cp-cx.baja{color:var(--ok);}
+
+  /* ---- Hitos de la semana: lista ejecutiva, 5 visibles y scroll interno ---- */
+  .cp-hitos-panel,.cp-seq-panel{--cp-item:62px;--cp-igap:6px;}
+  .cp-hitos,.cp-seq-list{
+    max-height:calc(var(--cp-item) * 5 + var(--cp-igap) * 4);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;
+    margin:0 -6px;padding:1px 6px;-webkit-overflow-scrolling:touch;
+  }
+  .cp-hito{
+    position:relative;display:grid;grid-template-columns:46px 24px minmax(0,1fr) auto;align-items:center;gap:10px;
+    height:var(--cp-item);box-sizing:border-box;padding:8px 12px 8px 8px;margin-bottom:var(--cp-igap);
+    border-radius:11px;background:var(--card-surface);border:1px solid var(--cp-hair);
+    transition:border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease),background-color var(--dur-2) var(--ease);
+  }
+  .cp-hito:last-child{margin-bottom:0;}
+  .cp-hito:hover{box-shadow:var(--cp-lift);border-color:color-mix(in srgb, var(--teal) 22%, var(--line));}
+  .cp-hito[data-abre-ficha]{cursor:pointer;}
+  .cp-hito-fecha{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;height:44px;border-radius:9px;line-height:1;
+    background:var(--cp-inset);border:1px solid var(--cp-hair);
+  }
+  .cp-hito-fecha b{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--ink);}
+  .cp-hito-fecha small{margin-top:3px;font-size:9.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);}
+  .cp-hito.vencido .cp-hito-fecha{background:color-mix(in srgb, var(--danger) 9%, var(--cp-inset));border-color:color-mix(in srgb, var(--danger) 25%, transparent);}
+  .cp-hito.vencido .cp-hito-fecha b{color:var(--danger);}
+  .cp-hito.hoy .cp-hito-fecha{background:color-mix(in srgb, var(--warn) 11%, var(--cp-inset));border-color:color-mix(in srgb, var(--warn) 28%, transparent);}
+  .cp-hito-emo{font-size:16px;line-height:1;text-align:center;}
+  .cp-hito-txt{min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .cp-hito-proy{font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cp-hito-proy .cp-id{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:500;color:var(--ink-dim);margin-right:4px;}
+  .cp-hito-ent{font-size:12.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cp-hito-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:0;max-width:150px;}
+  .cp-hito-resp{font-size:11.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .cp-hito-sit{font-size:11.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
+  .cp-hito.vencido .cp-hito-sit{color:var(--danger);}
+  .cp-hito.hoy .cp-hito-sit,.cp-hito.proximo .cp-hito-sit{color:color-mix(in srgb, var(--warn) 85%, var(--ink));}
+
+  /* ---- Orden de proyectos del responsable seleccionado ---- */
+  .cp-seq-item{
+    display:grid;grid-template-columns:48px minmax(0,1fr);align-items:center;gap:12px;
+    height:var(--cp-item);box-sizing:border-box;padding:8px 12px 8px 8px;margin-bottom:var(--cp-igap);
+    border-radius:11px;background:var(--card-surface);border:1px solid var(--cp-hair);
+    transition:border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease);
+  }
+  .cp-seq-item:last-child{margin-bottom:0;}
+  .cp-seq-item:hover{box-shadow:var(--cp-lift);border-color:color-mix(in srgb, var(--navy) 25%, var(--line));}
+  .cp-seq-item:focus-within{border-color:color-mix(in srgb, var(--teal) 45%, var(--line));}
+  .cp-seq-num{position:relative;display:block;}
+  .cp-seq-num .equipo-num-input{
+    width:48px;height:44px;padding:8px 0 0;border-radius:10px;box-sizing:border-box;
+    font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--navy);
+    background:linear-gradient(180deg, color-mix(in srgb, var(--navy) 10%, var(--surface)), color-mix(in srgb, var(--navy) 4%, var(--surface)));
+    border:1px solid color-mix(in srgb, var(--navy) 28%, transparent);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 1px 2px rgba(10,18,45,.06);
+  }
+  .cp-seq-num .equipo-num-input:focus{border-color:var(--teal);box-shadow:var(--ring);}
+  .cp-seq-num .equipo-num-input:disabled{opacity:.8;}
+  .cp-seq-num-k{position:absolute;top:4px;left:0;right:0;text-align:center;font-size:8.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-dim);pointer-events:none;}
+  .cp-seq-txt{display:flex;flex-direction:column;min-width:0;gap:2px;}
+  .cp-seq-txt b{font-size:13.5px;color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cp-seq-txt b .cp-id{font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:500;color:var(--ink-dim);margin-right:4px;}
+  .cp-seq-txt span{font-size:12.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cp-seq-txt span i{font-style:normal;color:var(--ink-dim);}
+
+  /* ---- Responsive (iPhone) ---- */
+  @media (max-width:1100px){
+    .cp-scroll{flex:none;height:440px;}
+  }
+  @media (max-width:760px){
+    .cp-row-head{grid-template-columns:44px minmax(0,1fr) 30px 16px;gap:10px;padding:8px 10px 8px 8px;}
+    .cp-row-fecha{height:42px;}
+    .cp-row-ref{display:none;}
+    .cp-acc-body{margin:0 8px 8px;}
+    .cp-plain{max-width:none;font-size:16px;height:36px;}
+    .cp-input{font-size:16px;}
+    .cp-seg-av{max-width:none;}
+    .cp-seg-av button{height:32px;}
+    .cp-scroll{height:420px;}
+    .cp-cal{gap:2px;padding:4px;}
+    .cp-cal-dn{font-size:9.5px;letter-spacing:.04em;}
+    .cp-cal-num{font-size:16px;}
+    .cp-cal-sirena{top:3px;right:3px;font-size:9px;}
+    .cp-det-name{font-size:19px;}
+  }
+  @media (max-width:560px){
+    #carga-vista-carga .workload-panel{padding:14px 12px;}
+    .cp-hitos-panel,.cp-seq-panel{--cp-item:66px;}
+    .cp-hito{grid-template-columns:42px 20px minmax(0,1fr);gap:8px;}
+    .cp-hito-fecha{height:42px;}
+    .cp-hito-meta{grid-column:3;flex-direction:row;align-items:center;gap:8px;max-width:none;}
+    .cp-hito{height:auto;min-height:var(--cp-item);}
+    .cp-hitos{max-height:calc(76px * 5);}
+    .cp-resumen{--cp-card:88px;}
+    .cp-per{padding-left:14px;}
+    .cp-per-name{font-size:15px;}
+    .cp-per-nivel{min-width:0;}
+    .cp-seq-num .equipo-num-input{font-size:18px;}
+    .cp-filtros .msel,.cp-filtros .cp-select{flex:1 1 calc(50% - 4px);min-width:0;}
+    .cp-filtros .msel-btn{width:100%;min-width:0;max-width:none;}
+  }
+  :root[data-theme="light"] #carga-vista-carga{--cp-inset:#F2F5F8;}
+  :root[data-theme="light"] #carga-vista-carga .workload-panel{box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 1px 2px rgba(10,18,45,.04),0 10px 30px -18px rgba(10,18,45,.18);}
+  :root[data-theme="light"] .cp-per,:root[data-theme="light"] .cp-row,
+  :root[data-theme="light"] .cp-hito,:root[data-theme="light"] .cp-seq-item{background:#FFFFFF;}
+  :root[data-theme="light"] .cp-per.is-sel{background:linear-gradient(100deg, #EAF5F2, #FFFFFF 70%);}
 
 
   /* ============================================================
@@ -5112,7 +5580,7 @@
     </div>
     <div class="workload-shell" id="carga-vista-carga">
       <div class="workload-header">
-        <span class="workload-header-title">👥 Carga por responsable</span>
+        <span class="workload-header-title">👥 Carga por persona</span>
         <div class="subtabs" data-subtabs="carga">
           <button class="subtab-btn active" data-area="todas" onclick="setCargaArea('todas')">Todas las áreas</button>
           <button class="subtab-btn" data-area="comercial" onclick="setCargaArea('comercial')">Comercial</button>
@@ -5120,20 +5588,42 @@
           <button class="subtab-btn" data-area="presupuestos" onclick="setCargaArea('presupuestos')">Presupuestos e Ingeniería</button>
         </div>
       </div>
-      <div class="workload-grid">
-        <div class="workload-col-main">
-          <div class="wl-list" id="carga-list"></div>
-        </div>
-        <div class="workload-col-side">
-          <div class="workload-panel">
-            <p class="workload-panel-title" id="carga-dist-title">📊 Distribución por área</p>
-            <div id="carga-dist-body"></div>
+      <div class="cp-filtros">
+        <select class="cp-select" id="cp-f-semana" onchange="cpSetSemana(this.value)" aria-label="Semana"></select>
+        <div class="msel" id="cp-f-resp" data-onchange="renderCarga"><button type="button" class="msel-btn" onclick="mselToggleOpen('cp-f-resp',event)"><span class="msel-btn-label">Responsable: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
+        <div class="msel" id="cp-f-pri" data-onchange="renderCarga"><button type="button" class="msel-btn" onclick="mselToggleOpen('cp-f-pri',event)"><span class="msel-btn-label">Prioridad: todas</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
+        <div class="msel" id="cp-f-ref" data-onchange="renderCarga"><button type="button" class="msel-btn" onclick="mselToggleOpen('cp-f-ref',event)"><span class="msel-btn-label">Refrigerante: todos</span></button><div class="msel-panel" onclick="event.stopPropagation()"></div></div>
+        <button class="filter-reset" onclick="cpLimpiarFiltros()" aria-label="Limpiar filtros">
+          <span aria-hidden="true">🧹</span><span class="tt">Limpiar filtros</span>
+        </button>
+      </div>
+      <!-- Fila 1: ranking (izq.) · detalle del responsable (der.). -->
+      <div class="cp-grid">
+        <div class="workload-panel cp-resumen">
+          <div class="cp-panel-head">
+            <p class="workload-panel-title">Ranking de carga</p>
+            <span class="cp-res-sum" id="cp-res-sum"></span>
           </div>
-          <div class="workload-panel">
-            <p class="workload-panel-title">🎯 Principales hitos</p>
-            <div id="carga-hitos-body"></div>
-          </div>
+          <div id="cp-resumen-body"></div>
         </div>
+        <div class="workload-panel cp-det-panel">
+          <div id="cp-detalle-body"></div>
+        </div>
+      </div>
+      <!-- Fila 2: hitos consolidados del área (55%) · orden de proyectos del
+           responsable seleccionado (45%, N° = o.ordenTrabajo). -->
+      <div class="cp-row2">
+        <section class="workload-panel cp-hitos-panel">
+          <div class="cp-panel-head">
+            <div class="cp-panel-tit">
+              <p class="workload-panel-title" id="cp-hitos-title">📅 Hitos de la semana</p>
+              <span class="cp-panel-sub" id="cp-hitos-sub"></span>
+            </div>
+            <span class="cp-count" id="cp-hitos-n"></span>
+          </div>
+          <div id="cp-hitos-body"></div>
+        </section>
+        <section class="workload-panel cp-seq-panel" id="cp-seq-panel"></section>
       </div>
     </div>
 
@@ -6772,6 +7262,46 @@ let avisoSoloLecturaMostrado = false;
    cargarPerfilUsuario() tuviera la respuesta de Supabase. El aviso solo sale
    cuando el rol ya está confirmado. */
 let rolConfirmado = false;
+/* PERFIL OPERATIVO RESTRINGIDO (rol `operativo_restringido`, ver
+   supabase/25_perfil_operativo_restringido.sql). Lleva permisos configurables
+   en usuario.permisos = {areas:[...], acciones:{ver, crear, editar,
+   completar_tareas, actualizar_avance}}. Hoy solo `ver` está en true. La base
+   ya filtra por área; esto lo refleja en la interfaz. Los demás roles no pasan
+   por acá: perfilRestringido es false y puedeAccion() cae en puedeEditar. */
+const ROL_RESTRINGIDO = 'operativo_restringido';
+/* Vistas que se pueden otorgar: revision, carga y desempeno (subvista de
+   Carga). Sin `vistas` en los permisos, valen las dos primeras. */
+const VISTAS_PERFIL_POR_DEFECTO = ['revision', 'carga'];
+let perfilRestringido = false;
+let permisosPerfil = {areas:[], acciones:{}, vistas:VISTAS_PERFIL_POR_DEFECTO};
+function puedeAccion(accion){
+  if(!rolConfirmado) return false;
+  if(!perfilRestringido) return !!puedeEditar;
+  return permisosPerfil.acciones.ver === true && permisosPerfil.acciones[accion] === true;
+}
+/* Áreas operativas visibles. Sin restricción (resto de roles) = todas. */
+function areaPermitida(area){
+  return !perfilRestringido || permisosPerfil.areas.indexOf(area) !== -1;
+}
+/* "Presupuestos e Ingeniería", "Comercial + Arquitectura"… según el usuario. */
+function areasPerfilTexto(){
+  return permisosPerfil.areas.map(a=>AREA_LABEL[a] || a).join(' + ') || 'sin áreas asignadas';
+}
+/* Vistas a las que llega el perfil, según permisos.vistas. Equipo de trabajo,
+   Detalle, Gerencia y Cronograma nunca. */
+function vistaPermitida(tab, subvistaCarga){
+  if(!perfilRestringido) return true;
+  const v = permisosPerfil.vistas;
+  if(tab === 'revision') return v.indexOf('revision') !== -1;
+  if(tab !== 'carga') return false;
+  if(subvistaCarga === 'desempeno') return v.indexOf('desempeno') !== -1;
+  return (!subvistaCarga || subvistaCarga === 'carga') && v.indexOf('carga') !== -1;
+}
+/* Desempeño: admin, o perfil restringido con esa vista otorgada (lee solo
+   las tareas de sus áreas, que es lo único que le llega de la base). */
+function puedeVerDesempeno(){
+  return esAdmin() || (rolConfirmado && perfilRestringido && vistaPermitida('carga', 'desempeno'));
+}
 let supabaseSyncTimer = null;
 /* Escrituras propias en vuelo: mientras haya alguna, un refresco por Realtime
    traería un estado a medio subir, así que se posterga. */
@@ -6799,7 +7329,7 @@ const COLUMNAS_OPCIONALES = ['orden_trabajo', 'prioridad_tablero', 'duracion_pro
 /* Igual que COLUMNAS_OPCIONALES, pero para la tabla entregables: "Requiere
    metrado", su responsable y el vínculo con el Metrado autogenerado se agregaron
    por entregable y esta base puede no tener aún esas columnas. */
-const COLUMNAS_OPCIONALES_ENTREGABLES = ['requiere_metrados', 'resp_metrados', 'resp_metrados_otro', 'metrado_origen_identificador', 'pendiente_envio_cliente', 'envio_origen_identificador', 'estado_tarea', 'bloqueo_origen', 'bloqueo_detalle', 'fecha_original'];
+const COLUMNAS_OPCIONALES_ENTREGABLES = ['requiere_metrados', 'resp_metrados', 'resp_metrados_otro', 'metrado_origen_identificador', 'pendiente_envio_cliente', 'envio_origen_identificador', 'estado_tarea', 'bloqueo_origen', 'bloqueo_detalle', 'fecha_original', 'carga_persona'];
 const columnasFaltantes = new Set();
 let avisoMigracionMostrado = false;
 
@@ -6983,6 +7513,9 @@ function entregableToRow(e, oppId){
     estado_tarea: orNull(e.estadoTarea),
     bloqueo_origen: orNull(e.bloqueoOrigen),
     bloqueo_detalle: orNull(e.bloqueoDetalle),
+    /* Carga por persona (24_carga_persona.sql): avance, qué falta, esta semana,
+       enfoque y complejidad manual, en un solo jsonb. */
+    carga_persona: (e.cp && Object.keys(e.cp).length) ? e.cp : null,
   };
   /* Mismo mecanismo que en oportunidadToRow: si la base todavía no tiene estas
      columnas, se omiten para no abortar el upsert completo. */
@@ -7009,6 +7542,7 @@ function rowToEntregable(r){
     estadoTarea: r.estado_tarea || '',
     bloqueoOrigen: r.bloqueo_origen || '',
     bloqueoDetalle: r.bloqueo_detalle || '',
+    cp: (r.carga_persona && typeof r.carga_persona==='object' && !Array.isArray(r.carga_persona)) ? r.carga_persona : undefined,
     proximoPaso: r.proximo_paso || '',
     observacion: r.observacion || '',
     ronda: r.ronda || 1,
@@ -7029,14 +7563,18 @@ async function cargarDesdeSupabase(opts){
   const subirCorrecciones = !opts || opts.subirCorrecciones !== false;
   try{
     const [oppRes, entRes, histRes] = await Promise.all([
-      db.from('oportunidades').select('*').order('Identificador', {ascending:true}),
+      /* Perfil restringido: la base no le deja leer la tabla (tiene importes y
+         márgenes); lee la vista con datos generales y solo sus áreas. */
+      db.from(perfilRestringido ? 'oportunidades_operativo' : 'oportunidades').select('*').order('Identificador', {ascending:true}),
       db.from('entregables').select('*'),
-      historialTablaDisponible
+      historialTablaDisponible && !perfilRestringido
         ? db.from(HISTORIAL_TABLA).select('*').order('creado_en', {ascending:true})
         : Promise.resolve({data:null, error:null}),
     ]);
     if(oppRes.error) throw oppRes.error;
     if(entRes.error) throw entRes.error;
+    /* Además del filtro de la base, solo pasan tareas de las áreas autorizadas. */
+    if(perfilRestringido) entRes.data = (entRes.data || []).filter(r=>areaPermitida(r.area));
     if(!oppRes.data.length && oportunidades.length){
       /* Supabase respondió sin filas (RLS sin políticas, o tabla vacía en este
          proyecto) mientras que localmente sí hay oportunidades cargadas. Para
@@ -7052,12 +7590,14 @@ async function cargarDesdeSupabase(opts){
     /* Detecta contra el esquema real qué columnas opcionales existen. Un select '*'
        que no devuelve una columna significa que falta en la base, así que se deja
        de enviar antes del primer upsert (que si no fallaría entero). */
-    if(oppRes.data.length){
+    /* La vista del perfil restringido omite a propósito columnas opcionales
+       (cotizaciones, incidencias…): no son columnas faltantes en la base. */
+    if(oppRes.data.length && !perfilRestringido){
       COLUMNAS_OPCIONALES.forEach(col=>{
         if(!Object.prototype.hasOwnProperty.call(oppRes.data[0], col)) columnasFaltantes.add(col);
       });
     }
-    if(entRes.data.length){
+    if(entRes.data.length && !perfilRestringido){
       COLUMNAS_OPCIONALES_ENTREGABLES.forEach(col=>{
         if(!Object.prototype.hasOwnProperty.call(entRes.data[0], col)) columnasFaltantes.add(col);
       });
@@ -7122,6 +7662,7 @@ async function cargarDesdeSupabase(opts){
         const p = previasEnt.get(e.id);
         if(!e.fechaOriginal && p && p.fechaOriginal) e.fechaOriginal = p.fechaOriginal;
         if(p && p.fechaCreacion) e.fechaCreacion = p.fechaCreacion;
+        if(columnasFaltantes.has('carga_persona') && p && p.cp) e.cp = p.cp;
       }));
     }
     /* Foto de lo que hay en la nube: contra ella se calcula qué subir (solo los
@@ -7156,7 +7697,9 @@ async function cargarDesdeSupabase(opts){
        'sincronizando' y después con su propio resultado. */
     estadoNube = 'ok';
     detalleErrorNube = '';
-    persistLocal(subirCorrecciones ? undefined : {skipSupabase:true});
+    /* Sin permiso de escritura persistLocal solo avisaría "solo lectura" y no
+       guardaría nada: se omite para no mostrar ese aviso en cada carga. */
+    if(puedeEditar) persistLocal(subirCorrecciones ? undefined : {skipSupabase:true});
     renderAll();
     updateSyncIndicator();
   }catch(e){
@@ -7824,7 +8367,7 @@ function renderAll(){
   renderRevisionSemanal();
   renderCarga();
   renderEquipo();
-  if(cargaVista==='desempeno' && esAdmin()) renderDesempeno();
+  if(cargaVista==='desempeno' && puedeVerDesempeno()) renderDesempeno();
   renderGerencia();
   renderGantt();
   renderDetalle();
@@ -9469,7 +10012,7 @@ function openRSDetailDrawer(id, entId){
 
   document.getElementById('rs-drawer-ident').innerHTML = `
     <div class="rsd-ident"><p class="rsd-cliente">${escAttr(o.cliente)}</p><p class="rsd-proyecto">${escAttr(o.proyecto || '—')}</p></div>
-    <div class="rsd-importe">${formatMoneda(o.importe)}<span>USD</span>${altCotizacionesHtml(o)}</div>`;
+    ${perfilRestringido ? '' : `<div class="rsd-importe">${formatMoneda(o.importe)}<span>USD</span>${altCotizacionesHtml(o)}</div>`}`;
   document.getElementById('rs-drawer-tab-n').textContent = tareas.length ? String(tareas.length) : '';
   ['info','tareas'].forEach(t=>{
     const b = document.getElementById('rs-drawer-tab-' + t);
@@ -9484,10 +10027,10 @@ function openRSDetailDrawer(id, entId){
       <label class="rsd-f"><span class="rsd-k">Fecha cliente</span><input type="date" class="rsd-fc${riesgo ? ' is-danger' : ''}" value="${fc}" onchange="rsDrawerCampo('fechaComprometidaCliente',this.value)"${dis}></label>
       <div class="rsd-f"><span class="rsd-k">Última entrega interna</span><b class="${riesgo ? 'is-danger' : ''}">${ue ? formatFechaCorta(ue) : '—'}</b></div>
       <div class="rsd-f"><span class="rsd-k">Prioridad semanal</span><b class="rsd-pri pri-${col.pri}">${col.titulo}</b></div>
-      <label class="rsd-f"><span class="rsd-k">Comercial / KAM</span><select class="${v.kam ? '' : 'is-vacio'}" onchange="rsDrawerCampo('kam',this.value)"${dis}>${rsdKamOptionsHtml(v)}</select>${v.kam==='otro' ? `<input type="text" class="otro-input" value="${escAttr(v.kamOtro || '')}" placeholder="Nombre del ejecutivo" maxlength="60" aria-label="Nombre del ejecutivo comercial" oninput="rsDrawerOtro(null,this.value)"${dis}>` : ''}</label>
+      ${perfilRestringido ? EQUIPO_ROLES.filter(r=>areaPermitida(r.area)).map(r=>`<div class="rsd-f"><span class="rsd-k">${escAttr(AREA_LABEL[r.area])}</span><b>${escAttr(equipoNombreRol(v, r) || '—')}</b></div>`).join('') : `<label class="rsd-f"><span class="rsd-k">Comercial / KAM</span><select class="${v.kam ? '' : 'is-vacio'}" onchange="rsDrawerCampo('kam',this.value)"${dis}>${rsdKamOptionsHtml(v)}</select>${v.kam==='otro' ? `<input type="text" class="otro-input" value="${escAttr(v.kamOtro || '')}" placeholder="Nombre del ejecutivo" maxlength="60" aria-label="Nombre del ejecutivo comercial" oninput="rsDrawerOtro(null,this.value)"${dis}>` : ''}</label>`}
       <label class="rsd-f"><span class="rsd-k">Fecha de seguimiento</span><input type="date" value="${v.fechaSeguimiento || ''}" onchange="rsDrawerCampo('fechaSeguimiento',this.value)"${dis}></label>
       <div class="rsd-f"><span class="rsd-k">Área activa</span><b>${areas.length ? areas.join(', ') : '—'}</b></div>
-      <div class="rsd-f"><span class="rsd-k">Mes de cierre</span><b>${formatMesCierre(o.mesCierre)}</b></div>
+      ${perfilRestringido ? '' : `<div class="rsd-f"><span class="rsd-k">Mes de cierre</span><b>${formatMesCierre(o.mesCierre)}</b></div>`}
     </div>
     ${riesgo ? `<div class="rsd-alerta"><b>Riesgo:</b> última entrega interna ${formatFechaCorta(ue)} &gt; compromiso cliente ${formatFechaCorta(fc)}</div>` : ''}
     ${o.accionPendienteCliente && o.descripcionPendiente ? `<div class="rs-bloqueo">Bloqueo / cliente: ${escAttr(o.descripcionPendiente)}</div>` : ''}
@@ -9501,7 +10044,7 @@ function openRSDetailDrawer(id, entId){
         ? `<div class="rsd-tareas">${tareas.length ? tareas.map(e=>rsdTareaHtml(v, e, fc, ro, rsDrawerEntId)).join('') : '<span class="rsd-vacio">Sin tareas abiertas.</span>'}</div>`
         : (cerradas.length ? `<div class="rsd-hechas">${cerradas.map(e=>rsdHechaHtml(v, e, ro)).join('')}</div>` : '<span class="rsd-vacio">Aún no hay tareas cumplidas en esta ronda.</span>')}</div>
     </div>
-    <div class="rsd-sec" id="rs-incidencias">${incidenciasHtml('rs', v, rsDraft.incidencias, ro)}</div>
+    ${perfilRestringido ? '' : `<div class="rsd-sec" id="rs-incidencias">${incidenciasHtml('rs', v, rsDraft.incidencias, ro)}</div>`}
   `;
   body.scrollTop = scroll;
   if(rsDrawerCambioTab){
@@ -10026,145 +10569,531 @@ function cargaPorResponsable(flatArea){
   const maxCount = rows.length ? Math.max(...rows.map(r=>r.count)) : 1;
   return {rows, maxCount};
 }
-function renderCarga(){
-  const hoy = todayISO();
-  const flatArea = cargaPendientes(cargaArea);
-
-  /* ---- Columna izquierda: carga por responsable ---- */
-  const {rows, maxCount} = cargaPorResponsable(flatArea);
-
-  document.getElementById('carga-list').innerHTML = rows.map(r=>{
-    const pct = Math.round((r.count / maxCount) * 100);
-    const fechas = r.items.map(i=>i.e.fechaEntrega).filter(Boolean).sort();
-    const proxima = fechas.length ? formatFechaCorta(fechas[0]) : '—';
-    const nivel = cargaNivel(pct);
-    const expanded = cargaExpandedNames.has(r.name);
-    const areasResp = [...new Set(r.items.map(i=>i.e.area))];
-    const areaBadge = cargaArea!=='todas' ? '' : (areasResp.length===1
-      ? `<span class="chip resp-${areasResp[0]}">${AREA_LABEL[areasResp[0]]}</span>`
-      : `<span class="chip tone-neutral">${areasResp.map(a=>AREA_LABEL[a]).join(' + ')}</span>`);
-    /* Secuencia de trabajo de la persona: sus pendientes agrupados por proyecto y
-       ordenados por o.ordenTrabajo (N°), el mismo entero de Detalle >
-       Oportunidades; a igualdad de N°, la entrega más próxima. El N° se edita
-       acá mismo (actualizarNumeroCarga) — no es un campo nuevo. */
-    const fechaDe = x=> x.e.fechaEntrega || '9999-99-99';
-    const porProyecto = new Map();
-    r.items.forEach(x=>{
-      if(!porProyecto.has(x.o.id)) porProyecto.set(x.o.id, {o:x.o, items:[]});
-      porProyecto.get(x.o.id).items.push(x);
-    });
-    const numeroDe = o=> esOrdenTrabajoValido(o.ordenTrabajo) ? Number(o.ordenTrabajo) : 1;
-    const secuencia = [...porProyecto.values()].map(g=>{
-      g.items.sort((a,b)=>fechaDe(a).localeCompare(fechaDe(b)));
-      return g;
-    }).sort((a,b)=> numeroDe(a.o) - numeroDe(b.o) || fechaDe(a.items[0]).localeCompare(fechaDe(b.items[0])) || a.o.id - b.o.id);
-    const pendientesHtml = secuencia.map(({o, items})=>{
-      const tareasHtml = items.map(({e})=>{
-        const vencido = !!(e.fechaEntrega && e.fechaEntrega < hoy);
-        return `<div class="carga-seq-tarea${vencido?' is-vencido':''}">
-          <span class="carga-pend-entregable">${e.nombre}</span>
-          <span class="dot p${e.prioridad}" title="${PRI_LABEL[e.prioridad]||''}"></span>
-          <span class="carga-pend-fecha">📅 ${formatFechaCorta(e.fechaEntrega)}</span>
-        </div>`;
-      }).join('');
-      return `<div class="carga-seq-item">
-        <label class="equipo-num carga-seq-num" title="N° de orden de trabajo: el mismo entero de la columna «Orden de trabajo» de Detalle > Oportunidades.">
-          <span class="equipo-num-label">N°</span>
-          <input type="number" class="equipo-num-input" inputmode="numeric" step="1" min="1" max="${ORDEN_TRABAJO_MAX}"
-            value="${numeroDe(o)}"${puedeEditar ? '' : ' disabled'}
-            aria-label="Orden de trabajo de la oportunidad ${o.id}"
-            onkeydown="equipoNumKeydown(event)" onchange="actualizarNumeroCarga(${o.id},this)">
-        </label>
-        <div class="carga-seq-body">
-          <div class="carga-seq-head">
-            <span class="carga-pend-id">#${o.id}</span>
-            <span class="carga-pend-cliente">${o.cliente || '(sin cliente)'}</span>
-            <span class="carga-pend-proyecto">${o.proyecto || '(sin nombre)'}</span>
-          </div>
-          <div class="carga-seq-tareas">${tareasHtml}</div>
-        </div>
-      </div>`;
-    }).join('') || '<div class="rs-empty-inline">Sin pendientes a cargo.</div>';
-    return `<div class="wl-row nivel-${nivel.cls}" data-name="${escAttr(r.name)}">
-      <div class="wl-row-main">
-        <div class="wl-row-id">
-          <span class="wl-row-name">👤 ${r.name}</span>
-          ${areaBadge}
-        </div>
-        <div class="wl-row-bar barwrap" onclick="toggleCargaExpand(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCargaExpand(this);}" role="button" tabindex="0" aria-expanded="${expanded}" aria-label="Ver pendientes de ${escAttr(r.name)}">
-          <div class="bartrack"><div class="barfill nivel-${nivel.cls}" style="width:${pct}%;"></div></div>
-        </div>
-        <div class="wl-row-meta">
-          <span class="wl-row-count">📦 ${r.count} pend.</span>
-          <span class="wl-row-date">📅 ${proxima}</span>
-          <span class="chip carga-${nivel.cls}">${nivel.emoji} ${nivel.label}</span>
-        </div>
-      </div>
-      <div class="carga-detail-row ${expanded?'expanded':''}">
-        <div class="carga-acc-body"><div class="carga-acc-body-inner">
-          <p class="form-section-title" style="margin:2px 0 8px;font-size:11px;">📦 Secuencia de trabajo · ${secuencia.length} ${secuencia.length===1 ? 'proyecto' : 'proyectos'}</p>
-          <div class="carga-proyectos-list">${pendientesHtml}</div>
-        </div></div>
-      </div>
-    </div>`;
-  }).join('') || '<div class="rs-empty-inline" style="padding:20px;text-align:center;">Sin entregables pendientes en esta área.</div>';
-
-  /* ---- Panel derecho superior: distribución (por área, o por responsable si hay un área activa) ---- */
-  const distTitle = document.getElementById('carga-dist-title');
-  const distBody = document.getElementById('carga-dist-body');
-  if(cargaArea==='todas'){
-    distTitle.textContent = '📊 Distribución por área';
-    const flatAll = allEntregablesFlat().filter(x=>x.e.estado==='pendiente');
-    const areaColor = {comercial:'var(--info)', arquitectura:'var(--violet)', presupuestos:'var(--ok)'};
-    const buckets = ['comercial','arquitectura','presupuestos'].map(area=>({area, count: flatAll.filter(x=>x.e.area===area).length}));
-    const total = buckets.reduce((s,b)=>s+b.count,0) || 1;
-    distBody.innerHTML = buckets.map(b=>`<div class="dist-row">
-      <span class="dist-label">${AREA_LABEL[b.area]}</span>
-      <div class="dist-bar-track"><div class="dist-bar-fill" style="width:${Math.round((b.count/total)*100)}%;background:${areaColor[b.area]};"></div></div>
-      <span class="dist-count">${b.count}</span>
-    </div>`).join('');
-  } else {
-    distTitle.textContent = '📊 Distribución de carga — ' + AREA_LABEL[cargaArea];
-    const totalResp = rows.reduce((s,r)=>s+r.count,0) || 1;
-    distBody.innerHTML = rows.length ? rows.map(r=>{
-      const nivel = cargaNivel(Math.round((r.count/maxCount)*100));
-      const colorVar = nivel.cls==='alta' ? 'var(--danger)' : nivel.cls==='moderada' ? 'var(--warn)' : 'var(--ok)';
-      return `<div class="dist-row">
-        <span class="dist-label">${r.name}</span>
-        <div class="dist-bar-track"><div class="dist-bar-fill" style="width:${Math.round((r.count/totalResp)*100)}%;background:${colorVar};"></div></div>
-        <span class="dist-count">${r.count}</span>
-      </div>`;
-    }).join('') : '<div class="rs-empty-inline">Sin datos.</div>';
-  }
-
-  /* ---- Panel derecho inferior: principales hitos (vencidos primero, luego P1, luego fecha más próxima) ---- */
-  const hitosBody = document.getElementById('carga-hitos-body');
-  const hitos = flatArea.filter(x=>x.e.fechaEntrega).sort((a,b)=>{
-    const score = x=> x.e.fechaEntrega < hoy ? 0 : (x.e.prioridad===1 ? 1 : 2);
-    const sa = score(a), sb = score(b);
-    if(sa!==sb) return sa-sb;
-    return a.e.fechaEntrega.localeCompare(b.e.fechaEntrega);
-  }).slice(0,5);
-  hitosBody.innerHTML = hitos.length ? `<div class="hito-list">${hitos.map(({e,o})=>{
-    const vencido = e.fechaEntrega < hoy;
-    const cls = vencido ? 'hito-vencido' : 'hito-p'+e.prioridad;
-    return `<div class="hito-item ${cls}">
-      <div class="hito-top">
-        <span class="hito-id">#${o.id}</span>
-        <span class="hito-cliente">${o.cliente || '(sin cliente)'}</span>
-      </div>
-      <div class="hito-ent">${e.nombre}</div>
-      <div class="hito-sub">
-        <span>👤 ${nombreResponsableEntregable(e) || '(sin asignar)'}</span>
-        <span class="hito-fecha${vencido?' vencido':''}">📅 ${formatFechaCorta(e.fechaEntrega)}${vencido?' · Vencido':''}</span>
-      </div>
-    </div>`;
-  }).join('')}</div>` : '<div class="rs-empty-inline">Sin hitos pendientes en esta área.</div>';
+/* ------------------------------------------------------------
+   CARGA POR PERSONA — Resumen · Detalle · Hitos.
+   Lee las mismas oportunidades/entregables de siempre. Lo propio de esta vista
+   (avance, qué falta, esta semana, enfoque, complejidad manual) vive en e.cp
+   (columna jsonb carga_persona). Nada de esto cambia estado, fechas ni el
+   historial de cumplimiento: llegar al 100% de avance NO completa la tarea.
+   Las ediciones guardan directo (sin confirmación) por persistLocal + renderAll.
+   ------------------------------------------------------------ */
+const CP_AVANCES = [0,20,40,60,80,100];
+const CP_MAX_ENFOQUE = 3;
+const CP_PRIS = [
+  {value:'prioritario', label:'Prioritario', p:1},
+  {value:'importante',  label:'Importante',  p:2},
+  {value:'programado',  label:'Programado',  p:3},
+];
+let cargaSel = '';
+let cargaSemana = '';
+function cpPriKey(e){ return e.prioridad===1 ? 'prioritario' : e.prioridad===2 ? 'importante' : 'programado'; }
+function cpPriLabel(k){ return (CP_PRIS.find(x=>x.value===k)||{}).label || ''; }
+function cpPriDot(e){ return e.prioridad===1 ? 1 : e.prioridad===2 ? 2 : 3; }
+function cpLunesActual(){ return mondayOnOrBeforeISO(todayISO()); }
+function cpAvanceDe(e){ const a = Number(e.cp && e.cp.avance); return CP_AVANCES.includes(a) ? a : 0; }
+function cpEnfoque(e){ return !!(e.cp && e.cp.enfoque === cpLunesActual()); }
+function cpPlaneado(e, lunes){ return !!(e.cp && e.cp.semana === (lunes || cpLunesActual())); }
+/* Complejidad: criterio manual si existe; si no, se estima con refrigerante
+   (CO₂/amoníaco pesan más), alcance (importe, volumen de entregables abiertos,
+   metrados). Es independiente de la prioridad. */
+function cpComplejidad(e, o){
+  const man = e.cp && e.cp.complejidad;
+  if(['alta','media','baja'].includes(man)) return {key:man, manual:true};
+  let pts = 0;
+  const r = o.refrigerante;
+  if(r==='CO2' || r==='Amoniaco' || r==='Amoniaco/Glicol') pts += 2;
+  else if(r==='Freon') pts += 1;
+  const imp = Number(o.importe) || 0;
+  if(imp >= 500000) pts += 2; else if(imp >= 150000) pts += 1;
+  if(o.entregables.filter(x=>x.estado==='pendiente').length >= 4) pts += 1;
+  if(e.requiereMetrados) pts += 1;
+  return {key: pts>=4 ? 'alta' : pts>=2 ? 'media' : 'baja', manual:false};
 }
-function toggleCargaExpand(barEl){
-  const name = barEl.closest('.wl-row').dataset.name;
-  if(cargaExpandedNames.has(name)) cargaExpandedNames.delete(name); else cargaExpandedNames.add(name);
-  renderCarga();
+function cpGuardar(e, campos){
+  if(!puedeEditar){ avisarSoloLectura(); return false; }
+  e.cp = Object.assign({}, e.cp || {}, campos);
+  Object.keys(e.cp).forEach(k=>{ if(e.cp[k]==='' || e.cp[k]==null) delete e.cp[k]; });
+  persistLocal();
+  renderAll();
+  return true;
+}
+function cpBuscar(oppId, entId){
+  const o = oportunidades.find(x=>x.id===oppId);
+  const e = o && o.entregables.find(x=>x.id===entId);
+  return e ? {o, e} : null;
+}
+function cpSetSemana(v){ cargaSemana = v; renderCarga(); }
+function cpLimpiarFiltros(){
+  ['cp-f-resp','cp-f-pri','cp-f-ref'].forEach(mselClear);
+  cargaSemana = '';
+  setCargaArea('todas');
+}
+
+function cpAvanceClick(ev, oppId, entId){
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  const tr = ev.currentTarget.querySelector('.bartrack').getBoundingClientRect();
+  const frac = Math.min(1, Math.max(0, (ev.clientX - tr.left) / (tr.width || 1)));
+  const nuevo = CP_AVANCES[Math.round(frac * (CP_AVANCES.length - 1))];
+  if(nuevo !== cpAvanceDe(x.e)) cpGuardar(x.e, {avance:nuevo});
+}
+function cpAvanceKey(ev, oppId, entId){
+  const dir = ev.key==='ArrowRight' || ev.key==='ArrowUp' ? 1 : ev.key==='ArrowLeft' || ev.key==='ArrowDown' ? -1 : 0;
+  if(!dir) return;
+  ev.preventDefault();
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  const i = Math.min(CP_AVANCES.length-1, Math.max(0, CP_AVANCES.indexOf(cpAvanceDe(x.e)) + dir));
+  if(CP_AVANCES[i] !== cpAvanceDe(x.e)) cpGuardar(x.e, {avance:CP_AVANCES[i]});
+}
+function cpQueFalta(oppId, entId, input){
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  const v = input.value.trim();
+  if(v === ((x.e.cp && x.e.cp.queFalta) || '')) return;
+  cpGuardar(x.e, {queFalta:v});
+}
+function cpSetPrioridad(oppId, entId, key){
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  const p = (CP_PRIS.find(q=>q.value===key)||{}).p;
+  if(!p || p === x.e.prioridad) return;
+  if(!puedeEditar){ avisarSoloLectura(); renderCarga(); return; }
+  x.e.prioridad = p;
+  persistLocal();
+  renderAll();
+}
+function cpSetComplejidad(oppId, entId, v){
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  cpGuardar(x.e, {complejidad: v});
+}
+function cpToggleSemana(oppId, entId){
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  const lunes = cpLunesActual();
+  cpGuardar(x.e, {semana: cpPlaneado(x.e, lunes) ? '' : lunes});
+}
+function cpToggleEnfoque(oppId, entId){
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  const lunes = cpLunesActual();
+  if(!cpEnfoque(x.e)){
+    const nombre = nombreResponsableEntregable(x.e) || CARGA_SIN_ASIGNAR;
+    const n = allEntregablesFlat().filter(y=> y.e.estado==='pendiente' && cpEnfoque(y.e) && (nombreResponsableEntregable(y.e) || CARGA_SIN_ASIGNAR)===nombre).length;
+    if(n >= CP_MAX_ENFOQUE){ showToast('Máximo ' + CP_MAX_ENFOQUE + ' enfoques por responsable.', 'warn'); return; }
+  }
+  cpGuardar(x.e, {enfoque: cpEnfoque(x.e) ? '' : lunes});
+}
+/* N° de la secuencia semanal (o.ordenTrabajo): misma regla de siempre, ahora
+   se guarda directo. */
+function actualizarNumeroCarga(id, input){
+  const o = oportunidades.find(x => x.id === id);
+  if(!o) return;
+  const anterior = esOrdenTrabajoValido(o.ordenTrabajo) ? Number(o.ordenTrabajo) : 1;
+  if(!puedeEditar){ input.value = anterior; avisarSoloLectura(); return; }
+  const crudo = String(input.value).trim();
+  const valor = Number(crudo);
+  if(crudo === '' || !esOrdenTrabajoValido(valor)){
+    input.value = anterior;
+    showToast('El N° debe ser un número entero desde 1 hasta ' + ORDEN_TRABAJO_MAX + '.', 'warn');
+    return;
+  }
+  input.value = valor;
+  if(valor === anterior) return;
+  o.ordenTrabajo = valor;
+  persistLocal();
+  renderAll();
+}
+
+/* Pendientes con filtros combinables. Devuelve el conjunto "base" (sin semana)
+   y el filtrado por semana; los hitos usan la base. */
+/* Perfil restringido: el proyecto (fila o hito) abre la ficha de consulta, la
+   misma de Revisión semanal. Para el resto de roles no cambia nada. */
+function cpAbrirFichaAttrs(oppId){
+  if(!perfilRestringido) return '';
+  const abrir = 'openRSDetailDrawer(' + oppId + ')';
+  return ` data-abre-ficha role="button" tabindex="0" title="Abrir ficha del proyecto" onclick="${abrir}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${abrir};}"`;
+}
+function cpDatos(){
+  const resps = mselValues('cp-f-resp');
+  const pris = mselValues('cp-f-pri');
+  const refs = mselValues('cp-f-ref');
+  const nombreDe = e=> nombreResponsableEntregable(e) || CARGA_SIN_ASIGNAR;
+  const refDe = o=> refrigeranteDisplay(o) || 'Sin definir';
+  const porArea = cargaPendientes(cargaArea);
+  const base = porArea.filter(({e,o})=>
+    (!resps.length || resps.includes(nombreDe(e))) &&
+    (!pris.length || pris.includes(cpPriKey(e))) &&
+    (!refs.length || refs.includes(refDe(o))));
+  const enSemana = (e, lunes)=>{
+    const dom = addDaysISO(lunes, 6);
+    return cpPlaneado(e, lunes) || (e.fechaEntrega && e.fechaEntrega >= lunes && e.fechaEntrega <= dom);
+  };
+  const filtrado = cargaSemana ? base.filter(({e})=>enSemana(e, cargaSemana)) : base;
+  return {porArea, base, filtrado, enSemana, nombreDe, refDe};
+}
+function cpRenderFiltros(d){
+  const lunes = cpLunesActual();
+  const sel = document.getElementById('cp-f-semana');
+  const opts = [['', 'Semana: todas']];
+  for(let i=-1;i<=3;i++){
+    const l = addDaysISO(lunes, i*7);
+    opts.push([l, (i===0 ? 'Esta semana' : i===1 ? 'Próxima' : i===-1 ? 'Anterior' : 'Semana') + ' · ' + formatFechaCorta(l) + ' – ' + formatFechaCorta(addDaysISO(l,6))]);
+  }
+  if(cargaSemana && !opts.some(o=>o[0]===cargaSemana)) cargaSemana = '';
+  sel.innerHTML = opts.map(([v,t])=>`<option value="${v}"${v===cargaSemana?' selected':''}>${t}</option>`).join('');
+  sel.classList.toggle('msel-active', !!cargaSemana);
+  const nombres = [...new Set(d.porArea.map(({e})=>d.nombreDe(e)))].sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}));
+  mselSetOptions('cp-f-resp', nombres.map(n=>({value:n,label:n})), 'Responsable: todos');
+  mselSetOptions('cp-f-pri', CP_PRIS.map(p=>({value:p.value,label:p.label})), 'Prioridad: todas');
+  const refs = [...new Set(d.porArea.map(({o})=>d.refDe(o)))].sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}));
+  mselSetOptions('cp-f-ref', refs.map(n=>({value:n,label:n})), 'Refrigerante: todos');
+}
+
+/* Carga ponderada por refrigerante (interna, nunca se muestra; solo desempata el ranking): cada proyecto activo del
+   responsable suma según su refrigerante — Freón 1; Amoníaco, Amoníaco/Glicol
+   y CO₂ 2; sin refrigerante u otros sistemas cuentan 1. */
+const CP_NIVEL = {
+  disp:   {label:'Disponible'},
+  mod:    {label:'Moderado'},
+  limite: {label:'Al límite'},
+  sobre:  {label:'Sobrecargado'},
+};
+const CP_CARGA_ESCALA = 6;
+function cpPuntosProyecto(o){ return ['CO2','Amoniaco','Amoniaco/Glicol'].includes(o.refrigerante) ? 2 : 1; }
+function cpCargaPuntos(items){
+  const proyectos = new Map();
+  items.forEach(({o})=>proyectos.set(o.id, o));
+  return [...proyectos.values()].reduce((s,o)=>s + cpPuntosProyecto(o), 0);
+}
+/* Saturación = pendientes de la semana (con fecha en la semana o planificados en ella):
+   0–2 Disponible · 3 Moderado · 4 Al límite · más de 4 Sobrecargado. */
+const CP_LIMITE_SEMANA = 4;
+function cpNivelCarga(n){ return n > CP_LIMITE_SEMANA ? 'sobre' : n === CP_LIMITE_SEMANA ? 'limite' : n === 3 ? 'mod' : 'disp'; }
+const CP_SIRENA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18v-6a5 5 0 0 1 10 0v6"/><path d="M5 21a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1z"/><path d="M12 2v1M21 12h1M2 12h1M4.9 4.9l.7.7M19.1 4.9l-.7.7"/></svg>';
+/* Prioridad: sirena roja (Prioritario), punto ámbar (Importante), neutro (Programado). */
+function cpPrioHtml(e, conTexto){
+  const k = cpPriKey(e);
+  const ico = k==='prioritario' ? CP_SIRENA : '<span class="cp-prio-dot"></span>';
+  return `<span class="cp-prio ${k}" title="${cpPriLabel(k)}">${ico}${conTexto ? `<span class="cp-prio-txt">${cpPriLabel(k)}</span>` : ''}</span>`;
+}
+
+/* Seleccionar a alguien no repinta la lista: solo mueve la marca y cambia el
+   contenido del Detalle (alto fijo), así nada salta ni se desplaza. */
+let cpFilas = [];
+let cpDetNombre = null;
+const cpAbiertos = new Set();
+/* Animación de entrada: solo en el primer render tras abrir la vista. */
+let cpAnimar = true;
+function cpSeleccionar(name){
+  if(name === cargaSel) return;
+  cargaSel = name;
+  document.querySelectorAll('#cp-resumen-body .cp-per').forEach(b=>{
+    const on = b.dataset.name===name;
+    b.classList.toggle('is-sel', on);
+    b.setAttribute('aria-pressed', on);
+  });
+  cpRenderDetalle(todayISO());
+  cpRenderSecuencia();
+}
+function cpToggleFila(entId){
+  const fila = document.querySelector(`#cp-detalle-body .cp-row[data-ent="${entId}"]`);
+  const abrir = !cpAbiertos.has(entId);
+  if(abrir) cpAbiertos.add(entId); else cpAbiertos.delete(entId);
+  if(fila){
+    fila.classList.toggle('is-open', abrir);
+    const btn = fila.querySelector('.cp-row-head');
+    if(btn) btn.setAttribute('aria-expanded', abrir);
+  }
+}
+/* Franja semanal: un día con entregables lleva al primero de ellos en la lista. */
+function cpIrDia(fecha){
+  const lista = document.querySelector('#cp-detalle-body .cp-scroll');
+  const fila = lista && lista.querySelector(`.cp-row[data-fecha="${fecha}"]`);
+  if(!fila) return;
+  lista.scrollTo({top: Math.max(0, fila.offsetTop - 2), behavior:'smooth'});
+  fila.classList.remove('is-flash');
+  void fila.offsetWidth;
+  fila.classList.add('is-flash');
+}
+function cpComentario(oppId, entId, el){
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  const v = el.value.trim();
+  if(v === (x.e.observacion || '')) return;
+  if(!puedeEditar){ el.value = x.e.observacion || ''; avisarSoloLectura(); return; }
+  x.e.observacion = v;
+  persistLocal();
+  renderAll();
+}
+
+function cpSetAvance(oppId, entId, v){
+  const x = cpBuscar(oppId, entId); if(!x) return;
+  if(CP_AVANCES.includes(v) && v !== cpAvanceDe(x.e)) cpGuardar(x.e, {avance:v});
+}
+/* Fecha como mini-calendario: día grande + mes corto. */
+function cpFechaTile(iso){
+  if(!iso) return '<b>—</b><small>s/f</small>';
+  const [y,m,d] = iso.split('-').map(Number);
+  return `<b>${d}</b><small>${MESES[m-1]}</small>`;
+}
+function cpRenderDetalle(hoy){
+  const det = document.getElementById('cp-detalle-body');
+  if(!det) return;
+  const sel = cpFilas.find(f=>f.name===cargaSel);
+  const scrollPrev = det.querySelector('.cp-scroll');
+  const mismo = cpDetNombre === cargaSel;
+  const top = (mismo && scrollPrev) ? scrollPrev.scrollTop : 0;
+  cpDetNombre = cargaSel;
+  if(!sel){
+    det.innerHTML = '<div class="cp-det-vacio">Selecciona un colaborador del ranking para ver su detalle.</div>';
+    return;
+  }
+  const anim = mismo ? '' : ' cp-det-anim';
+  const fechaDe = x=> x.e.fechaEntrega || '9999-99-99';
+  const items = sel.items.slice().sort((a,b)=> fechaDe(a).localeCompare(fechaDe(b)) || (a.e.prioridad||9)-(b.e.prioridad||9) || a.e.id-b.e.id);
+  const ro = puedeEditar ? '' : ' disabled';
+  const lunes = cargaSemana || cpLunesActual();
+  const CX_TXT = {alta:'Alta', media:'Media', baja:'Baja'};
+  const nivel = cpNivelCarga(sel.semana);
+
+  /* Semana del responsable: cantidad por día; 🚨 solo en días con Prioritario. */
+  const DIAS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const cal = DIAS.map((dn, i)=>{
+    const f = addDaysISO(lunes, i);
+    const delDia = items.filter(({e})=>e.fechaEntrega===f);
+    const n = delDia.length;
+    const prio = delDia.some(({e})=>e.prioridad===1);
+    const dd = Number(f.slice(8,10));
+    const tit = `${formatFechaLarga(f)} · ${n} entregable${n===1?'':'s'}${prio ? ' · con Prioritario' : ''}`;
+    const cls = `cp-cal-dia${f===hoy?' is-hoy':''}${f<hoy?' is-pasado':''}${n?' tiene':''}${n>=3?' carga-alta':''}${i>4?' finde':''}`;
+    const accion = n ? ` onclick="cpIrDia('${f}')"` : ' tabindex="-1"';
+    return `<button type="button" class="${cls}" title="${tit}" aria-label="${tit}"${accion}>
+      ${prio ? '<span class="cp-cal-sirena" aria-hidden="true">🚨</span>' : ''}
+      <span class="cp-cal-dn">${f===hoy ? 'Hoy' : dn}</span>
+      <span class="cp-cal-num">${dd}</span>
+      <span class="cp-cal-n">${n || '·'}</span>
+    </button>`;
+  }).join('');
+
+  const filasHtml = items.map(({e,o})=>{
+    const av = cpAvanceDe(e);
+    const cx = cpComplejidad(e,o);
+    const dias = e.fechaEntrega ? daysBetween(hoy, e.fechaEntrega) : null;
+    const estadoFecha = dias===null ? '' : dias < 0 ? ' is-vencido' : dias <= 2 ? ' is-proximo' : '';
+    const ids = `${o.id},${e.id}`;
+    const abierto = cpAbiertos.has(e.id);
+    const enf = cpEnfoque(e);
+    const bloqueado = e.estadoTarea === 'bloqueado';
+    const origen = bloqueado ? ((BLOQUEO_ORIGENES.find(b=>b.value===e.bloqueoOrigen)||{}).label || '') : '';
+    const ref = refrigeranteDisplay(o);
+    const sit = dias===null ? '' : dias < 0 ? 'Vencido hace ' + (-dias) + ' d' : dias===0 ? 'Vence hoy' : dias===1 ? 'Vence mañana' : 'En ' + dias + ' días';
+    return `<div class="cp-row${abierto?' is-open':''}${estadoFecha}${bloqueado?' is-bloqueado':''}" data-ent="${e.id}" data-fecha="${e.fechaEntrega||''}">
+      <div class="cp-row-head" role="button" tabindex="0" onclick="cpToggleFila(${e.id})" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();cpToggleFila(${e.id});}" aria-expanded="${abierto}">
+        <span class="cp-row-fecha" title="${formatFechaLarga(e.fechaEntrega)}">${cpFechaTile(e.fechaEntrega)}</span>
+        <span class="cp-row-main">
+          <span class="cp-row-ent">${e.prioridad===1 ? '<span class="cp-row-sir" title="Prioritario">🚨</span>' : ''}${escAttr(e.nombre)}</span>
+          <span class="cp-row-proy"><span class="cp-id">#${o.id}</span> ${escAttr(o.cliente||'(sin cliente)')} · ${escAttr(o.proyecto||'(sin nombre)')}</span>
+        </span>
+        <span class="cp-row-ref${ref ? '' : ' vacio'}">${escAttr(ref || '—')}</span>
+        <button type="button" class="cp-row-star${enf?' on':''}" onclick="event.stopPropagation();cpToggleEnfoque(${ids})"${ro} title="${enf ? 'Quitar de enfoque' : 'Marcar como enfoque de la semana'} (máx. ${CP_MAX_ENFOQUE})" aria-pressed="${enf}" aria-label="Enfoque">${enf ? '★' : '☆'}</button>
+        <span class="cp-row-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+      </div>
+      <div class="cp-acc"><div class="cp-acc-in"><div class="cp-acc-body">
+        <div class="cp-acc-line cp-acc-top">
+          <div class="cp-acc-f cp-acc-avance">
+            <span class="cp-acc-k">Avance <b>${av}%</b></span>
+            <div class="cp-seg-av" role="radiogroup" aria-label="Avance">${CP_AVANCES.map(v=>`<button type="button" role="radio" aria-checked="${v===av}" class="${v===av?'on':v<av?'past':''}" onclick="cpSetAvance(${ids},${v})"${ro}>${v}%</button>`).join('')}</div>
+            <span class="cp-av-bar" aria-hidden="true"><i style="width:${av}%"></i></span>
+          </div>
+          <div class="cp-acc-f">
+            <span class="cp-acc-k">Fecha interna</span>
+            <span class="cp-acc-v${estadoFecha===' is-vencido'?' vencido':estadoFecha===' is-proximo'?' proximo':''}" title="${sit}">${formatFechaLarga(e.fechaEntrega)}${sit ? `<small>${sit}</small>` : ''}</span>
+          </div>
+          <label class="cp-acc-f">
+            <span class="cp-acc-k">Complejidad</span>
+            <select class="cp-plain" onchange="cpSetComplejidad(${ids},this.value)"${ro} aria-label="Complejidad">
+              <option value=""${cx.manual?'':' selected'}>${cx.manual ? 'Automática' : CX_TXT[cx.key] + ' (auto)'}</option>
+              ${['alta','media','baja'].map(k=>`<option value="${k}"${cx.manual&&cx.key===k?' selected':''}>${CX_TXT[k]}</option>`).join('')}</select>
+          </label>
+          <label class="cp-acc-f">
+            <span class="cp-acc-k">Prioridad</span>
+            <select class="cp-plain pri-${cpPriKey(e)}" onchange="cpSetPrioridad(${ids},this.value)"${ro} aria-label="Prioridad">${CP_PRIS.map(p=>`<option value="${p.value}"${p.value===cpPriKey(e)?' selected':''}>${p.label}</option>`).join('')}</select>
+          </label>
+        </div>
+        <div class="cp-acc-line full">
+          <label class="cp-acc-f">
+            <span class="cp-acc-k">Pendiente / Comentarios</span>
+            <textarea class="cp-input cp-textarea" rows="1" placeholder="Qué falta, acuerdos, notas…" maxlength="600"${ro} onchange="cpComentario(${ids},this)" aria-label="Pendiente / Comentarios">${escAttr(e.observacion || '')}</textarea>
+          </label>
+        </div>
+        <div class="cp-acc-line full cp-acc-imp">
+          ${bloqueado
+            ? `<span class="cp-imp"><span class="cp-imp-dot" aria-hidden="true"></span><span>Bloqueado${origen ? ' por ' + escAttr(origen) : ''}${e.bloqueoDetalle ? ' · ' + escAttr(e.bloqueoDetalle) : ''}</span></span>`
+            : '<span class="cp-imp-ok">Sin impedimentos</span>'}
+          ${perfilRestringido ? `<span class="cp-link"${cpAbrirFichaAttrs(o.id)}>Abrir ficha del proyecto →</span>` : ''}
+        </div>
+      </div></div></div>
+    </div>`;
+  }).join('');
+
+  det.innerHTML = `<div class="cp-det-head${anim}">
+      <div>
+        <div class="cp-det-tit nivel-${nivel}">
+          <span class="cp-det-name">${escAttr(sel.name)}</span>
+          <span class="cp-estado">${CP_NIVEL[nivel].label}</span>
+        </div>
+        <div class="cp-det-sub">${sel.total} activo${sel.total===1?'':'s'} · ${sel.semana} vence${sel.semana===1?'':'n'} esta semana</div>
+      </div>
+    </div>
+    <div class="cp-cal${anim}" role="group" aria-label="Semana del ${formatFechaCorta(lunes)}">${cal}</div>
+    <p class="cp-ent-label">Entregables · ${items.length}</p>
+    <div class="cp-scroll${anim}">${filasHtml || '<div class="cp-empty">Sin entregables con estos filtros.</div>'}</div>`;
+  det.querySelector('.cp-scroll').scrollTop = top;
+}
+
+/* Orden de proyectos del responsable seleccionado: un N° por proyecto
+   (o.ordenTrabajo, la misma regla y guardado de siempre: actualizarNumeroCarga).
+   No se mezcla con los hitos, que son del área completa. */
+function cpRenderSecuencia(){
+  const panel = document.getElementById('cp-seq-panel');
+  if(!panel) return;
+  const sel = cpFilas.find(f=>f.name===cargaSel);
+  const ro = puedeEditar ? '' : ' disabled';
+  const numeroDe = o=> esOrdenTrabajoValido(o.ordenTrabajo) ? Number(o.ordenTrabajo) : 1;
+  const fechaDe = x=> x.e.fechaEntrega || '9999-99-99';
+  const porProyecto = new Map();
+  (sel ? sel.items : []).forEach(x=>{
+    if(!porProyecto.has(x.o.id)) porProyecto.set(x.o.id, {o:x.o, items:[]});
+    porProyecto.get(x.o.id).items.push(x);
+  });
+  const sec = [...porProyecto.values()].map(g=>{ g.items.sort((a,b)=>fechaDe(a).localeCompare(fechaDe(b))); return g; })
+    .sort((a,b)=> numeroDe(a.o)-numeroDe(b.o) || fechaDe(a.items[0]).localeCompare(fechaDe(b.items[0])) || a.o.id-b.o.id);
+  const listaPrev = panel.querySelector('.cp-seq-list');
+  const scroll = (listaPrev && panel.dataset.nombre === (sel ? sel.name : '')) ? listaPrev.scrollTop : 0;
+  panel.dataset.nombre = sel ? sel.name : '';
+  panel.innerHTML = `<div class="cp-panel-head">
+      <div class="cp-panel-tit">
+        <p class="workload-panel-title">🔢 Orden de proyectos</p>
+        <span class="cp-panel-sub">${sel ? escAttr(sel.name) : 'Selecciona un colaborador'}</span>
+      </div>
+      <span class="cp-count">${sec.length} ${sec.length===1?'proyecto':'proyectos'}</span>
+    </div>
+    <div class="cp-seq-list">${sec.map(({o, items})=>`<div class="cp-seq-item">
+        <label class="cp-seq-num" title="N° de orden de trabajo: el mismo entero de la columna «Orden de trabajo» de Detalle > Oportunidades.">
+          <span class="cp-seq-num-k">N°</span>
+          <input type="number" class="equipo-num-input" inputmode="numeric" step="1" min="1" max="${ORDEN_TRABAJO_MAX}" value="${numeroDe(o)}"${ro}
+            aria-label="Orden de trabajo de la oportunidad ${o.id}" onkeydown="equipoNumKeydown(event)" onchange="actualizarNumeroCarga(${o.id},this)">
+        </label>
+        <div class="cp-seq-txt"><b><span class="cp-id">#${o.id}</span>${escAttr(o.cliente||'(sin cliente)')}</b><span>${escAttr(o.proyecto||'(sin nombre)')} <i>· ${items.map(({e})=>escAttr(e.nombre)).join(', ')}</i></span></div>
+      </div>`).join('') || '<div class="cp-empty">Sin proyectos a cargo.</div>'}</div>`;
+  panel.querySelector('.cp-seq-list').scrollTop = scroll;
+}
+
+function renderCarga(){
+  if(!document.getElementById('cp-resumen-body')) return;
+  const hoy = todayISO();
+  const d = cpDatos();
+  cpRenderFiltros(d);
+  const lunesAct = cargaSemana || cpLunesActual();
+  const domAct = addDaysISO(lunesAct, 6);
+  const shell = document.getElementById('carga-vista-carga');
+  if(shell) shell.classList.toggle('cp-anim', cpAnimar && !shell.hidden);
+  if(shell && !shell.hidden) cpAnimar = false;
+
+  /* ---- Agrupación por responsable ---- */
+  const grupos = new Map();
+  d.filtrado.forEach(x=>{
+    const n = d.nombreDe(x.e);
+    if(!grupos.has(n)) grupos.set(n, []);
+    grupos.get(n).push(x);
+  });
+  const PESO_PRI = {prioritario:3, importante:2, programado:1};
+  const PESO_CX = {alta:3, media:2, baja:1};
+  const filas = [...grupos.entries()].map(([name, items])=>{
+    const cx = items.map(({e,o})=>cpComplejidad(e,o).key);
+    return {
+      name, items,
+      total: items.length,
+      pri: items.filter(({e})=>e.prioridad===1).length,
+      imp: items.filter(({e})=>e.prioridad===2).length,
+      complejos: cx.filter(k=>k==='alta').length,
+      avance: Math.round(items.reduce((s,{e})=>s+cpAvanceDe(e),0) / items.length),
+      vencidos: items.filter(({e})=>e.fechaEntrega && e.fechaEntrega < hoy).length,
+      semana: items.filter(({e})=>d.enSemana(e, lunesAct)).length,
+      peso: items.reduce((s,{e},i)=>s + PESO_PRI[cpPriKey(e)] * PESO_CX[cx[i]], 0),
+      enfoques: items.filter(({e})=>cpEnfoque(e)),
+      areas: [...new Set(items.map(({e})=>e.area))],
+      proyectos: new Set(items.map(({o})=>o.id)).size,
+      carga: cpCargaPuntos(items),
+    };
+  }).sort((a,b)=> b.semana - a.semana || b.carga - a.carga || b.proyectos - a.proyectos || b.total - a.total || a.name.localeCompare(b.name,'es'));
+  if(!filas.some(f=>f.name===cargaSel)) cargaSel = filas.length ? filas[0].name : '';
+  cpFilas = filas;
+
+  /* ---- Ranking: la barra refleja los pendientes de la semana (escala hasta
+     CP_CARGA_ESCALA); la marca vertical es "Al límite" (4). Sin cifras visibles.
+     Se conserva el scroll interno al repintar. ---- */
+  const sobre = filas.filter(f=>cpNivelCarga(f.semana)==='sobre').length;
+  const sum = document.getElementById('cp-res-sum');
+  if(sum) sum.innerHTML = filas.length ? (sobre ? `<b>${sobre}</b> de ${filas.length} sobre capacidad` : `${filas.length} colaborador${filas.length===1?'':'es'} · en capacidad`) : '';
+  const limPct = (CP_LIMITE_SEMANA / CP_CARGA_ESCALA * 100).toFixed(2);
+  const listaPrev = document.querySelector('#cp-resumen-body .cp-lista');
+  const scrollLista = listaPrev ? listaPrev.scrollTop : 0;
+  document.getElementById('cp-resumen-body').innerHTML = '<div class="cp-lista">' + (filas.map(f=>{
+    const nivel = cpNivelCarga(f.semana);
+    const ancho = Math.min(100, Math.max(4, f.semana / CP_CARGA_ESCALA * 100));
+    const areaTxt = f.areas.map(a=>RS_AREA_CORTA[a] || AREA_LABEL[a]).join(' + ');
+    return `<button type="button" class="cp-per nivel-${nivel}${f.name===cargaSel?' is-sel':''}" aria-pressed="${f.name===cargaSel}" onclick="cpSeleccionar(this.dataset.name)" data-name="${escAttr(f.name)}">
+      <div class="cp-per-top">
+        <div class="cp-per-id">
+          <span class="cp-per-name">${escAttr(f.name)}</span>
+          <span class="cp-per-sub">${escAttr(areaTxt)}</span>
+        </div>
+        <div class="cp-per-carga">
+          <b>${f.proyectos}</b>
+          <span class="cp-per-unid">${f.proyectos===1 ? 'proyecto' : 'proyectos'}</span>
+        </div>
+      </div>
+      <div class="cp-cap">
+        <div class="cp-cap-bar">
+          <div class="cp-cap-track"><div class="cp-cap-fill" style="width:${ancho.toFixed(1)}%"></div></div>
+          <span class="cp-cap-lim" style="left:${limPct}%" title="Al límite"></span>
+        </div>
+        <span class="cp-per-nivel">${CP_NIVEL[nivel].label}</span>
+      </div>
+    </button>`;
+  }).join('') || '<div class="cp-empty">Sin entregables pendientes con estos filtros.</div>') + '</div>';
+  document.querySelector('#cp-resumen-body .cp-lista').scrollTop = scrollLista;
+
+  cpRenderDetalle(hoy);
+  cpRenderSecuencia();
+
+  /* ---- Hitos: lo que sale esta semana (o la semana filtrada). Su alcance es el
+     ÁREA activa, de todos sus responsables: no lo acotan el colaborador
+     seleccionado ni los filtros de responsable/prioridad/refrigerante. ---- */
+  const lunesH = lunesAct;
+  document.getElementById('cp-hitos-title').textContent = (cargaSemana && cargaSemana!==cpLunesActual()) ? '📅 Hitos de la semana seleccionada' : '📅 Hitos de la semana';
+  document.getElementById('cp-hitos-sub').textContent = (cargaArea==='todas' ? 'Todas las áreas' : AREA_LABEL[cargaArea]) + ' · ' + formatFechaCorta(lunesH) + ' – ' + formatFechaCorta(addDaysISO(lunesH,6));
+  const hitos = d.porArea.filter(({e})=>d.enSemana(e, lunesH)).sort((a,b)=>
+    (a.e.fechaEntrega||'9999').localeCompare(b.e.fechaEntrega||'9999') || (a.e.prioridad||9) - (b.e.prioridad||9));
+  document.getElementById('cp-hitos-n').textContent = hitos.length + (hitos.length===1 ? ' hito' : ' hitos');
+  const hitosPrev = document.querySelector('#cp-hitos-body .cp-hitos');
+  const scrollHitos = hitosPrev ? hitosPrev.scrollTop : 0;
+  /* Un solo emoji por hito, por precedencia: vencido 🔴 · prioritario 🚨 · hoy ⏰ · próximo 📅. */
+  document.getElementById('cp-hitos-body').innerHTML = hitos.length ? '<div class="cp-hitos">' + hitos.map(({e,o})=>{
+    const dias = e.fechaEntrega ? daysBetween(hoy, e.fechaEntrega) : null;
+    const cls = dias===null ? '' : dias < 0 ? 'vencido' : dias===0 ? 'hoy' : dias===1 ? 'proximo' : '';
+    const sit = dias===null ? 'Sin fecha' : dias < 0 ? 'Vencido · ' + (-dias) + ' d' : dias===0 ? 'Vence hoy' : dias===1 ? 'Mañana' : 'En ' + dias + ' d';
+    const emo = dias!==null && dias < 0 ? ['🔴','Vencido'] : e.prioridad===1 ? ['🚨','Prioritario'] : dias===0 ? ['⏰','Vence hoy'] : ['📅','Próximo'];
+    return `<div class="cp-hito ${cls}">
+      <span class="cp-hito-fecha" title="${formatFechaLarga(e.fechaEntrega)}">${cpFechaTile(e.fechaEntrega)}</span>
+      <span class="cp-hito-emo" role="img" aria-label="${emo[1]}" title="${emo[1]}">${emo[0]}</span>
+      <div class="cp-hito-txt">
+        <span class="cp-hito-proy"><span class="cp-id">#${o.id}</span>${escAttr(o.cliente||'(sin cliente)')} · ${escAttr(o.proyecto||'(sin nombre)')}</span>
+        <span class="cp-hito-ent">${escAttr(e.nombre)}</span>
+      </div>
+      <div class="cp-hito-meta">
+        <span class="cp-hito-sit">${sit}</span>
+        <span class="cp-hito-resp">${escAttr(d.nombreDe(e))}</span>
+      </div>
+    </div>`;
+  }).join('') + '</div>' : '<div class="cp-empty">Sin entregables para esta semana en esta área.</div>';
+  const hitosLista = document.querySelector('#cp-hitos-body .cp-hitos');
+  if(hitosLista) hitosLista.scrollTop = scrollHitos;
 }
 
 
@@ -10291,8 +11220,10 @@ function esAdmin(){
   try{ return !!(usuarioActual && usuarioActual.rol === 'admin'); }catch(e){ return false; }
 }
 function setCargaVista(vista){
-  if(vista === 'desempeno' && !esAdmin()) vista = 'carga';
+  if(vista === 'desempeno' && !puedeVerDesempeno()) vista = 'carga';
+  if(!vistaPermitida('carga', vista)) vista = 'carga';
   cargaVista = vista;
+  if(vista === 'carga') cpAnimar = true;
   document.querySelectorAll('[data-subtabs="carga-vista"] .subtab-btn')
     .forEach(b=>b.classList.toggle('active', b.dataset.vista===vista));
   document.getElementById('carga-vista-carga').hidden = vista !== 'carga';
@@ -10896,34 +11827,6 @@ function equipoNumKeydown(ev){
   if(['.', ',', 'e', 'E', '+', '-'].includes(ev.key)) ev.preventDefault();
 }
 
-/* N° editable del plegable de Carga laboral = o.ordenTrabajo, el MISMO entero
-   manual que la columna "Orden de trabajo" de Detalle > Oportunidades y la misma
-   columna orden_trabajo de Supabase (ver oportunidadToRow). No es un campo nuevo:
-   misma validación (esOrdenTrabajoValido) y mismo portón de guardado. */
-function actualizarNumeroCarga(id, input){
-  const o = oportunidades.find(x => x.id === id);
-  if(!o) return;
-  const anterior = esOrdenTrabajoValido(o.ordenTrabajo) ? Number(o.ordenTrabajo) : 1;
-  if(!puedeEditar){ input.value = anterior; avisarSoloLectura(); return; }
-
-  const crudo = String(input.value).trim();
-  const valor = Number(crudo);
-  if(crudo === '' || !esOrdenTrabajoValido(valor)){
-    input.value = anterior;
-    showToast('El N° debe ser un número entero desde 1 hasta ' + ORDEN_TRABAJO_MAX + '.', 'warn');
-    return;
-  }
-  input.value = valor;
-  if(valor === anterior) return;
-
-  confirmarGuardado([['Oportunidad', '#' + o.id + ' · ' + o.cliente], ['N° (orden de trabajo)', String(anterior), String(valor)]], ()=>{
-    o.ordenTrabajo = valor;
-    persistLocal();
-    /* Repinta todas las vistas: la secuencia de cada persona se reordena y la
-       misma cifra se actualiza en Detalle > Oportunidades. */
-    renderAll();
-  }, input, ()=>{ input.value = anterior; });
-}
 /* ============================================================
    03: CRONOGRAMA (gantt por días, por área)
    ============================================================ */
@@ -13508,7 +14411,333 @@ function exportarExcel(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([oppHeaders, ...oppRows]), 'Oportunidades');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([entHeaders, ...entRows]), 'Entregables');
-  XLSX.writeFile(wb, 'Control_Oportunidades_' + todayISO() + '.xlsx');
+  /* Pestañas 3 y 4 (Pipeline Comercial y Resumen Pipeline). SheetJS libre no
+     escribe colores ni paneles congelados, así que el libro se arma con ExcelJS
+     (cargado solo al exportar): las dos hojas originales llevan las mismas filas,
+     sin formato, y las nuevas van con estilo. Sin conexión a la CDN se usa el
+     libro SheetJS de siempre y las hojas nuevas se agregan sin estilos. */
+  const nombre = 'Control_Oportunidades_' + todayISO() + '.xlsx';
+  const pipe = pipelineExportFilas();
+  const originales = [['Oportunidades', [oppHeaders, ...oppRows]], ['Entregables', [entHeaders, ...entRows]]];
+  cargarExcelJS()
+    .then(ExcelJS => pipelineExportarConEstilo(ExcelJS, originales, pipe, nombre))
+    .catch(err => {
+      console.warn('Exportación sin formato en Pipeline (ExcelJS no disponible):', err);
+      pipelineHojasSheetJS(wb, pipe);
+      XLSX.writeFile(wb, nombre);
+    });
+}
+
+/* ---------- Pipeline Comercial 2026–2027 (solo exportación) ---------- */
+const PIPE_HOJA = 'Pipeline Comercial';
+const PIPE_HEADERS = ['CLIENTE','REQUERIMIENTO','VENTA','STATUS','ZONA','PAÍS','REFRIGERANTE','COMERCIAL','COTIZADOR','% PROBABILIDAD DE ÉXITO','MES ESTIMADO DE CIERRE','DURACIÓN','AÑO'];
+const PIPE_ANIOS = [2026, 2027];
+const PIPE_CERRADAS = ['cerrado','perdido','cancelado'];
+/* Orden del embudo comercial para el resumen; los nombres salen de ETAPAS. */
+const PIPE_ORDEN_ETAPAS = ['prospecto','comercial','cotizacion','pendiente_envio','analisis','negociacion','postpuesto','cerrado','perdido','cancelado'];
+/* Colores de STATUS (relleno, texto) — se aplican con formato condicional para
+   que sigan al texto si se edita el estado en el archivo. */
+const PIPE_STATUS_COLOR = {
+  prospecto:['F2F2F2','595959'], comercial:['E4DFEC','5B3F86'], cotizacion:['FFF2CC','7F6000'],
+  pendiente_envio:['FCE4D6','843C0C'], analisis:['DDEBF7','1F4E79'], negociacion:['BDD7EE','1F3864'],
+  postpuesto:['EDEDED','7F7F7F'], cerrado:['C6EFCE','006100'], perdido:['FFC7CE','9C0006'], cancelado:['D9D9D9','404040'],
+};
+const PIPE_FMT = {usd:'"US$ "#,##0', pct:'0"%"', int:'0', dur:'General" meses"', dec:'0.0" meses"'};
+const PIPE_NAVY = '1F3864';
+
+let excelJSPromise = null;
+function cargarExcelJS(){
+  if(window.ExcelJS) return Promise.resolve(window.ExcelJS);
+  if(!excelJSPromise){
+    excelJSPromise = new Promise((resolve, reject)=>{
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+      s.onload = ()=> window.ExcelJS ? resolve(window.ExcelJS) : reject(new Error('ExcelJS no se inicializó'));
+      s.onerror = ()=>{ excelJSPromise = null; reject(new Error('No se pudo cargar ExcelJS')); };
+      document.head.appendChild(s);
+    });
+  }
+  return excelJSPromise;
+}
+
+/* Una fila por oportunidad del arreglo maestro (Oportunidades y Entregas). Los
+   campos sin dato quedan vacíos (null), nunca en cero. */
+function pipelineExportFilas(){
+  const num = v => (v===null || v===undefined || v==='' || isNaN(Number(v))) ? null : Number(v);
+  return oportunidades.map(o=>{
+    const [y, m] = String(o.mesCierre || '').split('-').map(Number);
+    const zona = o.zona==='exterior' ? 'Exterior' : catalogLabel(ZONAS, o.zona);
+    return {
+      etapa: o.etapa,
+      fila: [
+        o.cliente || null, o.proyecto || null, num(o.importe) || null, etapaLabel(o.etapa) || null,
+        zona || null, catalogLabel(PAISES, o.pais) || null, o.refrigerante || null,
+        nombreKAM(o) || null, nombrePresupuestador(o) || null, num(o.probabilidadCierre),
+        (m>=1 && m<=12) ? m : null, num(o.duracionProyecto), (y>=1900 && y<=9999) ? y : null,
+      ],
+    };
+  });
+}
+
+/* Celdas del Resumen: {addr, v | f (+ resultado precalculado), st}. Las fórmulas
+   apuntan a la hoja Pipeline Comercial con un rango holgado, para que las filas
+   que se agreguen a mano también entren al recalcular. */
+function pipelineResumenCeldas(pipe){
+  const last = Math.max(2000, pipe.length + 501);
+  const col = c => `'${PIPE_HOJA}'!$${c}$2:$${c}$${last}`;
+  const C = col('C'), D = col('D'), J = col('J'), K = col('K'), L = col('L'), M = col('M');
+  const ABIERTA = `${D},"<>",${D},"<>${etapaLabel('cerrado')}",${D},"<>${etapaLabel('perdido')}",${D},"<>${etapaLabel('cancelado')}"`;
+  const abiertaProd = `(${D}<>"${etapaLabel('cerrado')}")*(${D}<>"${etapaLabel('perdido')}")*(${D}<>"${etapaLabel('cancelado')}")`;
+
+  /* Mismos cálculos en JS: resultado visible aunque Excel no recalcule al abrir. */
+  const rows = pipe.map(p=>({etapa:p.etapa, venta:p.fila[2]||0, prob:p.fila[9], mes:p.fila[10], dur:p.fila[11], anio:p.fila[12]}));
+  const abiertas = rows.filter(r=>r.etapa && !PIPE_CERRADAS.includes(r.etapa));
+  const suma = (arr, k) => arr.reduce((s,r)=>s + (Number(r[k])||0), 0);
+  const deAnio = (arr, a) => arr.filter(r=>r.anio===a);
+
+  const cells = [];
+  const put = (addr, x, st) => cells.push(Object.assign({addr, st}, (x && typeof x==='object') ? x : {v:x}));
+  const f = (formula, result) => ({f:formula, r:result});
+
+  put('B1', 'RESUMEN PIPELINE COMERCIAL 2026–2027', 'title');
+  put('B2', `Fórmulas sobre la hoja "${PIPE_HOJA}". Pipeline activo = todas las etapas excepto Vendido, Perdido y Cancelado. Generado el ${formatFechaLarga(todayISO())}.`, 'note');
+
+  // A. Indicadores principales
+  let r = 4;
+  put('B'+r, 'A. INDICADORES PRINCIPALES', 'section');
+  r++;
+  ['Indicador', 'Año 2026', 'Año 2027'].forEach((t,i)=>put('BCD'[i]+r, t, 'th'));
+  const kpis = [
+    ['Oportunidades activas (cantidad)', a=>f(`COUNTIFS(${ABIERTA},${M},${a})`, deAnio(abiertas,a).length), 'int'],
+    ['Pipeline activo (USD)', a=>f(`SUMIFS(${C},${ABIERTA},${M},${a})`, suma(deAnio(abiertas,a),'venta')), 'usd'],
+    ['Pipeline ponderado por probabilidad (USD)', a=>f(`SUMPRODUCT((${M}=${a})*${abiertaProd},${C},${J})/100`,
+      deAnio(abiertas,a).reduce((s,x)=>s + x.venta*(Number(x.prob)||0), 0)/100), 'usd'],
+  ];
+  const filaKpi = {};
+  kpis.forEach(([label, fn, fmt], i)=>{
+    r++;
+    filaKpi[i] = r;
+    put('B'+r, label, 'label');
+    PIPE_ANIOS.forEach((a,j)=>put('CD'[j]+r, fn(a), fmt));
+  });
+
+  // B. Resumen por etapa comercial
+  r += 2;
+  put('B'+r, 'B. RESUMEN POR ETAPA COMERCIAL', 'section');
+  r++;
+  ['Etapa','Cantidad 2026','Venta USD 2026','Cantidad 2027','Venta USD 2027','Total USD'].forEach((t,i)=>put('BCDEFG'[i]+r, t, 'th'));
+  const filaEtapa = (et, cerrada) => {
+    r++;
+    const rr = r, lab = etapaLabel(et), de = rows.filter(x=>x.etapa===et);
+    put('B'+rr, lab, cerrada ? 'labelClosed' : 'label');
+    PIPE_ANIOS.forEach((a,j)=>{
+      put('CE'[j]+rr, f(`COUNTIFS(${D},$B${rr},${M},${a})`, deAnio(de,a).length), cerrada ? 'intClosed' : 'int');
+      put('DF'[j]+rr, f(`SUMIFS(${C},${D},$B${rr},${M},${a})`, suma(deAnio(de,a),'venta')), cerrada ? 'usdClosed' : 'usd');
+    });
+    put('G'+rr, f(`D${rr}+F${rr}`, suma(de.filter(x=>PIPE_ANIOS.includes(x.anio)),'venta')), cerrada ? 'usdClosed' : 'usd');
+    return de;
+  };
+  const subtotal = (label, desde, hasta, de, st) => {
+    r++;
+    put('B'+r, label, st+'Label');
+    ['C','D','E','F','G'].forEach(c=>{
+      const esCant = c==='C' || c==='E';
+      const a = (c==='C' || c==='D') ? 2026 : (c==='G' ? null : 2027);
+      const sub = a ? deAnio(de,a) : de.filter(x=>PIPE_ANIOS.includes(x.anio));
+      put(c+r, f(`SUM(${c}${desde}:${c}${hasta})`, esCant ? sub.length : suma(sub,'venta')), st + (esCant ? 'Int' : 'Usd'));
+    });
+    return r;
+  };
+  const ordenAbiertas = PIPE_ORDEN_ETAPAS.filter(e=>!PIPE_CERRADAS.includes(e) && ETAPAS.some(x=>x.value===e));
+  const ordenCerradas = PIPE_ORDEN_ETAPAS.filter(e=>PIPE_CERRADAS.includes(e));
+  /* Etapas de la plataforma que no estén en el orden (por si se agrega alguna). */
+  ETAPAS.forEach(e=>{ if(!PIPE_ORDEN_ETAPAS.includes(e.value)) ordenAbiertas.push(e.value); });
+  const iniAb = r + 1;
+  let deAb = [];
+  ordenAbiertas.forEach(e=>{ deAb = deAb.concat(filaEtapa(e, false)); });
+  const subAb = subtotal('Subtotal pipeline abierto', iniAb, r, deAb, 'sub');
+  const iniCe = r + 1;
+  let deCe = [];
+  ordenCerradas.forEach(e=>{ deCe = deCe.concat(filaEtapa(e, true)); });
+  const subCe = subtotal('Subtotal cerradas (histórico)', iniCe, r, deCe, 'sub');
+  r++;
+  put('B'+r, 'TOTAL', 'totLabel');
+  ['C','D','E','F','G'].forEach(c=>{
+    const prev = cells.filter(x=>x.addr===c+subAb || x.addr===c+subCe).reduce((s,x)=>s + x.r, 0);
+    put(c+r, f(`${c}${subAb}+${c}${subCe}`, prev), (c==='C' || c==='E') ? 'totInt' : 'totUsd');
+  });
+
+  // C. Distribución mensual de cierre (solo pipeline activo)
+  r += 2;
+  put('B'+r, 'C. DISTRIBUCIÓN MENSUAL DE CIERRE — PIPELINE ACTIVO', 'section');
+  r++;
+  ['Mes','Pipeline 2026 USD','Pipeline 2027 USD'].forEach((t,i)=>put('BCD'[i]+r, t, 'th'));
+  const MESES_LARGOS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const iniMes = r + 1;
+  MESES_LARGOS.forEach((mes, i)=>{
+    r++;
+    put('B'+r, mes, 'label');
+    PIPE_ANIOS.forEach((a,j)=>put('CD'[j]+r, f(`SUMIFS(${C},${ABIERTA},${M},${a},${K},${i+1})`,
+      suma(deAnio(abiertas,a).filter(x=>x.mes===i+1),'venta')), 'usd'));
+  });
+  const finMes = r;
+  r++;
+  put('B'+r, 'TOTAL', 'totLabel');
+  PIPE_ANIOS.forEach((a,j)=>{
+    const c = 'CD'[j];
+    put(c+r, f(`SUM(${c}${iniMes}:${c}${finMes})`, suma(deAnio(abiertas,a).filter(x=>x.mes),'venta')), 'totUsd');
+  });
+  const totMes = r;
+  r++;
+  put('B'+r, 'Conciliación vs. pipeline activo (debe ser 0)', 'note');
+  PIPE_ANIOS.forEach((a,j)=>{
+    const c = 'CD'[j];
+    put(c+r, f(`${c}${totMes}-${c}${filaKpi[1]}`, 0), 'usdNote');
+  });
+
+  r += 2;
+  put('B'+r, 'Sin fecha de cierre definida (pipeline activo sin mes o sin año)', 'section');
+  r++;
+  ['Concepto','Cantidad','Venta USD'].forEach((t,i)=>put('BCD'[i]+r, t, 'th'));
+  r++;
+  const sinFecha = abiertas.filter(x=>!x.anio || !x.mes);
+  put('B'+r, 'Oportunidades activas sin fecha', 'label');
+  put('C'+r, f(`COUNTIFS(${ABIERTA},${M},"")+COUNTIFS(${ABIERTA},${M},"<>",${K},"")`, sinFecha.length), 'int');
+  put('D'+r, f(`SUMIFS(${C},${ABIERTA},${M},"")+SUMIFS(${C},${ABIERTA},${M},"<>",${K},"")`, suma(sinFecha,'venta')), 'usd');
+
+  // D. Duración de proyectos (pipeline activo; vacíos no cuentan como cero)
+  r += 2;
+  put('B'+r, 'D. DURACIÓN DE PROYECTOS — PIPELINE ACTIVO', 'section');
+  r++;
+  ['Indicador','Valor'].forEach((t,i)=>put('BC'[i]+r, t, 'th'));
+  PIPE_ANIOS.forEach(a=>{
+    r++;
+    const conDur = deAnio(abiertas,a).filter(x=>x.dur!==null && x.dur!==undefined);
+    put('B'+r, `Duración promedio de proyectos ${a}`, 'label');
+    put('C'+r, f(`IFERROR(AVERAGEIFS(${L},${ABIERTA},${M},${a},${L},"<>"),"—")`,
+      conDur.length ? suma(conDur,'dur')/conDur.length : '—'), 'dec');
+  });
+  r++;
+  put('B'+r, 'Proyectos activos sin duración registrada', 'label');
+  put('C'+r, f(`COUNTIFS(${ABIERTA},${L},"")`, abiertas.filter(x=>x.dur===null || x.dur===undefined).length), 'int');
+
+  return cells;
+}
+
+function pipelineExportarConEstilo(ExcelJS, originales, pipe, nombre){
+  const wx = new ExcelJS.Workbook();
+  return Promise.resolve().then(()=>{
+    /* Hojas 1 y 2: mismo contenido que arma SheetJS, sin formato. */
+    originales.forEach(([hoja, aoa])=>{
+      const w = wx.addWorksheet(hoja);
+      aoa.forEach(fila=>w.addRow(fila.map(v=>v===undefined ? null : v)));
+    });
+    const font = (extra) => Object.assign({name:'Calibri', size:10}, extra || {});
+    const fill = argb => ({type:'pattern', pattern:'solid', fgColor:{argb:'FF'+argb}});
+    const borde = {style:'thin', color:{argb:'FFD0D7E5'}};
+    const bordes = {top:borde, left:borde, bottom:borde, right:borde};
+
+    // Pestaña 3 — Pipeline Comercial
+    const ws = wx.addWorksheet(PIPE_HOJA, {views:[{state:'frozen', ySplit:1}]});
+    ws.columns = [34,46,14,26,11,12,14,22,22,14,12,12,8].map(w=>({width:w}));
+    ws.addRow(PIPE_HEADERS);
+    pipe.forEach(p=>ws.addRow(p.fila));
+    const head = ws.getRow(1);
+    head.height = 32;
+    head.eachCell(c=>{
+      c.font = font({bold:true, color:{argb:'FFFFFFFF'}});
+      c.fill = fill(PIPE_NAVY);
+      c.alignment = {vertical:'middle', horizontal:'center', wrapText:true};
+      c.border = bordes;
+    });
+    const fmtCol = {3:PIPE_FMT.usd, 10:PIPE_FMT.pct, 11:PIPE_FMT.int, 12:PIPE_FMT.dur, 13:PIPE_FMT.int};
+    for(let i=2;i<=pipe.length+1;i++){
+      for(let c=1;c<=13;c++){
+        const cell = ws.getCell(i, c);
+        cell.font = font();
+        cell.border = bordes;
+        cell.alignment = {vertical:'top', wrapText:c<=2, horizontal:c>=10 || c===4 || c===5 ? 'center' : undefined};
+        if(fmtCol[c]) cell.numFmt = fmtCol[c];
+      }
+    }
+    ws.autoFilter = {from:'A1', to:{row:pipe.length+1, column:13}};
+    const lastD = Math.max(2000, pipe.length + 501);
+    ws.addConditionalFormatting({
+      ref:`D2:D${lastD}`,
+      rules: PIPE_ORDEN_ETAPAS.filter(e=>PIPE_STATUS_COLOR[e]).map((e,i)=>({
+        type:'expression', priority:i+1, formulae:[`$D2="${etapaLabel(e)}"`],
+        style:{fill:{type:'pattern', pattern:'solid', bgColor:{argb:'FF'+PIPE_STATUS_COLOR[e][0]}},
+          font:{color:{argb:'FF'+PIPE_STATUS_COLOR[e][1]}, bold:e==='cerrado'}},
+      })),
+    });
+
+    // Pestaña 4 — Resumen Pipeline
+    const rs = wx.addWorksheet('Resumen Pipeline', {views:[{showGridLines:false}]});
+    rs.columns = [3,46,18,18,18,18,18].map(w=>({width:w}));
+    const ST = {
+      title:{font:font({size:15, bold:true, color:{argb:'FF'+PIPE_NAVY}})},
+      note:{font:font({italic:true, size:9, color:{argb:'FF7F7F7F'}})},
+      section:{font:font({size:11, bold:true, color:{argb:'FF'+PIPE_NAVY}})},
+      th:{font:font({bold:true, color:{argb:'FFFFFFFF'}}), fill:fill(PIPE_NAVY), alignment:{horizontal:'center', vertical:'middle', wrapText:true}, border:bordes},
+      label:{font:font(), border:bordes},
+      int:{font:font(), border:bordes, numFmt:PIPE_FMT.int, alignment:{horizontal:'center'}},
+      usd:{font:font(), border:bordes, numFmt:PIPE_FMT.usd},
+      dec:{font:font(), border:bordes, numFmt:PIPE_FMT.dec, alignment:{horizontal:'center'}},
+      usdNote:{font:font({italic:true, size:9, color:{argb:'FF7F7F7F'}}), numFmt:PIPE_FMT.usd},
+      labelClosed:{font:font({italic:true, color:{argb:'FF7F7F7F'}}), border:bordes, fill:fill('F7F7F7')},
+      intClosed:{font:font({italic:true, color:{argb:'FF7F7F7F'}}), border:bordes, fill:fill('F7F7F7'), numFmt:PIPE_FMT.int, alignment:{horizontal:'center'}},
+      usdClosed:{font:font({italic:true, color:{argb:'FF7F7F7F'}}), border:bordes, fill:fill('F7F7F7'), numFmt:PIPE_FMT.usd},
+      subLabel:{font:font({bold:true}), border:bordes, fill:fill('DDEBF7')},
+      subInt:{font:font({bold:true}), border:bordes, fill:fill('DDEBF7'), numFmt:PIPE_FMT.int, alignment:{horizontal:'center'}},
+      subUsd:{font:font({bold:true}), border:bordes, fill:fill('DDEBF7'), numFmt:PIPE_FMT.usd},
+      totLabel:{font:font({bold:true, color:{argb:'FFFFFFFF'}}), border:bordes, fill:fill(PIPE_NAVY)},
+      totInt:{font:font({bold:true, color:{argb:'FFFFFFFF'}}), border:bordes, fill:fill(PIPE_NAVY), numFmt:PIPE_FMT.int, alignment:{horizontal:'center'}},
+      totUsd:{font:font({bold:true, color:{argb:'FFFFFFFF'}}), border:bordes, fill:fill(PIPE_NAVY), numFmt:PIPE_FMT.usd},
+    };
+    pipelineResumenCeldas(pipe).forEach(x=>{
+      const cell = rs.getCell(x.addr);
+      cell.value = x.f !== undefined ? {formula:x.f, result:x.r} : x.v;
+      const s = ST[x.st] || {};
+      ['font','fill','alignment','border','numFmt'].forEach(k=>{ if(s[k]) cell[k] = s[k]; });
+    });
+    rs.getRow(1).height = 24;
+
+    /* Excel recalcula todo al abrir: el resumen siempre concilia con el detalle. */
+    wx.calcProperties = Object.assign({}, wx.calcProperties, {fullCalcOnLoad:true});
+    return wx.xlsx.writeBuffer();
+  }).then(out=>{
+    const blob = new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  });
+}
+
+/* Respaldo sin conexión: mismas hojas y fórmulas, sin colores ni panel fijo. */
+function pipelineHojasSheetJS(wb, pipe){
+  if(wb.SheetNames.includes(PIPE_HOJA)) return;
+  const ws = XLSX.utils.aoa_to_sheet([PIPE_HEADERS, ...pipe.map(p=>p.fila)]);
+  const fmtCol = {C:PIPE_FMT.usd, J:PIPE_FMT.pct, L:PIPE_FMT.dur};
+  for(let i=2;i<=pipe.length+1;i++) Object.keys(fmtCol).forEach(c=>{ if(ws[c+i]) ws[c+i].z = fmtCol[c]; });
+  ws['!autofilter'] = {ref:`A1:M${pipe.length+1}`};
+  ws['!cols'] = [34,46,14,26,11,12,14,22,22,14,12,12,8].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, PIPE_HOJA);
+  const rs = {};
+  let maxR = 1;
+  pipelineResumenCeldas(pipe).forEach(x=>{
+    const z = PIPE_FMT[String(x.st).replace(/^(sub|tot)|Closed$|Note$/g,'').toLowerCase()];
+    rs[x.addr] = x.f !== undefined
+      ? {t: typeof x.r==='number' ? 'n' : 's', v:x.r, f:x.f, z}
+      : {t:'s', v:x.v};
+    maxR = Math.max(maxR, Number(x.addr.slice(1)));
+  });
+  rs['!ref'] = 'A1:G' + maxR;
+  rs['!cols'] = [3,46,18,18,18,18,18].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, rs, 'Resumen Pipeline');
 }
 
 /* ============================================================
@@ -16132,11 +17361,14 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     /* Gerencia no está disponible para el visor (ni antes de confirmar el rol). */
     if(btn.dataset.tab === 'gerencia' && !puedeVerGerencia()) return;
+    if(!vistaPermitida(btn.dataset.tab, btn.dataset.cargaVista)) return;
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.tab).classList.add('active');
     positionTabIndicator();
+    /* Carga de trabajo abre siempre en «Carga laboral» salvo que el botón pida otra subvista. */
+    if(btn.dataset.tab === 'carga') setCargaVista(btn.dataset.cargaVista || 'carga');
     if(btn.dataset.tab === 'cronograma') requestAnimationFrame(renderGantt);
     if(btn.dataset.tab === 'gerencia'){ plnAnimar = true; renderGerencia(); }
     renderKPIs();
@@ -16353,10 +17585,13 @@ const ROLES_QUE_EDITAN = ['admin', 'editor'];
 function puedeVerGerencia(){ return rolConfirmado && puedeEditar && gerSubvistasVisibles().length > 0; }
 function aplicarPermisosDeRol(){
   document.body.classList.toggle('solo-lectura', !puedeEditar);
+  document.body.classList.toggle('perfil-restringido', perfilRestringido);
+  if(perfilRestringido) aplicarNavegacionPerfilRestringido();
   document.getElementById('btn-usuarios').style.display = esAdmin() ? '' : 'none';
-  /* Desempeño: solo admin. Si otro rol la tenía abierta, vuelve a Carga laboral. */
-  document.getElementById('subtab-desempeno').hidden = !esAdmin();
-  if(!esAdmin() && cargaVista === 'desempeno') setCargaVista('carga');
+  /* Desempeño: admin, o perfil restringido con la vista otorgada. Si otro rol
+     la tenía abierta, vuelve a Carga laboral. */
+  document.getElementById('subtab-desempeno').hidden = !puedeVerDesempeno();
+  if(!puedeVerDesempeno() && cargaVista === 'desempeno') setCargaVista('carga');
   /* Gerencia: solo roles que editan (admin / editor). Si un visor la tenía
      abierta, vuelve a Revisión semanal. */
   const btnGer = document.querySelector('.app-sidebar .tab-btn[data-tab="gerencia"]');
@@ -16375,6 +17610,40 @@ function aplicarPermisosDeRol(){
   renderCarga();
 }
 
+/* Perfil restringido: la barra lateral y las subvistas muestran solo Revisión
+   semanal y Carga laboral. Esto es presentación; los datos ya vienen filtrados
+   por la base y cada vista vuelve a chequear (vistaPermitida). */
+function aplicarNavegacionPerfilRestringido(){
+  document.querySelectorAll('.app-sidebar .tab-btn').forEach(b=>{
+    b.hidden = !vistaPermitida(b.dataset.tab, b.dataset.cargaVista);
+  });
+  document.querySelectorAll('.app-sidebar .side-group').forEach(g=>{
+    g.hidden = !g.querySelector('.tab-btn:not([hidden])');
+  });
+  /* Selector de subvistas de Carga: solo las otorgadas; si queda una, se oculta. */
+  const toggle = document.querySelector('[data-subtabs="carga-vista"]');
+  let subvistas = 0;
+  toggle.querySelectorAll('.subtab-btn').forEach(b=>{
+    const ok = vistaPermitida('carga', b.dataset.vista);
+    b.hidden = !ok;
+    if(ok) subvistas++;
+  });
+  toggle.hidden = subvistas < 2;
+  const ro = document.querySelector('.readonly-badge');
+  if(ro) ro.title = 'Tu perfil es de consulta: ' + areasPerfilTexto();
+  /* Si había una vista no permitida abierta (restauración previa), a Revisión. */
+  const activo = document.querySelector('.tab-panel.active');
+  if(activo && !vistaPermitida(activo.id, cargaVista)){
+    const btnRev = document.querySelector('.app-sidebar .tab-btn[data-tab="revision"]');
+    if(btnRev) btnRev.click();
+  }
+  if(!vistaPermitida('carga', cargaVista)) setCargaVista('carga');
+  const areas = permisosPerfil.areas;
+  document.querySelectorAll('[data-subtabs="carga"] .subtab-btn').forEach(b=>{
+    b.hidden = !!b.dataset.area && b.dataset.area !== 'todas' && areas.indexOf(b.dataset.area) === -1;
+  });
+}
+
 /* Se avisa una sola vez por sesión: el visor puede intentar arrastrar tarjetas
    varias veces, y un toast por intento sería insoportable. La bandera se declara
    arriba, junto a puedeEditar, porque el arranque puede llegar acá antes de esta
@@ -16385,7 +17654,9 @@ function avisarSoloLectura(){
   if(!rolConfirmado) return;
   if(avisoSoloLecturaMostrado) return;
   avisoSoloLecturaMostrado = true;
-  showToast('Tu rol es visor: podés consultar el panel, pero no modificarlo. Pedile a un admin que te cambie el rol si necesitás editar.', 'warn');
+  showToast(perfilRestringido
+    ? 'Tu perfil es de consulta (' + areasPerfilTexto() + '): podés ver, pero no modificar. Pedile a un admin que habilite más acciones si las necesitás.'
+    : 'Tu rol es visor: podés consultar el panel, pero no modificarlo. Pedile a un admin que te cambie el rol si necesitás editar.', 'warn');
 }
 
 async function cargarPerfilUsuario(session){
@@ -16393,7 +17664,23 @@ async function cargarPerfilUsuario(session){
     const {data, error} = await db.from('usuario').select('nombre, roles(descripcion)').eq('auth_user_id', session.user.id).maybeSingle();
     if(error) throw error;
     usuarioActual = data ? {nombre:data.nombre, rol:(data.roles && data.roles.descripcion) || ''} : {nombre:session.user.email, rol:''};
+    /* Los permisos por acción se piden aparte y solo al perfil restringido: así
+       el login de los demás roles no depende de que exista la columna
+       `permisos` (supabase/25). Si no se leen, el perfil queda sin acciones. */
+    perfilRestringido = usuarioActual.rol === ROL_RESTRINGIDO;
+    permisosPerfil = {areas:[], acciones:{}, vistas:VISTAS_PERFIL_POR_DEFECTO};
+    if(perfilRestringido){
+      const r = await db.from('usuario').select('permisos').eq('auth_user_id', session.user.id).maybeSingle();
+      const p = (r.data && r.data.permisos) || {};
+      if(r.error) console.warn('No se pudieron leer los permisos del perfil restringido:', r.error);
+      permisosPerfil = {
+        areas: Array.isArray(p.areas) ? p.areas : [],
+        acciones: (p.acciones && typeof p.acciones === 'object') ? p.acciones : {},
+        vistas: Array.isArray(p.vistas) ? p.vistas : VISTAS_PERFIL_POR_DEFECTO,
+      };
+    }
   }catch(e){
+    perfilRestringido = false;
     console.warn('No se pudo cargar el perfil de usuario (tabla `usuario`):', e);
     usuarioActual = {nombre:session.user.email, rol:''};
   }
@@ -16403,9 +17690,23 @@ async function cargarPerfilUsuario(session){
   puedeEditar = ROLES_QUE_EDITAN.indexOf(usuarioActual.rol) !== -1;
   rolConfirmado = true;
   document.getElementById('user-badge-name').textContent = usuarioActual.nombre;
-  document.getElementById('user-badge-role').textContent = usuarioActual.rol || 'sin rol';
+  document.getElementById('user-badge-role').textContent = perfilRestringido ? areasPerfilTexto() : (usuarioActual.rol || 'sin rol');
   document.getElementById('user-badge').hidden = false;
+  if(perfilRestringido) purgarDatosLocalesPerfilRestringido();
   aplicarPermisosDeRol();
+}
+
+/* El perfil restringido no debe ver lo que otra sesión dejó en este navegador
+   (copia local, deshacer) ni lo que trae la página de origen: se vacía antes de
+   pintar y se carga solo lo que la base le permite. Nunca escribe de vuelta. */
+let datosLocalesPurgados = false;
+function purgarDatosLocalesPerfilRestringido(){
+  /* El perfil se vuelve a leer en cada renovación de token: solo la primera vez. */
+  if(datosLocalesPurgados) return;
+  datosLocalesPurgados = true;
+  oportunidades = [];
+  try{ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(UNDO_KEY); }catch(e){}
+  renderAll();
 }
 
 async function handleLogout(){
@@ -16432,11 +17733,15 @@ window.addEventListener('DOMContentLoaded', function(){
   db.auth.onAuthStateChange(function(event, session){
     console.log('[auth]', event, session ? session.user.email : '(sin sesión)');
     if(session){
-      cargarPerfilUsuario(session);
+      /* El perfil va primero: define si los datos se piden a la tabla completa
+         o a la vista del perfil restringido. */
+      const perfil = cargarPerfilUsuario(session);
       if(!appIniciada){
         appIniciada = true;
-        cargarDesdeSupabase();
-        suscribirRealtime();
+        perfil.then(function(){
+          cargarDesdeSupabase();
+          suscribirRealtime();
+        });
       }
     }else{
       appIniciada = false;

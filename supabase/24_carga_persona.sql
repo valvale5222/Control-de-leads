@@ -1,0 +1,14 @@
+-- =====================================================================
+-- 24: Carga por persona — avance, qué falta, esta semana, enfoque y
+--     complejidad manual de cada entregable.
+--
+-- Una sola columna jsonb en public.entregables:
+--   { avance: 0|20|40|60|80|100, queFalta: text,
+--     semana: 'YYYY-MM-DD'  (lunes de la semana planificada),
+--     enfoque: 'YYYY-MM-DD' (lunes de la semana en que es enfoque),
+--     complejidad: 'alta'|'media'|'baja' (vacío = automática) }
+-- No toca fechas, estado ni historial de cumplimiento.
+-- "add column if not exists": se puede correr varias veces. Mientras no se
+-- corra, el panel guarda estos datos solo en el navegador.
+-- =====================================================================
+alter table public.entregables add column if not exists carga_persona jsonb;
