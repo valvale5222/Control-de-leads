@@ -9551,7 +9551,9 @@ function calCardTipHtml(o){
 }
 function rsAjustarAlturaDias(){
   const cuerpos = [...document.querySelectorAll('#rs-calendar .rsc-day-body')];
-  if(!cuerpos.length) return;
+  /* Oculto (otra vista activa, re-render en segundo plano) todo mide 0 y el
+     alto quedaría fijado en 2px; se recalcula al hacerse visible (observer abajo). */
+  if(!cuerpos.length || !cuerpos[0].getClientRects().length) return;
   cuerpos.forEach(b=>{ b.style.maxHeight = ''; });
   let alto = 0;
   cuerpos.forEach(b=>{
@@ -9564,6 +9566,20 @@ function rsAjustarAlturaDias(){
   if(alto) cuerpos.forEach(b=>{ b.style.maxHeight = alto + 'px'; });
 }
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ if(rsView==='calendario') rsAjustarAlturaDias(); });
+/* Re-mide al pasar de oculto a visible y cuando cambia el ancho disponible
+   (barra lateral, ventana). Solo reacciona al ancho para no entrar en bucle
+   con el max-height que fija rsAjustarAlturaDias. */
+(function rsCalObservarAncho(){
+  const cal = document.getElementById('rs-calendar');
+  if(!cal || typeof ResizeObserver==='undefined') return;
+  let ancho = 0;
+  new ResizeObserver(entries=>{
+    const w = Math.round(entries[0].contentRect.width);
+    if(w===ancho) return;
+    ancho = w;
+    if(w && rsView==='calendario') rsAjustarAlturaDias();
+  }).observe(cal);
+})();
 function renderRSCalendario(filters, alcance){
   const {lunesISO, domingoISO} = getSemanaByOffset(rsCalWeekOffset);
   const dias = Array.from({length:5}, (_,i)=> addDaysISO(lunesISO, i));
