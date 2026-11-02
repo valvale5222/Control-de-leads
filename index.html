@@ -2034,6 +2034,8 @@
     display:table-cell;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.4;
   }
   table.detail-table-fit .col-resp-actual{min-width:120px;white-space:nowrap;}
+  /* Varias áreas con pendientes: una por línea. */
+  .col-resp-actual .dot-label + .dot-label{display:block;margin-top:2px;}
   table.detail-table-fit .col-orden-trabajo{text-align:center;min-width:90px;}
   /* Orden de trabajo = secuencia libre (1, 2, 3 … N). Antes se pintaba de
      rojo/naranja/verde/violeta según el valor 1-4, pero eso era semántica de
@@ -11982,6 +11984,16 @@ function equipoAreasActivas(o){
   const abiertas = new Set(o.entregables.filter(e => e.estado === 'pendiente').map(e => e.area));
   return AREAS.map(a => a.value).filter(a => abiertas.has(a));
 }
+/* Columna Área de Oportunidades (y su resumen): dónde está el pendiente, es
+   decir, las áreas con tareas pendientes. Sin tareas pendientes se usa el
+   responsableActual guardado (p. ej. "cliente" en análisis). */
+function areasPendientesOportunidad(o){
+  const activas = equipoAreasActivas(o);
+  return activas.length ? activas : (o.responsableActual ? [o.responsableActual] : []);
+}
+function areaPendienteLabel(a){
+  return a==='cliente' ? 'Pendiente del cliente' : (RESP_ACTUAL_LABEL[a] || a);
+}
 /* Solo proyectos con tareas activas. Orden: la fecha cliente más próxima (sin
    fecha, al final) y a igualdad, por ID. */
 function proyectosConEquipo(){
@@ -12445,7 +12457,9 @@ function renderDetalle(){
   const sortBy = document.getElementById('f-sort').value || 'importe-desc';
   const list = getOportunidadesInternas().slice().sort(ordenarPorSegmentadorOrden(sortBy));
   document.getElementById('detalle-tbody').innerHTML = list.map(o=>{
-    const respLabel = o.responsableActual==='cliente' ? 'Pendiente del cliente' : RESP_ACTUAL_LABEL[o.responsableActual];
+    const areasPend = areasPendientesOportunidad(o);
+    const respLabel = areasPend.map(areaPendienteLabel).join(' · ');
+    const respHtml = areasPend.map(a=>`<span class="dot-label dot-area-${a}"><span class="dot-mark"></span>${areaPendienteLabel(a)}</span>`).join(' ');
     /* Uno o varios pares {area,nombre} por fila — uno por cada entregable pendiente,
        para que el filtro y la búsqueda por Área/Responsable no dependan de un único
        "responsable principal" elegido por fecha (ver entregablesAsignablesDeOportunidad). */
@@ -12453,7 +12467,7 @@ function renderDetalle(){
     const asignadoText = asignPairs.length ? asignPairs.map(p=>p.nombre).join(' · ') : '—';
     const asignadoTitle = asignPairs.length ? asignPairs.map(p=>`${RESP_ACTUAL_LABEL[p.area]||p.area} — ${p.nombre}${p.entregableNombre?' ('+p.entregableNombre+')':''}`).join('\n') : '—';
     const asignadoPairsAttr = escAttr(JSON.stringify(asignPairs.map(p=>({area:p.area,nombre:p.nombre}))));
-    return `<tr${detalleMovilClase('op', o.id)} data-id="${o.id}" data-kam="${o.kam}" data-etapa="${o.etapa}" data-asignado-pairs="${asignadoPairsAttr}" data-pri="${o.prioridad}" data-prob="${probabilidadBucketKey(o.probabilidadCierre)}" data-orden-trabajo="${o.ordenTrabajo}" data-resp-actual="${o.responsableActual}" data-accion-pendiente="${o.accionPendienteCliente ? '1' : '0'}">
+    return `<tr${detalleMovilClase('op', o.id)} data-id="${o.id}" data-kam="${o.kam}" data-etapa="${o.etapa}" data-asignado-pairs="${asignadoPairsAttr}" data-pri="${o.prioridad}" data-prob="${probabilidadBucketKey(o.probabilidadCierre)}" data-orden-trabajo="${o.ordenTrabajo}" data-resp-actual="${areasPend.join(' ')}" data-accion-pendiente="${o.accionPendienteCliente ? '1' : '0'}">
       <td class="mono" data-label="ID">#${o.id}</td>
       <td class="col-cliente" data-label="Cliente"><button class="cliente-link" onclick="openEditModal(${o.id})" title="${escAttr(o.cliente)}">${o.cliente}</button></td>
       <td class="proj col-proyecto" data-label="Proyecto" title="${escAttr(o.proyecto)}">${o.proyecto}</td>
@@ -12461,7 +12475,7 @@ function renderDetalle(){
       <td class="mono col-importe" data-label="USD">${formatMoneda(o.importe)}${altCotizacionesHtml(o)}</td>
       <td class="col-prioridad" data-label="Prioridad">${prioridadTableroChipHtml(o)}</td>
       <td class="col-etapa" data-label="Etapa">${etapaChipHtml(o)}</td>
-      <td class="col-resp-actual" data-label="Área" title="${escAttr(respLabel)}"><span class="dot-label dot-area-${o.responsableActual}"><span class="dot-mark"></span>${respLabel}</span></td>
+      <td class="col-resp-actual" data-label="Área" title="${escAttr(respLabel)}">${respHtml}</td>
       <td class="plain-text col-asignado" data-label="Responsable" title="${escAttr(asignadoTitle)}">${asignadoText}</td>
       <td class="mono col-mes-cierre" data-label="Mes de cierre">${formatMesCierre(o.mesCierre)}</td>
       <td class="mono col-prob-cierre" data-label="Prob. de cierre">${formatProbabilidadCierre(o.probabilidadCierre)}</td>
@@ -12494,7 +12508,7 @@ const RESUMEN_OP_BLOCKS = [
 function resumenOpBlockItems(block, base){
   return block.type==='cliente'
     ? base.filter(o=>o.accionPendienteCliente===true)
-    : base.filter(o=>o.responsableActual===block.value);
+    : base.filter(o=>areasPendientesOportunidad(o).includes(block.value));
 }
 /* Urgencia por oportunidad = plazo de su entregable pendiente principal
    (getPrimaryPendingDeliverable + getPlazoInfo, misma lógica temporal que ya
@@ -12646,7 +12660,7 @@ function applyFiltersDetalle(){
        (resp), que filtra por área del entregable pendiente, no de la oportunidad. */
     const matchQuick = !resumenOpQuickFilter || (resumenOpQuickFilter.type==='cliente'
       ? row.dataset.accionPendiente === '1'
-      : row.dataset.respActual === resumenOpQuickFilter.value);
+      : row.dataset.respActual.split(' ').includes(resumenOpQuickFilter.value));
     /* Dentro de cada filtro, OR (basta con coincidir con una de las opciones elegidas);
        entre filtros distintos, AND (deben cumplirse todos los que estén activos). */
     const match = (!kam.length || kam.includes(row.dataset.kam)) && (!etapa.length || etapa.includes(row.dataset.etapa)) &&
