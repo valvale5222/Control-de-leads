@@ -5642,6 +5642,279 @@
     }
     input, select, textarea{ cursor:auto; }
   }
+  /* ============================================================
+     INICIO
+     ============================================================ */
+  .ini{display:flex;flex-direction:column;}
+  /* ---------- INICIO · Estado de la operación + Panorama comercial ----------
+     Mismos tokens, radios y animaciones (gerSube / gerCrece) de Gerencia. Áreas:
+     Comercial teal, Arquitectura violeta, Presupuestos azul. Etapas: análisis
+     azul, negociación ámbar (los de G. Comercial). */
+  .ini{
+    --ini-an:#4F82C4;--ini-neg:#D9A24F;--ini-hair:color-mix(in srgb, var(--line) 85%, transparent);
+    --a-comercial:var(--teal);--a-arquitectura:var(--violet);--a-presupuestos:var(--navy);
+    gap:16px;max-width:1480px;
+  }
+  :root[data-theme="light"] .ini{--ini-an:#24507F;--ini-neg:#C48A39;}
+  .ini .a-comercial{--a-c:var(--a-comercial);} .ini .a-arquitectura{--a-c:var(--a-arquitectura);} .ini .a-presupuestos{--a-c:var(--a-presupuestos);}
+  .ini .is-an{--s-c:var(--ini-an);} .ini .is-neg{--s-c:var(--ini-neg);}
+  :where(.ini) :where(button){font:inherit;color:inherit;}
+  .ini .ini-cnt{font-variant-numeric:tabular-nums;}
+  .ini-card{
+    position:relative;min-width:0;border-radius:16px;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--ink) 3%), var(--surface));
+    border:1px solid var(--glass-border);
+    box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 7%, transparent), 0 1px 2px rgba(4,8,20,.08), var(--shadow-sm);
+  }
+  .ini-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .ini-h h3{margin:0;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
+  .ini-h-out{margin:0 2px 10px;justify-content:flex-start;}
+  .ini-h-nota{margin-left:auto;font-size:11.5px;color:var(--ink-dim);}
+  .ini-h-sub{font-size:12px;color:var(--ink-dim);}
+  .ini-ley{display:inline-flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--ink-soft);}
+  .ini-ley > span{display:inline-flex;align-items:center;gap:6px;}
+  .ini-ad{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--a-c);}
+  .ini-sd{display:inline-block;width:8px;height:8px;border-radius:3px;flex-shrink:0;background:var(--s-c);}
+
+  /* Franja de KPIs */
+  .ini-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:4px;}
+  .ini-k{
+    --k-c:var(--ink-dim);position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;padding:12px 16px 12px;
+    text-align:left;background:none;border:0;border-radius:12px;cursor:pointer;
+    transition:background-color var(--dur-2) var(--ease),transform var(--dur-2) var(--ease-emphasized);
+  }
+  .ini-k + .ini-k::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:1px;background:var(--ini-hair);}
+  .ini-k:hover{background:var(--side-hover);}
+  .ini-k:hover::before,.ini-k:hover + .ini-k::before{opacity:0;}
+  .ini-k:active{transform:scale(.985);}
+  .ini-k:focus-visible{outline:none;box-shadow:inset var(--ring);}
+  .ini-k.is-info-only,.ini-am.is-info-only{cursor:default;}
+  .ini-k.is-info-only:hover{background:none;}
+  .ini-k.is-info-only:active{transform:none;}
+  .ini-am.is-info-only:hover b{color:var(--ink);}
+  .ini-k.is-ok{--k-c:var(--ok);} .ini-k.is-info{--k-c:var(--navy);} .ini-k.is-warn{--k-c:var(--warn);}
+  .ini-k.is-danger{--k-c:var(--danger);} .ini-k.is-quiet{--k-c:var(--ink-dim);} .ini-k.is-neg{--k-c:var(--ini-neg);}
+  .ini-k-l{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ini-k-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--k-c);box-shadow:0 0 0 3px color-mix(in srgb, var(--k-c) 16%, transparent);}
+  .ini-k-m{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;min-width:0;}
+  .ini-k-n{display:flex;align-items:baseline;gap:8px;min-width:0;font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;line-height:1;letter-spacing:-.025em;color:var(--ink);white-space:nowrap;}
+  .ini-k.is-danger .ini-k-n{color:var(--danger);}
+  .ini-k-x{font-size:12.5px;font-weight:600;letter-spacing:0;color:var(--ink-soft);}
+  .ini-k-x .ini-cur,.ini-k-x .ini-uni{font-size:1em;font-weight:600;}
+  .ini-k-x .ini-cur{margin-right:3px;} .ini-k-x .ini-uni{margin-left:3px;}
+  .ini-k-s{font-size:11.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ini-spark{display:flex;align-items:flex-end;gap:3px;height:26px;flex-shrink:0;}
+  .ini-spark i{display:block;width:5px;height:var(--h);border-radius:2px 2px 1px 1px;background:color-mix(in srgb, var(--k-c) 40%, transparent);
+    transform-origin:bottom;animation:gerCreceY .6s var(--ease-emphasized) both;animation-delay:calc(var(--i) * 30ms + .1s);}
+  .ini-spark i.is-on{background:var(--k-c);}
+  .ini-spark i.a-comercial,.ini-spark i.a-arquitectura,.ini-spark i.a-presupuestos{width:8px;background:var(--a-c);}
+  .ini-k.is-danger .ini-spark i{width:8px;background:color-mix(in srgb, var(--warn) 75%, transparent);}
+  .ini-k.is-danger .ini-spark i:first-child{background:var(--warn);}
+  .ini-spark i.is-dim{background:color-mix(in srgb, var(--ink-dim) 45%, transparent) !important;}
+
+  /* Fila central: calendario + situación por área */
+  .ini-mid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:stretch;}
+  .ini-sem{padding:16px 16px 14px;display:flex;flex-direction:column;}
+  .ini-dias{flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-height:220px;}
+  .ini-dia{
+    display:flex;flex-direction:column;gap:8px;min-width:0;padding:10px 8px 10px;border-radius:12px;cursor:pointer;
+    background:color-mix(in srgb, var(--ink) 2.5%, transparent);border:1px solid var(--ini-hair);
+    transition:border-color var(--dur-2) var(--ease),background-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease),transform var(--dur-2) var(--ease-emphasized);
+  }
+  .ini-dia:hover{border-color:color-mix(in srgb, var(--teal) 35%, var(--line));box-shadow:var(--shadow-xs);transform:translateY(-1px);}
+  .ini-dia:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-dia.is-hoy{background:color-mix(in srgb, var(--teal) 7%, var(--surface));border-color:color-mix(in srgb, var(--teal) 45%, transparent);box-shadow:0 0 0 1px color-mix(in srgb, var(--teal) 18%, transparent);}
+  .ini-dia.is-pas{opacity:.78;}
+  .ini-dia-h{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;padding:0 4px;}
+  .ini-dia-h > span{display:flex;flex-direction:column;min-width:0;}
+  .ini-dia-h b{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);}
+  .ini-dia.is-hoy .ini-dia-h b{color:var(--teal);}
+  .ini-dia-h small{font-size:11px;color:var(--ink-dim);}
+  .ini-dia-h em{font-style:normal;font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .ini-dia-l{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .ini-ch{
+    display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;padding:5px 7px;border-radius:7px;cursor:pointer;text-align:left;
+    font-size:11px;font-weight:600;color:color-mix(in srgb, var(--a-c) 70%, var(--ink));
+    background:color-mix(in srgb, var(--a-c) 13%, var(--surface));border:1px solid color-mix(in srgb, var(--a-c) 22%, transparent);
+    transition:background-color var(--dur-1) var(--ease),transform var(--dur-1) var(--ease);
+  }
+  .ini-ch:hover{background:color-mix(in srgb, var(--a-c) 22%, var(--surface));transform:translateX(1px);}
+  .ini-ch:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-ch span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ini-ch b{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;opacity:.8;}
+  .ini-ch.is-venc{box-shadow:inset 2px 0 0 var(--danger);}
+  .ini-ch.is-bloq{box-shadow:inset 2px 0 0 var(--warn);}
+  .ini-ch-mas{padding:2px 7px;font-size:10.5px;font-weight:600;color:var(--ink-dim);}
+  .ini-dia-v{padding:2px 4px;font-size:11px;color:var(--ink-dim);}
+
+  .ini-areas{display:flex;flex-direction:column;gap:10px;min-width:0;}
+  .ini-areas .ini-h-out{margin-bottom:2px;}
+  .ini-ac{display:flex;flex-direction:column;gap:10px;padding:12px 14px 12px;cursor:pointer;flex:1;
+    transition:transform var(--dur-2) var(--ease-emphasized),box-shadow var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease);}
+  .ini-ac:hover{transform:translateY(-1px);border-color:color-mix(in srgb, var(--a-c) 35%, var(--glass-border));}
+  .ini-ac:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-ac-h{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .ini-ac-n{display:inline-flex;align-items:center;gap:8px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--ink);}
+  .ini-ac-n .ini-ad{width:8px;height:8px;box-shadow:0 0 0 3px color-mix(in srgb, var(--a-c) 16%, transparent);}
+  .ini-st{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:var(--radius-pill);font-size:11px;font-weight:600;}
+  .ini-st i{width:5px;height:5px;border-radius:50%;background:currentColor;}
+  .ini-st.is-ok{color:var(--ok);background:var(--ok-bg);}
+  .ini-st.is-danger{color:var(--danger);background:var(--danger-bg);}
+  .ini-ac-m{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+  .ini-am{display:flex;flex-direction:column;gap:3px;min-width:0;padding:2px 2px 0;text-align:left;background:none;border:0;border-radius:8px;cursor:pointer;}
+  .ini-am:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-am-k{font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ini-am b{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;line-height:1.1;color:var(--ink);transition:color var(--dur-1) var(--ease);}
+  .ini-am:hover b{color:var(--a-c);}
+  .ini-am.is-danger b{color:var(--danger);}
+  .ini-am.is-cero b{color:var(--ink-dim);font-weight:500;}
+  .ini-am-bar{display:block;height:3px;margin-top:3px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--ink) 7%, transparent);overflow:hidden;}
+  .ini-am-bar i{display:block;width:var(--w);height:100%;border-radius:inherit;background:var(--a-c);transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) .12s both;}
+  .ini-am.is-danger .ini-am-bar i{background:var(--danger);}
+
+  /* Franja de bloqueos */
+  .ini-bloq{display:flex;align-items:stretch;gap:0;padding:8px;}
+  .ini-bloq.is-cero{align-items:center;}
+  .ini-bt{display:flex;align-items:center;gap:12px;padding:6px 18px 6px 8px;background:none;border:0;border-radius:10px;cursor:pointer;text-align:left;flex-shrink:0;}
+  .ini-bt:hover{background:var(--side-hover);}
+  .ini-bt:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-bt-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;color:var(--warn);background:var(--warn-bg);border:1px solid color-mix(in srgb, var(--warn) 25%, transparent);}
+  .ini-bloq.is-cero .ini-bt-ico{color:var(--ink-dim);background:color-mix(in srgb, var(--ink) 4%, transparent);border-color:var(--line);}
+  .ini-bt-ico svg{width:17px;height:17px;}
+  .ini-bt-n{display:flex;flex-direction:column;}
+  .ini-bt-n b{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;line-height:1;color:var(--ink);}
+  .ini-bt-n small{font-size:11.5px;color:var(--ink-dim);}
+  .ini-bms{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));min-width:0;}
+  .ini-bm{display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0;padding:8px 18px;background:none;border:0;border-radius:10px;cursor:pointer;text-align:left;position:relative;}
+  .ini-bm::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:1px;background:var(--ini-hair);}
+  .ini-bm:hover{background:var(--side-hover);}
+  .ini-bm:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-bm-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:600;color:var(--ink);}
+  .ini-bm-h span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ini-bm-h b{font-family:'Space Grotesk',sans-serif;font-size:16px;font-variant-numeric:tabular-nums;}
+  .ini-bm-bar{display:block;height:4px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--ink) 7%, transparent);overflow:hidden;}
+  .ini-bm-bar i{display:block;width:var(--w);height:100%;border-radius:inherit;background:var(--warn);transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) .15s both;}
+  .ini-bm:nth-child(2) .ini-bm-bar i{background:var(--violet);}
+  .ini-bm:nth-child(3) .ini-bm-bar i{background:var(--navy);}
+  .ini-bm.is-sin .ini-bm-h{color:var(--ink-dim);font-weight:500;}
+  .ini-bm.is-sin .ini-bm-bar i{background:color-mix(in srgb, var(--ink-dim) 55%, transparent);}
+  .ini-bloq-nota{padding:0 18px;font-size:12px;color:var(--ink-dim);}
+
+  /* Panorama comercial */
+  .ini-zone{display:flex;flex-direction:column;min-width:0;margin-top:4px;}
+  .ini-com{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1.45fr);}
+  .ini-cc{display:flex;flex-direction:column;gap:6px;min-width:0;padding:16px 20px 16px;}
+  .ini-cc + .ini-cc{border-left:1px solid var(--ini-hair);}
+  .ini-cc.is-link{cursor:pointer;border-radius:16px 0 0 16px;transition:background-color var(--dur-2) var(--ease);}
+  .ini-cc.is-link:hover{background:color-mix(in srgb, var(--ink) 2.5%, transparent);}
+  .ini-cc.is-link:focus-visible{outline:none;box-shadow:inset var(--ring);}
+  .ini-c-k{font-size:12px;font-weight:600;color:var(--ink-soft);}
+  .ini-c-v{display:flex;align-items:baseline;gap:6px;margin-top:4px;padding:0;background:none;border:0;text-align:left;
+    font-family:'Space Grotesk',sans-serif;font-size:34px;font-weight:700;line-height:1;letter-spacing:-.03em;color:var(--ink);white-space:nowrap;}
+  .ini-c-v.is-link{cursor:pointer;border-radius:8px;transition:color var(--dur-1) var(--ease);}
+  .ini-c-v.is-link:hover{color:var(--teal);}
+  .ini-c-v.is-link:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-c-v.is-nd{color:var(--ink-dim);}
+  .ini-cur,.ini-uni{font-size:.42em;font-weight:600;letter-spacing:0;color:var(--ink-soft);}
+  .ini-c-s{font-size:11.5px;color:var(--ink-dim);}
+  .ini-c-s b{font-weight:600;color:var(--ink-soft);}
+  .ini-meta{display:flex;flex-direction:column;gap:7px;margin-top:auto;padding-top:18px;}
+  .ini-meta-l{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--ink-dim);}
+  .ini-meta-l b{font-weight:600;color:var(--ok);}
+  .ini-meta-bar{position:relative;display:block;height:7px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--ink) 7%, transparent);}
+  .ini-meta-bar i{display:block;width:var(--w);height:100%;border-radius:inherit;background:linear-gradient(90deg, var(--teal-deep), var(--teal));transform-origin:left;animation:gerCrece .9s var(--ease-emphasized) .15s both;}
+  .ini-meta-bar em{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:2px;background:var(--ink);}
+  .ini-pipe-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;min-height:30px;}
+  .ini-seg .des-per-btn{min-width:48px;}
+  .ini-split{display:flex;gap:3px;height:6px;margin-top:10px;}
+  .ini-split i{display:block;min-width:4px;border-radius:var(--radius-pill);background:var(--s-c);transition:flex .5s var(--ease-emphasized);}
+  .ini-split i.is-vacio{background:color-mix(in srgb, var(--ink) 7%, transparent);}
+  .ini-et{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+  .ini-et-i{display:flex;align-items:center;gap:7px;padding:8px 11px;font-size:12px;color:var(--ink-soft);text-align:left;cursor:pointer;
+    border:1px solid var(--line);border-radius:10px;background:color-mix(in srgb, var(--ink) 2.5%, transparent);
+    transition:background-color var(--dur-2) var(--ease),border-color var(--dur-2) var(--ease);}
+  .ini-et-i:hover{background:var(--side-hover);border-color:var(--glass-border);color:var(--ink);}
+  .ini-et-i:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-et-i b{margin-left:auto;font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--ink);}
+  .ini-crit{margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-dim);}
+  .ini-ej-list{display:flex;flex-direction:column;gap:7px;margin-top:8px;}
+  .ini-ej{display:grid;grid-template-columns:minmax(90px,140px) minmax(0,1fr) 22px;align-items:center;gap:12px;animation:gerSube .4s var(--ease-emphasized) both;animation-delay:calc(min(var(--i), 8) * 35ms);}
+  .ini-ej-n{padding:0;background:none;border:0;text-align:left;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ini-ej-n:hover{color:var(--teal);}
+  .ini-ej-n:focus-visible{outline:none;box-shadow:var(--ring);border-radius:4px;}
+  .ini-ej-bar{display:flex;gap:2px;height:16px;}
+  .ini-ej-bar button{display:flex;align-items:center;justify-content:flex-end;width:var(--w);min-width:18px;height:100%;padding:0 6px;border:0;border-radius:5px;cursor:pointer;background:var(--s-c);
+    box-shadow:inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent);transform-origin:left;animation:gerCrece .75s var(--ease-emphasized) .08s both;transition:filter var(--dur-1) var(--ease);}
+  .ini-ej-bar button:hover{filter:brightness(1.12) saturate(1.05);}
+  .ini-ej-bar button:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-ej-bar em{font-style:normal;font-size:10px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;}
+  .ini-ej-t{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--ink);text-align:right;}
+  .ini-vacio{margin:8px 0 0;font-size:12.5px;color:var(--ink-dim);}
+
+  /* Aviso "Desde Inicio" en las vistas de destino + resaltado del destino */
+  .ini-dest{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:0 0 12px;padding:8px 8px 8px 14px;border-radius:12px;font-size:12.5px;color:var(--ink);
+    background:color-mix(in srgb, var(--teal) 8%, var(--surface));border:1px solid color-mix(in srgb, var(--teal) 30%, transparent);animation:gerSube .35s var(--ease-emphasized) both;}
+  .ini-dest-k{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--teal);}
+  .ini-dest-t{font-weight:600;}
+  .ini-dest-n{color:var(--ink-soft);}
+  .ini-dest-a{padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font:inherit;font-size:12px;cursor:pointer;}
+  .ini-dest-a:hover{color:var(--ink);border-color:var(--glass-border);}
+  .ini-dest-x{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font:inherit;font-size:12px;cursor:pointer;}
+  .ini-dest-x:hover{color:var(--danger);border-color:color-mix(in srgb, var(--danger) 35%, var(--line));}
+  .ini-dest-x:focus-visible,.ini-dest-a:focus-visible{outline:none;box-shadow:var(--ring);}
+  .ini-foco{animation:iniFoco 2.2s var(--ease) both;}
+  @keyframes iniFoco{0%,60%{box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 45%, transparent);}100%{box-shadow:0 0 0 0 transparent;}}
+
+  /* Entrada escalonada (solo al entrar a la vista o cambiar de operación) */
+  .ini.is-anim .ini-kpis,.ini.is-anim .ini-sem,.ini.is-anim .ini-ac,.ini.is-anim .ini-bloq,.ini.is-anim .ini-com,.ini.is-anim .ini-h-out{animation:gerSube .5s var(--ease-emphasized) both;}
+  .ini.is-anim .ini-sem{animation-delay:.06s;} .ini.is-anim .ini-ac:nth-of-type(1){animation-delay:.1s;}
+  .ini.is-anim .ini-ac:nth-of-type(2){animation-delay:.14s;} .ini.is-anim .ini-ac:nth-of-type(3){animation-delay:.18s;}
+  .ini.is-anim .ini-bloq{animation-delay:.22s;} .ini.is-anim .ini-com{animation-delay:.28s;}
+  @media (prefers-reduced-motion:reduce){
+    .ini *,.ini.is-anim *,.ini-dest,.ini-foco{animation:none !important;transition:none !important;}
+  }
+  @media (max-width:1366px){
+    .ini-k{padding:11px 12px;}
+    .ini-k-n{font-size:27px;}
+    .ini-spark{display:none;}
+    .ini-mid{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);}
+    .ini-c-v{font-size:30px;}
+    .ini-dias{gap:6px;}
+    .ini-dia{padding:9px 6px;}
+    .ini-dia-h{padding:0 2px;}
+    .ini-dia-h b{font-size:9.5px;letter-spacing:.03em;}
+    .ini-ch{flex-direction:column;align-items:flex-start;gap:0;padding:4px 7px;}
+    .ini-ch span{max-width:100%;}
+    .ini-ch b{font-size:9.5px;}
+    .ini-am-y{display:none;}
+    .ini-ac-m{gap:8px;}
+    .ini-et-i{padding:8px 9px;gap:6px;white-space:nowrap;font-size:11.5px;}
+  }
+  @media (max-width:1180px){
+    .ini-kpis{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .ini-k:nth-child(4)::before{display:none;}
+    .ini-mid{grid-template-columns:1fr;}
+    .ini-com{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);}
+    .ini-ejs{grid-column:1 / -1;border-left:0 !important;border-top:1px solid var(--ini-hair);}
+  }
+  @media (max-width:767px){
+    .ini{gap:14px;}
+    .ini-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .ini-k::before{display:none;}
+    .ini-k:last-child{grid-column:1 / -1;}
+    .ini-k-n{font-size:24px;}
+    .ini-dias{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;min-height:0;}
+    .ini-dia{scroll-snap-align:start;}
+    .ini-ac-m{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .ini-bloq{flex-direction:column;}
+    .ini-bm::before{display:none;}
+    .ini-com{grid-template-columns:1fr;}
+    .ini-cc + .ini-cc{border-left:0;border-top:1px solid var(--ini-hair);}
+    .ini-cc.is-link{border-radius:16px 16px 0 0;}
+    .ini-c-v{font-size:28px;}
+    .ini-ej{grid-template-columns:minmax(80px,110px) minmax(0,1fr) 20px;gap:8px;}
+  }
+
 </style>
 </head>
 <body>
@@ -5673,6 +5946,9 @@
   <nav class="side-nav">
     <div class="side-group" role="group" aria-labelledby="side-g-op">
       <p class="side-group-label" id="side-g-op">Operación</p>
+      <button type="button" class="tab-btn side-item" data-tab="inicio" data-side-label="Inicio">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="2"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="2"/><rect x="13.5" y="11.5" width="7.5" height="9.5" rx="2"/><rect x="3" y="15" width="7.5" height="6" rx="2"/></svg>
+        <span class="side-label">Inicio</span></button>
       <button type="button" class="tab-btn side-item active" data-tab="revision" data-side-label="Revisión semanal" aria-current="page">
         <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="m8.5 15 2.2 2.2 4.8-4.7"/></svg>
         <span class="side-label">Revisión semanal</span></button>
@@ -5758,6 +6034,13 @@
        indicadores y exportaciones irán en la vista Gerencia. -->
   <div class="view-context">
     <h2 class="view-context-name" id="view-context-name">Revisión semanal</h2>
+  </div>
+
+  <!-- ============ INICIO — estado de la operación y panorama comercial ============
+       Lo pinta renderInicio(); cada indicador lleva a la vista que lo explica. -->
+  <div class="tab-panel" id="inicio">
+    <h2 class="print-only-title">Inicio</h2>
+    <div id="ini-body"></div>
   </div>
 
   <!-- ============ TAB 01 — REVISIÓN SEMANAL ============ -->
@@ -8684,6 +8967,394 @@ function allEntregablesFlat(){
   oportunidades.forEach(o=>{ o.entregables.forEach(e=>out.push({e,o})); });
   return out;
 }
+var iniAnimado = false;
+/* ============================================================
+   INICIO — Estado de la operación + Panorama comercial
+   Solo lee las oportunidades y entregables existentes y no guarda nada
+   propio. Cada cifra usa la MISMA fuente que su destino, para que al hacer
+   clic se vea exactamente lo contado:
+   · Pendientes = cargaPendientes() de Carga laboral. Áreas: Comercial,
+     Arquitectura y Presupuestos e Ingeniería.
+   · Esta semana = pendientes con fecha interna de lunes a viernes actual.
+   · Atrasados = pendientes con fecha interna anterior a hoy.
+   · Bloqueos = pendientes en estado Bloqueado; motivo = origen registrado
+     (BLOQUEO_ORIGENES). Sin origen no se inventa: "Sin motivo registrado".
+   · Entregados = completados con fecha real en el año en curso (informativo:
+     no hay una vista de entregables completados a la que llevar).
+   · Ventas acumuladas = consolidado oficial GC_RESULTADO (permiso de
+     G. Comercial). No depende del selector de pipeline.
+   · Pipeline priorizado = Análisis + Negociación con mes de cierre en el año
+     elegido y probabilidad ≥ el criterio de ese año (INI_PIPE).
+   Navegación: los filtros que llegan desde Inicio son aislados (no tocan los
+   filtros propios del destino), se ven como un aviso con "Quitar" y se
+   borran solos al navegar por la barra lateral (iniLimpiarDestinos).
+   ============================================================ */
+const INI_AREAS = [
+  {key:'comercial',    label:'Comercial',                 corta:'Com.'},
+  {key:'arquitectura', label:'Arquitectura',              corta:'Arq.'},
+  {key:'presupuestos', label:'Presupuestos e Ingeniería', corta:'Ppto.'},
+];
+const INI_PIPE = {
+  '2026': {label:'2026',  criterio:[{anio:'2026', prob:60}]},
+  '2027': {label:'2027',  criterio:[{anio:'2027', prob:40}]},
+  'todos':{label:'Todos', criterio:[{anio:'2026', prob:60}, {anio:'2027', prob:40}]},
+};
+const INI_DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+var iniPipeSel = '2026';
+var iniValPrev = {};
+var iniUlt = null;           // último modelo (lo leen los enlaces)
+var iniNavegando = false;    // true mientras Inicio dispara la navegación
+
+/* ---------- Números animados ---------- */
+function iniFmt(v, fmt){
+  if(fmt==='mm'){ const a = Math.abs(v); return a >= 1e6 ? (v / 1e6).toFixed(2) : a >= 1e3 ? String(Math.round(v / 1e3)) : String(Math.round(v)); }
+  return String(Math.round(v));
+}
+function iniNum(key, v, fmt){
+  return `<span class="ini-cnt" data-ini="${key}" data-v="${Number(v) || 0}" data-fmt="${fmt || 'n'}">${iniFmt(Number(v) || 0, fmt)}</span>`;
+}
+/* "US$ 35.26 MM" con moneda y unidad en tono menor. */
+function iniMonto(key, v){
+  const a = Math.abs(Number(v) || 0);
+  return `<span class="ini-cur">US$</span>${iniNum(key, v, 'mm')}<span class="ini-uni">${a >= 1e6 ? 'MM' : a >= 1e3 ? 'K' : ''}</span>`;
+}
+function iniContar(root){
+  const panel = document.getElementById('inicio');
+  const quieto = !panel || !panel.classList.contains('active') || window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  root.querySelectorAll('[data-ini]').forEach(el=>{
+    const key = el.dataset.ini, fin = Number(el.dataset.v) || 0, fmt = el.dataset.fmt;
+    if(quieto){ el.textContent = iniFmt(fin, fmt); return; }
+    const ini = iniValPrev[key] == null ? 0 : iniValPrev[key];
+    iniValPrev[key] = fin;
+    if(ini === fin){ el.textContent = iniFmt(fin, fmt); return; }
+    const t0 = performance.now(), dur = 650;
+    const paso = t=>{
+      const k = Math.min(1, Math.max(0, (t - t0) / dur)), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = iniFmt(ini + (fin - ini) * e, fmt);
+      if(k < 1) requestAnimationFrame(paso);
+    };
+    el.textContent = iniFmt(ini, fmt);
+    requestAnimationFrame(paso);
+  });
+}
+/* Al entrar a Inicio los números vuelven a contar desde cero. */
+function iniAlEntrar(){
+  iniValPrev = {};
+  iniAnimado = false;
+  renderInicio();
+}
+
+/* ---------- Modelo ---------- */
+function iniMotivoKey(e){ return e.bloqueoOrigen && catalogLabel(BLOQUEO_ORIGENES, e.bloqueoOrigen) ? e.bloqueoOrigen : '__sin'; }
+function iniMotivoLabel(k){ return k==='__sin' ? 'Sin motivo registrado' : catalogLabel(BLOQUEO_ORIGENES, k); }
+function iniCumpleCriterio(o, crit){
+  if(o.etapa!=='analisis' && o.etapa!=='negociacion') return false;
+  const m = gcMesDe(o);
+  const c = m && crit.find(c=>c.anio===m.slice(0, 4));
+  const p = plnProb(o);
+  return !!c && p!=null && p >= c.prob;
+}
+function iniKamKey(o){ return o.kam ? String(o.kam) + (o.kam==='otro' ? ':' + (o.kamOtro || '') : '') : '—'; }
+
+function iniModelo(){
+  const hoy = todayISO(), anio = hoy.slice(0, 4), sem = getSemanaActual();
+  const dias = INI_DIAS.map((n, i)=>({nombre:n, iso:addDaysISO(sem.lunesISO, i), items:[]}));
+  const viernes = dias[4].iso;
+  const areas = INI_AREAS.map(a=>Object.assign({}, a, {pend:0, sem:0, atr:0, ent:0}));
+  const porArea = Object.fromEntries(areas.map(a=>[a.key, a]));
+  const pend = cargaPendientes('todas').filter(x=>porArea[x.e.area]);
+  const motivos = new Map();
+  pend.forEach(x=>{
+    const a = porArea[x.e.area], f = x.e.fechaEntrega;
+    a.pend++;
+    if(f && f >= sem.lunesISO && f <= viernes){ a.sem++; dias[daysBetween(sem.lunesISO, f)].items.push(x); }
+    if(f && f < hoy) a.atr++;
+    if(x.e.estadoTarea==='bloqueado'){ const k = iniMotivoKey(x.e); motivos.set(k, (motivos.get(k) || 0) + 1); }
+  });
+  /* Entregados del año y por semana (últimas 8, la actual incluida). */
+  const semanas = Array.from({length:8}, (_, i)=>({lunes:addDaysISO(sem.lunesISO, (i - 7) * 7), n:0}));
+  allEntregablesFlat().forEach(({e})=>{
+    if(e.estado!=='completado' || !porArea[e.area]) return;
+    const fc = String(e.fechaCompletado || '').slice(0, 10);
+    if(fc.slice(0, 4)===anio) porArea[e.area].ent++;
+    const s = semanas.find(s=>fc >= s.lunes && fc <= addDaysISO(s.lunes, 6));
+    if(s) s.n++;
+  });
+  const orden = (a, b)=>(a.e.prioridad || 9) - (b.e.prioridad || 9) || String(a.o.id).localeCompare(String(b.o.id), 'es', {numeric:true});
+  dias.forEach(d=>d.items.sort(orden));
+  const tot = k=>areas.reduce((s, a)=>s + a[k], 0);
+  const bloqN = [...motivos.values()].reduce((s, n)=>s + n, 0);
+  const conMotivo = [...motivos.entries()].filter(([k])=>k!=='__sin').sort((a, b)=>b[1] - a[1] || iniMotivoLabel(a[0]).localeCompare(iniMotivoLabel(b[0])));
+  return {
+    hoy, anio, sem, dias, viernes, areas, semanas,
+    total:{pend:tot('pend'), sem:tot('sem'), atr:tot('atr'), ent:tot('ent')},
+    bloq:{n:bloqN, top:conMotivo.slice(0, 3), sinMotivo:motivos.get('__sin') || 0},
+    pipe:iniModeloPipeline(iniPipeSel),
+  };
+}
+function iniModeloPipeline(sel){
+  const crit = (INI_PIPE[sel] || INI_PIPE['2026']).criterio;
+  const lista = oportunidades.filter(o=>iniCumpleCriterio(o, crit));
+  const grupos = new Map();
+  lista.forEach(o=>{
+    const k = iniKamKey(o);
+    if(!grupos.has(k)) grupos.set(k, {key:k, nombre:nombreKAM(o) || 'Sin ejecutivo asignado', sinKam:!o.kam, an:0, neg:0});
+    grupos.get(k)[o.etapa==='analisis' ? 'an' : 'neg']++;
+  });
+  /* Orden alfabético (sin ejecutivo al final): es distribución, no ranking. */
+  const kams = [...grupos.values()].sort((a, b)=>(a.sinKam - b.sinKam) || a.nombre.localeCompare(b.nombre, 'es'));
+  const neg = lista.filter(o=>o.etapa==='negociacion');
+  return {sel, crit, lista, kams, bruto:gcSuma(lista, gcBruto), pond:gcSuma(lista, gcPond),
+    an:lista.length - neg.length, neg:neg.length, negBruto:gcSuma(neg, gcBruto)};
+}
+function iniCritTxt(crit){ return crit.map(c=>'prob. ≥ ' + c.prob + '% · cierre ' + c.anio).join(' / '); }
+
+/* ---------- Navegación hacia los destinos ---------- */
+/* Usa el mismo botón de la barra lateral: mismo listener y permisos.
+   iniNavegando evita que ese clic borre el filtro recién puesto. */
+function iniIr(tab){
+  const btn = document.querySelector('.app-sidebar .tab-btn[data-tab="' + tab + '"]');
+  iniNavegando = true;
+  try{ if(btn && !btn.hidden) btn.click(); } finally { iniNavegando = false; }
+  const p = document.getElementById(tab);
+  return !!(p && p.classList.contains('active'));
+}
+/* Navegación normal (barra lateral u otra pestaña): los filtros que dejó
+   Inicio se quitan y el destino se repinta con sus filtros de siempre. */
+function iniLimpiarDestinos(){
+  if(iniNavegando) return;
+  if(cpFiltroInicio){ cpFiltroInicio = null; renderCarga(); }
+  if(detFiltroInicio){ detFiltroInicio = null; applyFiltersDetalle(); renderDetalleEntregas(); }
+  if(gcCriterioInicio){ gcCriterioInicio = null; gcRenderForecast(); }
+}
+function iniFoco(el){
+  if(!el) return;
+  el.scrollIntoView({block:'center', behavior:window.matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth'});
+  el.classList.remove('ini-foco'); void el.offsetWidth; el.classList.add('ini-foco');
+  setTimeout(()=>el.classList.remove('ini-foco'), 2400);
+}
+/* Carga laboral con un filtro aislado (tipo: pendientes | semana | atrasados |
+   bloqueo) y, si se indica, un área. */
+function iniIrCarga(area, tipo, motivo){
+  if(!iniIr('carga')) return;
+  if(typeof setCargaVista==='function' && cargaVista!=='carga') setCargaVista('carga');
+  const M = iniUlt || iniModelo();
+  const op = e=>INI_AREAS.some(a=>a.key===e.area);
+  const F = {
+    pendientes:{label:'Pendientes vigentes', test:(e, o)=>op(e, o)},
+    semana:{label:'Vencen esta semana · ' + formatFechaCorta(M.sem.lunesISO) + ' – ' + formatFechaCorta(M.viernes), test:(e, o)=>op(e, o) && !!e.fechaEntrega && e.fechaEntrega >= M.sem.lunesISO && e.fechaEntrega <= M.viernes},
+    atrasados:{label:'Atrasados · fecha interna vencida', test:(e, o)=>op(e, o) && !!e.fechaEntrega && e.fechaEntrega < todayISO()},
+    bloqueo:{label:motivo ? 'Bloqueados · ' + iniMotivoLabel(motivo) : 'Bloqueos activos', test:(e, o)=>op(e, o) && e.estadoTarea==='bloqueado' && (!motivo || iniMotivoKey(e)===motivo)},
+  }[tipo || 'pendientes'];
+  cpFiltroInicio = {tipo:tipo || 'pendientes', label:F.label, test:F.test};
+  /* Los bloqueados se abren desplegados: así se ve el motivo de inmediato. */
+  if(tipo==='bloqueo') cargaPendientes('todas').forEach(({e, o})=>{ if(F.test(e, o)) cpAbiertos.add(e.id); });
+  setCargaArea(area || 'todas');
+  iniFoco(document.getElementById('ini-dest-cp'));
+}
+/* Detalle de oportunidades con un conjunto exacto de oportunidades. Abre la
+   pestaña (Oportunidades o Entregas) donde están; el aviso indica el resto. */
+function iniIrDetalle(lista, label){
+  if(!iniIr('detalle')) return;
+  detFiltroInicio = {label, ids:new Set(lista.map(o=>o.id))};
+  const internas = getOportunidadesInternas().some(o=>detFiltroInicio.ids.has(o.id));
+  setDetailView(internas || !oportunidadesEnCancha().some(o=>detFiltroInicio.ids.has(o.id)) ? 'oportunidades' : 'entregas');
+  applyFiltersDetalle();
+  renderDetalleEntregas();
+}
+function iniIrPipe(etapa, kam){
+  const P = iniModeloPipeline(iniPipeSel);
+  const l = P.lista.filter(o=>(!etapa || o.etapa===etapa) && (kam==null || iniKamKey(o)===kam));
+  const g = kam!=null && P.kams.find(k=>k.key===kam);
+  const partes = [g ? g.nombre : '', etapa ? etapaLabelDisplay(etapa) : 'Análisis + Negociación', 'pipeline ' + INI_PIPE[iniPipeSel].label].filter(Boolean);
+  iniIrDetalle(l, partes.join(' · '));
+}
+function iniIrRevision(iso){
+  if(!iniIr('revision')) return;
+  setRSView('calendario');
+  moveRSWeek(0);
+  if(!iso) return;
+  const i = daysBetween(getSemanaActual().lunesISO, iso);
+  setTimeout(()=>iniFoco(document.querySelectorAll('#rs-calendar .rsc-day')[i]), 60);
+}
+function iniPuedeGerencia(){ return typeof puedeVerGerencia==='function' && puedeVerGerencia() && tienePermiso('gerencia.gerente'); }
+function iniIrGerencia(seccion){
+  if(!iniPuedeGerencia() || !iniIr('gerencia')) return;
+  setGerSubvista('gerente');
+  if(seccion==='pipeline'){
+    gcCriterioInicio = {label:'Pipeline priorizado ' + INI_PIPE[iniPipeSel].label, crit:INI_PIPE[iniPipeSel].criterio};
+    gcRenderForecast();
+    iniFoco(document.querySelector('#gerencia .gco-fc'));
+  } else iniFoco(document.getElementById('gco-res'));
+}
+
+/* Aviso "Desde Inicio" en el destino: se inserta después de `ancla`. */
+function iniAviso(ancla, id, texto, extra, quitarJs){
+  let el = document.getElementById(id);
+  if(!texto || !ancla){ if(el) el.remove(); return; }
+  if(!el || el.previousElementSibling !== ancla){
+    if(el) el.remove();
+    el = document.createElement('div');
+    el.id = id; el.className = 'ini-dest'; el.setAttribute('role', 'status');
+    ancla.insertAdjacentElement('afterend', el);
+  }
+  el.innerHTML = `<span class="ini-dest-k">Desde Inicio</span><span class="ini-dest-t">${texto}</span>${extra || ''}<button type="button" class="ini-dest-x" onclick="${quitarJs}" aria-label="Quitar filtro de Inicio">Quitar <span aria-hidden="true">×</span></button>`;
+}
+
+/* ---------- Pintado ---------- */
+function iniSpark(vals, cls, max){
+  const m = Math.max(1, max || Math.max(...vals.map(v=>v.n)));
+  return `<span class="ini-spark" aria-hidden="true">${vals.map((v, i)=>`<i class="${v.cls || cls || ''}" style="--h:${Math.max(8, v.n * 100 / m).toFixed(1)}%;--i:${i}"></i>`).join('')}</span>`;
+}
+function iniKpisHtml(M){
+  const T = M.total, P = M.pipe;
+  const pico = M.dias.reduce((a, d)=>d.items.length > a.items.length ? d : a, M.dias[0]);
+  const semPas = M.semanas[M.semanas.length - 2].n;
+  const top = M.bloq.top[0];
+  /* Sin destino (js vacío) el KPI es informativo: no es un botón. */
+  const kpi = (tono, label, num, sub, spark, js, extra)=>`<${js ? 'button type="button"' : 'div'} class="ini-k is-${tono}${js ? '' : ' is-info-only'}"${js ? ` onclick="${js}"` : ''}>
+      <span class="ini-k-l"><i class="ini-k-dot"></i>${label}</span>
+      <span class="ini-k-m"><span class="ini-k-n">${num}${extra || ''}</span>${spark || ''}</span>
+      <span class="ini-k-s">${sub}</span>
+    </${js ? 'button' : 'div'}>`;
+  return `<div class="ini-card ini-kpis">
+    ${kpi('ok', 'Entregados ' + M.anio, iniNum('k-ent', T.ent), semPas + ' la semana pasada', iniSpark(M.semanas.map((s, i)=>({n:s.n, cls:i===M.semanas.length - 1 ? 'is-on' : ''})), ''), '')}
+    ${kpi('info', 'Pendientes vigentes', iniNum('k-pend', T.pend), M.areas.map(a=>a.corta + ' ' + a.pend).join(' · '), iniSpark(M.areas.map(a=>({n:a.pend, cls:'a-' + a.key}))), "iniIrCarga('todas','pendientes')")}
+    ${kpi('warn', 'Vencen esta semana', iniNum('k-sem', T.sem), pico.items.length ? 'Lun a vie · pico el ' + pico.nombre.toLowerCase() + ' (' + pico.items.length + ')' : 'Lun a vie · sin entregas', iniSpark(M.dias.map(d=>({n:d.items.length, cls:d===pico && d.items.length ? 'is-on' : ''}))), 'iniIrRevision()')}
+    ${kpi(M.bloq.n ? 'danger' : 'quiet', 'Bloqueos activos', iniNum('k-bloq', M.bloq.n), top ? top[1] + ' por ' + iniMotivoLabel(top[0]).toLowerCase() : (M.bloq.n ? 'Sin motivo registrado' : 'Ningún entregable detenido'), M.bloq.n ? iniSpark(M.bloq.top.map(t=>({n:t[1]})).concat(M.bloq.sinMotivo ? [{n:M.bloq.sinMotivo, cls:'is-dim'}] : [])) : '', "iniIrCarga('todas','bloqueo')")}
+    ${kpi('neg', 'En negociación', iniNum('k-neg', P.neg), 'Pipeline priorizado ' + INI_PIPE[P.sel].label, '', "iniIrPipe('negociacion')", `<span class="ini-k-x">· ${iniMonto('k-negb', P.negBruto)}</span>`)}
+  </div>`;
+}
+function iniSemanaHtml(M){
+  const MAXV = 4;
+  const cols = M.dias.map(d=>{
+    const esHoy = d.iso===M.hoy, pasado = d.iso < M.hoy;
+    const chips = d.items.slice(0, MAXV).map(({o, e})=>`<button type="button" class="ini-ch a-${e.area}${pasado ? ' is-venc' : ''}${e.estadoTarea==='bloqueado' ? ' is-bloq' : ''}" onclick="event.stopPropagation();openRSDetailDrawer(${o.id},${e.id})" title="${escAttr((e.nombre || 'Entregable') + ' · ' + (o.cliente || '') + ' · ' + (AREA_LABEL[e.area] || ''))}"><span>${escAttr(e.nombre || 'Entregable')}</span><b>#${o.id}</b></button>`).join('');
+    const mas = d.items.length > MAXV ? `<span class="ini-ch-mas">+${d.items.length - MAXV} más</span>` : '';
+    return `<div class="ini-dia${esHoy ? ' is-hoy' : ''}${pasado ? ' is-pas' : ''}" role="button" tabindex="0" onclick="iniIrRevision('${d.iso}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();iniIrRevision('${d.iso}');}" aria-label="${d.nombre} ${formatFechaCorta(d.iso)}: ${d.items.length} entregables. Ver en Revisión semanal">
+      <span class="ini-dia-h"><span><b>${esHoy ? 'Hoy' : d.nombre}</b><small>${formatFechaCorta(d.iso)}</small></span><em>${d.items.length}</em></span>
+      <span class="ini-dia-l">${chips}${mas || (d.items.length ? '' : '<span class="ini-dia-v">Sin entregas</span>')}</span>
+    </div>`;
+  }).join('');
+  return `<section class="ini-card ini-sem" aria-labelledby="ini-sem-t">
+      <header class="ini-h"><h3 id="ini-sem-t">Entregas de la semana</h3><span class="ini-ley">${INI_AREAS.map(a=>`<span><i class="ini-ad a-${a.key}"></i>${a.key==='presupuestos' ? 'Presupuestos' : a.label}</span>`).join('')}</span></header>
+      <div class="ini-dias">${cols}</div>
+    </section>`;
+}
+function iniAreasHtml(M){
+  const MET = [['pend', 'Pendientes', 'pendientes'], ['sem', 'Esta semana', 'semana'], ['atr', 'Atrasados', 'atrasados'], ['ent', 'Entregados <span class="ini-am-y">' + M.anio + '</span>', null]];
+  const max = Object.fromEntries(MET.map(([k])=>[k, Math.max(1, ...M.areas.map(a=>a[k]))]));
+  const cards = M.areas.map(a=>{
+    const mets = MET.map(([k, l, tipo])=>{
+      const tono = k==='atr' ? (a.atr ? ' is-danger' : ' is-cero') : '';
+      const cuerpo = `<span class="ini-am-k">${l}</span>
+        <b>${iniNum('a-' + a.key + '-' + k, a[k])}</b>
+        <span class="ini-am-bar"><i style="--w:${(a[k] * 100 / max[k]).toFixed(1)}%"></i></span>`;
+      /* Entregados no tiene vista de destino en Perú: cifra informativa (el
+         clic no sube a la tarjeta, que lleva a pendientes). */
+      return tipo
+        ? `<button type="button" class="ini-am${tono}" onclick="event.stopPropagation();iniIrCarga('${a.key}','${tipo}')" title="${l.replace(/<[^>]+>/g, '')}: ${a[k]}">${cuerpo}</button>`
+        : `<span class="ini-am is-info-only${tono}" onclick="event.stopPropagation()">${cuerpo}</span>`;
+    }).join('');
+    return `<div class="ini-card ini-ac a-${a.key}" role="button" tabindex="0" onclick="iniIrCarga('${a.key}','pendientes')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();iniIrCarga('${a.key}','pendientes');}" aria-label="${a.label}: ver en Carga laboral">
+      <span class="ini-ac-h"><span class="ini-ac-n"><i class="ini-ad a-${a.key}"></i>${a.label}</span><span class="ini-st ${a.atr ? 'is-danger' : 'is-ok'}"><i></i>${a.atr ? 'Con atraso' : 'Al día'}</span></span>
+      <span class="ini-ac-m">${mets}</span>
+    </div>`;
+  }).join('');
+  return `<section class="ini-areas" aria-labelledby="ini-ar-t">
+      <header class="ini-h ini-h-out"><h3 id="ini-ar-t">Situación por área</h3><span class="ini-h-nota">Barras en la misma escala</span></header>
+      ${cards}
+    </section>`;
+}
+function iniBloqHtml(M){
+  const B = M.bloq;
+  const max = Math.max(1, ...B.top.map(t=>t[1]));
+  const mot = B.top.map(([k, n])=>`<button type="button" class="ini-bm" onclick="iniIrCarga('todas','bloqueo','${k}')" title="Ver los entregables bloqueados por ${escAttr(iniMotivoLabel(k))}">
+      <span class="ini-bm-h"><span>${escAttr(iniMotivoLabel(k))}</span><b>${n}</b></span>
+      <span class="ini-bm-bar"><i style="--w:${(n * 100 / max).toFixed(1)}%"></i></span>
+    </button>`).join('');
+  const sin = B.sinMotivo ? `<button type="button" class="ini-bm is-sin" onclick="iniIrCarga('todas','bloqueo','__sin')"><span class="ini-bm-h"><span>Sin motivo registrado</span><b>${B.sinMotivo}</b></span><span class="ini-bm-bar"><i style="--w:${(B.sinMotivo * 100 / Math.max(max, B.sinMotivo)).toFixed(1)}%"></i></span></button>` : '';
+  return `<div class="ini-card ini-bloq${B.n ? '' : ' is-cero'}">
+      <button type="button" class="ini-bt" onclick="iniIrCarga('todas','bloqueo')" title="Ver todos los entregables bloqueados">
+        <span class="ini-bt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="ini-bt-n"><b>${iniNum('b-n', B.n)}</b><small>${B.n===1 ? 'bloqueo activo' : 'bloqueos activos'}</small></span>
+      </button>
+      ${B.n ? `<div class="ini-bms">${mot}${sin}</div>` : '<span class="ini-bloq-nota">Ningún entregable detenido</span>'}
+    </div>`;
+}
+function iniComercialHtml(M){
+  const R = GC_RESULTADO, P = M.pipe;
+  const gerOk = iniPuedeGerencia();
+  const verVenta = tienePermiso('gerencia.gerente');
+  const escala = Math.max(R.venta, R.meta);
+  const venta = verVenta
+    ? `<span class="ini-c-k">Ventas acumuladas ${R.corte.slice(0, 4)}</span>
+       <b class="ini-c-v">${iniMonto('venta', R.venta)}</b>
+       <span class="ini-meta">
+         <span class="ini-meta-l"><b>${(R.venta * 100 / R.meta).toFixed(0)}% de la meta anual</b><span>Meta ${gcMM(R.meta)}</span></span>
+         <span class="ini-meta-bar"><i style="--w:${(R.venta * 100 / escala).toFixed(1)}%"></i><em style="left:${(R.meta * 100 / escala).toFixed(1)}%"></em></span>
+         <span class="ini-c-s">Consolidado oficial al ${gcFechaTxt(R.corte)}</span>
+       </span>`
+    : `<span class="ini-c-k">Ventas acumuladas</span>
+       <b class="ini-c-v is-nd">—</b>
+       <span class="ini-c-s">Disponible para perfiles con acceso a G. Comercial</span>`;
+  const seg = Object.keys(INI_PIPE).map(k=>`<button type="button" class="des-per-btn${k===P.sel ? ' is-on' : ''}" role="radio" aria-checked="${k===P.sel}" onclick="setIniPipe('${k}')">${INI_PIPE[k].label}</button>`).join('');
+  const maxK = Math.max(1, ...P.kams.map(k=>k.an + k.neg));
+  const kams = P.kams.map((k, i)=>{
+    const kk = escAttr(k.key);
+    return `<div class="ini-ej" style="--i:${i}">
+      <button type="button" class="ini-ej-n" data-k="${kk}" onclick="iniIrPipe(null,this.dataset.k)" title="Ver las oportunidades de ${escAttr(k.nombre)}">${escAttr(k.nombre)}</button>
+      <span class="ini-ej-bar">
+        ${k.an ? `<button type="button" class="is-an" data-k="${kk}" style="--w:${(k.an * 100 / maxK).toFixed(2)}%" onclick="iniIrPipe('analisis',this.dataset.k)" title="${escAttr(k.nombre)} · ${k.an} en análisis"><em>${k.an}</em></button>` : ''}${k.neg ? `<button type="button" class="is-neg" data-k="${kk}" style="--w:${(k.neg * 100 / maxK).toFixed(2)}%" onclick="iniIrPipe('negociacion',this.dataset.k)" title="${escAttr(k.nombre)} · ${k.neg} en negociación"><em>${k.neg}</em></button>` : ''}
+      </span>
+      <b class="ini-ej-t">${k.an + k.neg}</b>
+    </div>`;
+  }).join('') || '<p class="ini-vacio">Sin oportunidades con este criterio.</p>';
+  const tot = P.an + P.neg;
+  return `<section class="ini-zone" aria-labelledby="ini-com-t">
+      <header class="ini-h ini-h-out"><h3 id="ini-com-t">Panorama comercial</h3><span class="ini-h-sub">Cartera abierta priorizada</span></header>
+      <div class="ini-card ini-com">
+        <div class="ini-cc ini-venta${verVenta && gerOk ? ' is-link' : ''}"${verVenta && gerOk ? ` role="button" tabindex="0" onclick="iniIrGerencia('ventas')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();iniIrGerencia('ventas');}" title="Ver en Gerencia comercial"` : ''}>${venta}</div>
+        <div class="ini-cc ini-pipe">
+          <div class="ini-pipe-h"><span class="ini-c-k">Pipeline priorizado</span><div class="des-periodo pln-seg-sm ini-seg" role="radiogroup" aria-label="Año de cierre del pipeline">${seg}</div></div>
+          ${gerOk ? `<button type="button" class="ini-c-v is-link" onclick="iniIrGerencia('pipeline')" title="Ver en Gerencia comercial · Forecast">${iniMonto('p-bruto', P.bruto)}</button>` : `<b class="ini-c-v">${iniMonto('p-bruto', P.bruto)}</b>`}
+          <span class="ini-c-s">Importe bruto · ponderado <b>US$ ${iniNum('p-pond', P.pond, 'mm')} ${Math.abs(P.pond) >= 1e6 ? 'MM' : 'K'}</b></span>
+          <span class="ini-split" aria-hidden="true">${tot ? `<i class="is-an" style="flex:${P.an}"></i><i class="is-neg" style="flex:${P.neg}"></i>` : '<i class="is-vacio" style="flex:1"></i>'}</span>
+          <div class="ini-et">
+            <button type="button" class="ini-et-i" onclick="iniIrPipe('analisis')"><i class="ini-sd is-an"></i>En análisis<b>${iniNum('p-an', P.an)}</b></button>
+            <button type="button" class="ini-et-i" onclick="iniIrPipe('negociacion')"><i class="ini-sd is-neg"></i>En negociación<b>${iniNum('p-neg', P.neg)}</b></button>
+          </div>
+          <span class="ini-crit">Análisis + negociación · ${iniCritTxt(P.crit)}</span>
+        </div>
+        <div class="ini-cc ini-ejs">
+          <div class="ini-pipe-h"><span class="ini-c-k">Oportunidades por ejecutivo</span><span class="ini-ley"><span><i class="ini-sd is-an"></i>Análisis</span><span><i class="ini-sd is-neg"></i>Negociación</span></span></div>
+          <div class="ini-ej-list">${kams}</div>
+        </div>
+      </div>
+    </section>`;
+}
+
+function setIniPipe(k){
+  if(!INI_PIPE[k] || k===iniPipeSel) return;
+  iniPipeSel = k;
+  renderInicio();
+}
+
+function renderInicio(){
+  const host = document.getElementById('ini-body');
+  if(!host) return;
+  const M = iniModelo();
+  iniUlt = M;
+  host.classList.add('ini');
+  host.classList.toggle('is-anim', !iniAnimado);
+  iniAnimado = true;
+  host.innerHTML = `${iniKpisHtml(M)}
+    <div class="ini-mid">${iniSemanaHtml(M)}${iniAreasHtml(M)}</div>
+    ${iniBloqHtml(M)}
+    ${iniComercialHtml(M)}`;
+  iniContar(host);
+}
+
 function renderAll(){
   renderMeta();
   renderKPIs();
@@ -8696,6 +9367,7 @@ function renderAll(){
   renderGantt();
   renderDetalle();
   renderDetalleEntregas();
+  renderInicio();
 }
 
 function getFraseActual(){
@@ -10966,6 +11638,7 @@ function cpSetSemana(v){ cargaSemana = v; renderCarga(); }
 function cpLimpiarFiltros(){
   ['cp-f-resp','cp-f-pri','cp-f-ref'].forEach(mselClear);
   cargaSemana = '';
+  cpFiltroInicio = null;
   setCargaArea('todas');
 }
 
@@ -11056,6 +11729,7 @@ function cpDatos(){
   const refDe = o=> refrigeranteDisplay(o) || 'Sin definir';
   const porArea = cargaPendientes(cargaArea);
   const base = porArea.filter(({e,o})=>
+    (!cpFiltroInicio || cpFiltroInicio.test(e, o)) &&
     (!resps.length || resps.includes(nombreDe(e))) &&
     (!pris.length || pris.includes(cpPriKey(e))) &&
     (!refs.length || refs.includes(refDe(o))));
@@ -11116,6 +11790,11 @@ function cpPrioHtml(e, conTexto){
    contenido del Detalle (alto fijo), así nada salta ni se desplaza. */
 let cpFilas = [];
 let cpDetNombre = null;
+/* Filtro aislado que llega desde Inicio ({tipo, label, test(e,o)}): se suma a
+   los filtros propios de Carga sin tocarlos y se quita con su aviso, con
+   "Limpiar filtros" o al navegar por la barra lateral. */
+var cpFiltroInicio = null;
+function cpQuitarFiltroInicio(){ cpFiltroInicio = null; renderCarga(); }
 const cpAbiertos = new Set();
 /* Animación de entrada: solo en el primer render tras abrir la vista. */
 let cpAnimar = true;
@@ -11262,7 +11941,7 @@ function cpRenderDetalle(hoy){
         </div>
         <div class="cp-acc-line full cp-acc-imp">
           ${bloqueado
-            ? `<span class="cp-imp"><span class="cp-imp-dot" aria-hidden="true"></span><span>Bloqueado${origen ? ' por ' + escAttr(origen) : ''}${e.bloqueoDetalle ? ' · ' + escAttr(e.bloqueoDetalle) : ''}</span></span>`
+            ? `<span class="cp-imp"><span class="cp-imp-dot" aria-hidden="true"></span><span>Bloqueado${origen ? ' por ' + escAttr(origen) : ''}${e.bloqueoDetalle ? ' · ' + escAttr(e.bloqueoDetalle) : ''}</span></span>${perfilRestringido ? '' : `<button type="button" class="cp-link cp-link-ent" onclick="openRSDetailDrawer(${o.id},${e.id})">Ver detalle del entregable →</button>`}`
             : '<span class="cp-imp-ok">Sin impedimentos</span>'}
           ${perfilRestringido ? `<span class="cp-link"${cpAbrirFichaAttrs(o.id)}>Abrir ficha del proyecto →</span>` : ''}
         </div>
@@ -11328,6 +12007,9 @@ function renderCarga(){
   const hoy = todayISO();
   const d = cpDatos();
   cpRenderFiltros(d);
+  iniAviso(document.querySelector('#carga-vista-carga .cp-filtros'), 'ini-dest-cp',
+    cpFiltroInicio ? escAttr(cpFiltroInicio.label) + (cargaArea!=='todas' ? ' · ' + escAttr(AREA_LABEL[cargaArea]) : '') : '',
+    cpFiltroInicio ? `<span class="ini-dest-n">${d.filtrado.length} entregable${d.filtrado.length===1 ? '' : 's'}</span>` : '', 'cpQuitarFiltroInicio()');
   const lunesAct = cargaSemana || cpLunesActual();
   const domAct = addDaysISO(lunesAct, 6);
   const shell = document.getElementById('carga-vista-carga');
@@ -12665,6 +13347,7 @@ function applyFiltersDetalle(){
        entre filtros distintos, AND (deben cumplirse todos los que estén activos). */
     const match = (!kam.length || kam.includes(row.dataset.kam)) && (!etapa.length || etapa.includes(row.dataset.etapa)) &&
       matchAreaResp && matchQuick && (!prob.length || prob.includes(row.dataset.prob)) &&
+      (!detFiltroInicio || detFiltroInicio.ids.has(Number(row.dataset.id))) &&
       (!texto || rTexto.includes(texto));
     row.classList.toggle('hidden-row', !match);
     if(match) visible++;
@@ -12679,6 +13362,7 @@ function applyFiltersDetalle(){
     }
   });
   document.getElementById('f-count').textContent = visible + ' de ' + rows.length + ' oportunidades';
+  detAvisoInicio();
   detallePage = 1;
   renderDetallePagination();
 }
@@ -12735,9 +13419,26 @@ function resetFiltersDetalle(){
   document.getElementById('f-texto').value='';
   document.getElementById('f-sort').value='importe-desc';
   resumenOpQuickFilter = null;
+  detFiltroInicio = null;
   renderDetalle();
+  renderDetalleEntregas();
 }
 
+/* Filtro aislado que llega desde Inicio ({label, ids}): un conjunto exacto de
+   oportunidades, válido en Oportunidades y en Entregas (las de Análisis y
+   Negociación suelen estar en Entregas). No toca los filtros propios. */
+var detFiltroInicio = null;
+function detQuitarFiltroInicio(){ detFiltroInicio = null; applyFiltersDetalle(); renderDetalleEntregas(); }
+function detAvisoInicio(){
+  const F = detFiltroInicio;
+  const nOp = F ? getOportunidadesInternas().filter(o=>F.ids.has(o.id)).length : 0;
+  const nEn = F ? oportunidadesEnCancha().filter(o=>F.ids.has(o.id)).length : 0;
+  const n = F ? F.ids.size : 0;
+  const det = F ? `<span class="ini-dest-n">${n} oportunidad${n===1 ? '' : 'es'} · ${nOp} en Oportunidades · ${nEn} en Entregas</span>` : '';
+  const ir = v=>`<button type="button" class="ini-dest-a" onclick="setDetailView('${v}')">Ver en ${v==='entregas' ? 'Entregas' : 'Oportunidades'} →</button>`;
+  iniAviso(document.querySelector('#detail-view-oportunidades > .filters'), 'ini-dest-det-op', F ? escAttr(F.label) : '', det + (F && nEn ? ir('entregas') : ''), 'detQuitarFiltroInicio()');
+  iniAviso(document.querySelector('#detail-view-entregas > .filters'), 'ini-dest-det-en', F ? escAttr(F.label) : '', det + (F && nOp ? ir('oportunidades') : ''), 'detQuitarFiltroInicio()');
+}
 /* ---------- Selector Oportunidades / Entregas (dentro de Detalle) ---------- */
 let detailView = 'oportunidades';
 function setDetailView(view){
@@ -12763,6 +13464,7 @@ function oportunidadesEnCancha(){
   return oportunidades.filter(o=>o.estadoOperativo==='entregado_cliente');
 }
 function resetFiltersEntregas(){
+  detFiltroInicio = null;
   ['ent-f-kam','ent-f-etapa','ent-f-resp','ent-f-asignado','ent-f-prob'].forEach(id=>mselClear(id));
   document.getElementById('ent-f-texto').value='';
   document.getElementById('ent-sort').value='importe-desc';
@@ -12849,6 +13551,7 @@ function renderDetalleEntregas(){
     /* Filtro rápido del grid resumen (ver selectResumenEntCard): se combina con
        el resto (AND), igual que resumenOpQuickFilter en Detalle > Oportunidades. */
     if(resumenEntQuickFilter && o.etapa !== resumenEntQuickFilter) return false;
+    if(detFiltroInicio && !detFiltroInicio.ids.has(o.id)) return false;
 
     /* Área responsable / Responsable — misma lógica que Detalle > Oportunidades
        (ver applyFiltersDetalle): se evalúa por entregable asignable, basta con
@@ -12869,6 +13572,7 @@ function renderDetalleEntregas(){
   rows.sort(ordenarPorSegmentadorOrden(sortBy));
 
   document.getElementById('ent-f-count').textContent = rows.length + ' de ' + oportunidadesEnCancha().length + ' oportunidades';
+  detAvisoInicio();
   renderResumenEntregas();
 
   /* Paginación (ver renderEntregasTablePage / goToEntregasPage, más abajo): esta
@@ -16185,7 +16889,13 @@ function gcSincronizarMeses(){
 }
 function gcCambioAnio(){ gcSincronizarMeses(); gcCambioForecast(); }
 function gcCambioForecast(){ gcRenderForecast(); }
+/* Criterio aislado que llega desde Inicio ({label, crit}: Análisis +
+   Negociación con probabilidad mínima por año de cierre). Se suma a los
+   filtros del forecast sin tocarlos; "Limpiar" o su aviso lo quitan. */
+var gcCriterioInicio = null;
+function gcQuitarCriterioInicio(){ gcCriterioInicio = null; gcRenderForecast(); }
 function gcLimpiarForecast(){
+  gcCriterioInicio = null;
   ['gco-f-prob', 'gco-f-etapa', 'gco-f-anio', 'gco-f-mes'].forEach(mselClear);
   gcSincronizarMeses();
   gcMes = null;
@@ -16276,6 +16986,7 @@ function gcForecastModelo(){
   const anios = mselValues('gco-f-anio'), meses = mselValues('gco-f-mes');
   const conFecha = anios.length > 0 || meses.length > 0;
   const lista = gcUniverso().filter(o=>{
+    if(gcCriterioInicio && !iniCumpleCriterio(o, gcCriterioInicio.crit)) return false;
     if(probs.length && !probs.includes(gcProbKey(o))) return false;
     if(etapas.length && !etapas.includes(gcEtapaDe(o))) return false;
     const m = gcMesDe(o);
@@ -16310,6 +17021,9 @@ function gcRenderForecast(){
   if(!host) return;
   const F = gcForecastModelo();
   gcSerieUlt = F.serie;
+  iniAviso(document.querySelector('#gerencia .gco-fc .gco-filtros'), 'ini-dest-gc',
+    gcCriterioInicio ? escAttr(gcCriterioInicio.label) : '',
+    gcCriterioInicio ? `<span class="ini-dest-n">Análisis + negociación · ${iniCritTxt(gcCriterioInicio.crit)} · ${F.lista.length} oportunidad${F.lista.length===1 ? '' : 'es'} · bruto ${gcMM(gcSuma(F.lista, gcBruto))}</span>` : '', 'gcQuitarCriterioInicio()');
   gcSegOn('gco-met', 'met', gcMetrica);
 
   /* Indicadores del forecast (responden solo a los filtros superiores). */
@@ -17802,6 +18516,9 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     /* Gerencia no está disponible para el visor (ni antes de confirmar el rol). */
     if(btn.dataset.tab === 'gerencia' && !puedeVerGerencia()) return;
     if(!vistaPermitida(btn.dataset.tab, btn.dataset.cargaVista)) return;
+    /* Los filtros que dejó Inicio solo valen para ese salto: al navegar por
+       la barra se quitan (no aplica mientras Inicio está navegando). */
+    iniLimpiarDestinos();
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
@@ -17811,6 +18528,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     if(btn.dataset.tab === 'carga') setCargaVista(btn.dataset.cargaVista || 'carga');
     if(btn.dataset.tab === 'cronograma') requestAnimationFrame(renderGantt);
     if(btn.dataset.tab === 'gerencia'){ plnAnimar = true; renderGerencia(); }
+    if(btn.dataset.tab === 'inicio') iniAlEntrar();
     renderKPIs();
     hideGlobalTooltip();
   });
