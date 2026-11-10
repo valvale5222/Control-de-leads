@@ -6340,6 +6340,307 @@
     }
     input, select, textarea{ cursor:auto; }
   }
+
+  /* ============ GESTIÓN COMERCIAL — maqueta Fase 1 (datos de demostración) ============
+     Todo con prefijo gcm- (gc- ya lo usa el Gantt). Reutiliza los tokens, .subtabs,
+     .filters, .chip, .coi-kpi, .ger-card, .modal-* y .drawer-* del panel. */
+  .gcm,.gcm-mbox,.gcm-drw{--cp-hair:color-mix(in srgb, var(--line) 80%, transparent);--cp-inset:color-mix(in srgb, var(--ink) 4%, var(--surface-alt));display:flex;flex-direction:column;gap:14px;}
+  .gcm-top{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;}
+  .gcm-top .subtabs{margin:0;}
+  .gcm-demo{display:inline-flex;align-items:center;gap:10px;padding:6px 8px 6px 12px;border-radius:var(--radius-pill);border:1px dashed color-mix(in srgb, var(--violet) 45%, var(--line));background:var(--violet-bg);font-size:11.5px;color:var(--ink-soft);}
+  .gcm-demo b{color:var(--violet);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:10px;}
+  .gcm-demo .btn-mini{border-radius:var(--radius-pill);}
+  .gcm-sv{display:none;flex-direction:column;gap:14px;min-width:0;}
+  .gcm-sv.is-on{display:flex;animation:tabIn .3s var(--ease-emphasized);}
+  @media (prefers-reduced-motion:reduce){ .gcm-sv.is-on{animation:none;} }
+  .gcm-head{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;margin:0 2px;}
+  .gcm-head-t{display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap;}
+  .gcm-head-t h3{margin:0;font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.01em;}
+  .gcm-head-t span{font-size:11.5px;color:var(--ink-dim);}
+  .gcm-head-c{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .gcm-sel{background:var(--surface);border:1px solid var(--line);color:var(--ink);font:500 12.5px 'Inter',sans-serif;padding:0 30px 0 12px;height:34px;border-radius:10px;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A8B5C4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 8px center;background-size:14px;transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-2) var(--ease);}
+  .gcm-sel:hover{border-color:color-mix(in srgb, var(--teal) 40%, var(--line));}
+  .gcm-sel:focus{border-color:var(--teal);box-shadow:var(--ring);}
+  .gcm-sel.is-sm{height:28px;font-size:11.5px;padding:0 26px 0 9px;border-radius:8px;background-position:right 6px center;}
+  .gcm-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;}
+  .gcm-kpis .coi-kpi.is-violet{--k-c:var(--violet);}
+  .gcm-kpi-bar{display:block;height:4px;margin-top:5px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--ink) 8%, transparent);overflow:hidden;}
+  .gcm-kpi-bar i{display:block;height:100%;background:var(--k-c);border-radius:inherit;transform-origin:left;animation:gerCrece .8s var(--ease-emphasized) both;}
+  .gcm-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;}
+  .gcm-row > .ger-card{display:flex;flex-direction:column;min-width:0;}
+  .gcm.is-anim .coi-kpi,.gcm.is-anim .gcm-row > .ger-card{animation:gerSube .42s var(--ease-emphasized) both;}
+  .gcm.is-anim .coi-kpi:nth-child(2){animation-delay:.03s;} .gcm.is-anim .coi-kpi:nth-child(3){animation-delay:.06s;}
+  .gcm.is-anim .coi-kpi:nth-child(4){animation-delay:.09s;} .gcm.is-anim .coi-kpi:nth-child(5){animation-delay:.12s;}
+  .gcm.is-anim .coi-kpi:nth-child(6){animation-delay:.15s;} .gcm.is-anim .gcm-row > .ger-card{animation-delay:.14s;}
+  @media (prefers-reduced-motion:reduce){ .gcm.is-anim .coi-kpi,.gcm.is-anim .gcm-row > .ger-card{animation:none;} }
+  .gcm-list{display:flex;flex-direction:column;gap:2px;}
+  .gcm-it{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:7px 8px;border:none;border-radius:10px;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer;
+    transition:background-color var(--dur-1) var(--ease);}
+  .gcm-it:hover{background:var(--side-hover);}
+  .gcm-it:focus-visible{outline:none;box-shadow:inset var(--ring);}
+  .gcm-it .cp-row-fecha{height:40px;}
+  .gcm-it .cp-row-fecha b{font-size:15px;}
+  .gcm-it.is-vencida .cp-row-fecha{background:color-mix(in srgb, var(--danger) 9%, var(--cp-inset));border-color:color-mix(in srgb, var(--danger) 26%, transparent);}
+  .gcm-it.is-vencida .cp-row-fecha b{color:var(--danger);}
+  .gcm-it-m{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .gcm-it-m b{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-it-m span{font-size:11.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-it-r{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+  .gcm-it-r small{font-size:11px;color:var(--ink-dim);white-space:nowrap;}
+  .gcm-av{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;font:700 11.5px 'Space Grotesk',sans-serif;color:var(--ink-soft);background:var(--cp-inset);border:1px solid var(--cp-hair);flex-shrink:0;}
+  .gcm-empty{font-size:12px;color:var(--ink-dim);padding:16px 8px;text-align:center;}
+  .gcm-sep{height:1px;background:var(--line);margin:8px 0;}
+  .gcm-sub-t{margin:4px 8px 6px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);}
+  /* Categorías de gestión y etiquetas */
+  .gcm-cat-pro{--c:var(--navy);} .gcm-cat-opo{--c:var(--orange);} .gcm-cat-fid{--c:var(--teal);}
+  .gcm-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--c, var(--ink-soft)) 13%, transparent);color:var(--c, var(--ink-soft));white-space:nowrap;}
+  .gcm-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c, var(--ink-soft));}
+  .gcm-tag.is-plain::before{display:none;}
+  .gcm-id{font:600 10.5px 'IBM Plex Mono',monospace;color:var(--ink-dim);letter-spacing:.02em;}
+  .gcm-ley{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-soft);}
+  .gcm-ley span{display:inline-flex;align-items:center;gap:6px;}
+  .gcm-ley i{width:8px;height:8px;border-radius:50%;background:var(--c);}
+  /* Barras de cumplimiento y embudo */
+  .gcm-bars{display:flex;flex-direction:column;gap:9px;padding:2px 8px;}
+  .gcm-bar{display:grid;grid-template-columns:110px minmax(0,1fr) 64px;align-items:center;gap:12px;font-size:12.5px;}
+  .gcm-bar-k{font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-bar-t{position:relative;height:8px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--ink) 7%, transparent);overflow:hidden;}
+  .gcm-bar-t i{position:absolute;inset:0 auto 0 0;border-radius:inherit;background:var(--c, var(--teal));transform-origin:left;animation:gerCrece .9s var(--ease-emphasized) .1s both;}
+  .gcm-bar-v{text-align:right;font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .gcm-bar-v b{font-family:'Space Grotesk',sans-serif;font-size:14px;color:var(--ink);margin-right:3px;}
+  .gcm-funnel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:0 8px;}
+  .gcm-fn{display:flex;flex-direction:column;gap:2px;padding:8px 9px;border-radius:10px;background:color-mix(in srgb, var(--ink) 3%, transparent);border:none;font:inherit;color:inherit;text-align:left;cursor:pointer;min-width:0;transition:background-color var(--dur-1) var(--ease);}
+  .gcm-fn:hover{background:var(--side-hover);}
+  .gcm-fn b{font-family:'Space Grotesk',sans-serif;font-size:18px;color:var(--ink);line-height:1.1;}
+  .gcm-fn span{font-size:10.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-fn.is-ok b{color:var(--ok);}
+  /* Bandeja del Planner */
+  .gcm-pl{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;}
+  .gcm-pl + .gcm-pl{border-top:1px solid var(--cp-hair);}
+  .gcm-pl-m{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .gcm-pl-m b{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-pl-m span{font-size:11.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-tipo-conv{--c:var(--violet);} .gcm-tipo-act{--c:var(--info);}
+  .gcm-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border-radius:12px;border:1px solid color-mix(in srgb, var(--violet) 26%, var(--glass-border));background:color-mix(in srgb, var(--violet) 6%, var(--surface));font-size:12px;color:var(--ink-soft);}
+  .gcm-strip b{color:var(--ink);}
+  /* Agenda */
+  .gcm-cal-bar{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;}
+  .gcm-cal-bar .filters{margin:0;flex:1;min-width:0;padding:8px 10px;}
+  .gcm-cal-nav{display:inline-flex;align-items:center;gap:4px;}
+  .gcm-cal-nav .btn-mini{height:32px;padding:0 12px;border-radius:9px;}
+  #gcm-sv-cartera .filters input[type="text"],#gcm-sv-leads .filters input[type="text"]{min-width:270px;}
+  @media (max-width:767px){ #gcm-sv-cartera .filters input[type="text"],#gcm-sv-leads .filters input[type="text"]{min-width:0;width:100%;} }
+  .gcm-ico-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);cursor:pointer;transition:color var(--dur-1) var(--ease),border-color var(--dur-1) var(--ease);}
+  .gcm-ico-btn:hover{color:var(--ink);border-color:color-mix(in srgb, var(--teal) 45%, var(--line));}
+  .gcm-ico-btn svg{width:15px;height:15px;}
+  .gcm-cal-lbl{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--ink);margin:0 6px;white-space:nowrap;}
+  .gcm-cal-sum{margin-left:auto;font-size:11.5px;color:var(--ink-dim);}
+  .gcm-seg{display:inline-flex;padding:3px;border-radius:10px;background:var(--cp-inset);border:1px solid var(--cp-hair);gap:2px;}
+  .gcm-seg button{border:none;background:transparent;color:var(--ink-soft);font:600 12px 'Inter',sans-serif;padding:6px 12px;border-radius:8px;cursor:pointer;transition:background-color var(--dur-2) var(--ease),color var(--dur-2) var(--ease);}
+  .gcm-seg button:hover{color:var(--ink);}
+  .gcm-seg button.is-on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-xs);}
+  .gcm-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;}
+  .gcm-day{display:flex;flex-direction:column;gap:6px;min-height:250px;min-width:0;padding:8px;border-radius:14px;cursor:pointer;
+    background:linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--ink) 3%), var(--surface));border:1px solid var(--glass-border);box-shadow:var(--shadow-xs);
+    transition:border-color var(--dur-2) var(--ease),box-shadow var(--dur-2) var(--ease);}
+  .gcm-day:hover{border-color:color-mix(in srgb, var(--teal) 30%, var(--glass-border));}
+  .gcm-day.is-hoy{border-color:color-mix(in srgb, var(--teal) 55%, transparent);box-shadow:0 0 0 1px color-mix(in srgb, var(--teal) 30%, transparent), var(--shadow-xs);}
+  .gcm-day.is-finde{background:color-mix(in srgb, var(--ink) 2%, var(--surface));}
+  .gcm-day-h{display:flex;align-items:baseline;justify-content:space-between;padding:2px 3px 4px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);}
+  .gcm-day-h b{font-family:'Space Grotesk',sans-serif;font-size:17px;letter-spacing:0;color:var(--ink);}
+  .gcm-day.is-hoy .gcm-day-h b{color:var(--teal);}
+  .gcm-day-add{margin-top:auto;align-self:center;font-size:11px;color:var(--ink-dim);opacity:0;transition:opacity var(--dur-2) var(--ease);}
+  .gcm-day:hover .gcm-day-add{opacity:1;}
+  .gcm-ev{display:flex;flex-direction:column;gap:1px;width:100%;min-width:0;padding:6px 8px;border:none;border-left:3px solid var(--c);border-radius:8px;text-align:left;font:inherit;color:inherit;cursor:pointer;
+    background:color-mix(in srgb, var(--c) 10%, var(--surface));transition:transform var(--dur-2) var(--ease-emphasized),box-shadow var(--dur-2) var(--ease),background-color var(--dur-1) var(--ease);}
+  .gcm-ev:hover{transform:translateY(-1px);box-shadow:var(--shadow-xs);background:color-mix(in srgb, var(--c) 16%, var(--surface));}
+  .gcm-ev:focus-visible{outline:none;box-shadow:var(--ring);}
+  .gcm-ev small{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--ink-soft);white-space:nowrap;overflow:hidden;}
+  .gcm-ev b{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-ev span{font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-ev .gcm-st{margin-left:auto;font-size:11px;line-height:1;}
+  .gcm-ev.is-realizada .gcm-st{color:var(--ok);}
+  .gcm-ev.is-reprogramada{border-left-style:dashed;}
+  .gcm-ev.is-reprogramada .gcm-st{color:var(--warn);}
+  .gcm-ev.is-cancelada{opacity:.55;background:color-mix(in srgb, var(--ink) 4%, var(--surface));}
+  .gcm-ev.is-cancelada b{text-decoration:line-through;}
+  .gcm-ev.is-vencida{box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--danger) 35%, transparent);}
+  .gcm-month{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;}
+  .gcm-dow{padding:0 6px 2px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);}
+  .gcm-mday{display:flex;flex-direction:column;gap:3px;min-height:104px;min-width:0;padding:6px;border-radius:12px;cursor:pointer;background:var(--surface);border:1px solid var(--glass-border);transition:border-color var(--dur-2) var(--ease);}
+  .gcm-mday:hover{border-color:color-mix(in srgb, var(--teal) 30%, var(--glass-border));}
+  .gcm-mday.is-fuera{background:transparent;border-style:dashed;opacity:.55;}
+  .gcm-mday.is-hoy{border-color:color-mix(in srgb, var(--teal) 55%, transparent);}
+  .gcm-mday-n{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--ink-soft);padding:0 2px 2px;}
+  .gcm-mday.is-hoy .gcm-mday-n{color:var(--teal);}
+  .gcm-mev{display:flex;align-items:center;gap:5px;width:100%;min-width:0;padding:2px 5px;border:none;border-radius:6px;background:transparent;font:500 11px 'Inter',sans-serif;color:var(--ink-soft);text-align:left;cursor:pointer;}
+  .gcm-mev:hover{background:color-mix(in srgb, var(--c) 12%, transparent);color:var(--ink);}
+  .gcm-mev i{width:6px;height:6px;border-radius:50%;background:var(--c);flex-shrink:0;}
+  .gcm-mev span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-mev.is-cancelada span{text-decoration:line-through;opacity:.6;}
+  .gcm-mev.is-realizada i{box-shadow:0 0 0 2px color-mix(in srgb, var(--c) 25%, transparent);}
+  .gcm-mmas{font-size:10.5px;color:var(--ink-dim);padding:0 5px;}
+  /* Tabla de leads */
+  .gcm-tabla-wrap{overflow-x:auto;margin:-4px -6px;}
+  .gcm-tabla{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:820px;}
+  .gcm-tabla th{padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);border-bottom:1px solid var(--line);white-space:nowrap;}
+  .gcm-tabla td{padding:9px 10px;border-bottom:1px solid var(--cp-hair);color:var(--ink-soft);vertical-align:middle;}
+  .gcm-tabla tbody tr{cursor:pointer;transition:background-color var(--dur-1) var(--ease);}
+  .gcm-tabla tbody tr:hover td{background:var(--side-hover);}
+  .gcm-tabla tbody tr:focus-visible{outline:none;box-shadow:inset var(--ring);}
+  .gcm-tabla tbody tr:last-child td{border-bottom:none;}
+  .gcm-tabla td b{display:block;color:var(--ink);font-weight:600;font-size:13px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-tabla td small{display:block;font-size:11.5px;color:var(--ink-dim);max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-tabla td.is-warn small{color:var(--warn);}
+  .gcm-prog{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink-dim);white-space:nowrap;}
+  .gcm-prog span{position:relative;width:54px;height:5px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--ink) 8%, transparent);overflow:hidden;}
+  .gcm-prog span i{position:absolute;inset:0 auto 0 0;border-radius:inherit;background:var(--teal);}
+  /* Cartera */
+  .gcm-emps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start;}
+  .gcm-emp{padding:14px 16px;}
+  .gcm-emp.is-flash{animation:gcmFlash 1.6s var(--ease) both;}
+  @keyframes gcmFlash{0%,40%{box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 40%, transparent), var(--shadow-sm);}100%{box-shadow:var(--shadow-sm);}}
+  .gcm-emp-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;}
+  .gcm-emp-h h4{margin:0;font-family:'Space Grotesk',sans-serif;font-size:14.5px;font-weight:700;color:var(--ink);}
+  .gcm-emp-h p{margin:2px 0 0;font-size:11.5px;color:var(--ink-dim);}
+  .gcm-emp-ch{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+  .gcm-con{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--cp-hair);}
+  .gcm-con-m{min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .gcm-con-m b{font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-con-m span{font-size:11px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .gcm-con-c{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .gcm-con-sh{grid-column:2 / -1;display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:11px;color:var(--ink-dim);margin-top:-2px;}
+  .gcm-emp-f{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--cp-hair);font-size:11.5px;color:var(--ink-dim);}
+  /* Modal y drawer del módulo */
+  .modal-box.gcm-mbox{max-width:620px;}
+  .modal-box.gcm-mbox.is-wide{max-width:760px;}
+  .gcm-mbox .modal-body{gap:14px;}
+  .gcm-mbox .modal-footer{justify-content:flex-end;gap:10px;flex-wrap:wrap;}
+  .gcm-mbox .btn-primary:disabled,.gcm-drw .btn-primary:disabled{opacity:.45;cursor:not-allowed;filter:none;box-shadow:none;}
+  .gcm-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .gcm-fgrid .full{grid-column:1 / -1;}
+  .gcm-fgrid.is-3{grid-template-columns:1fr 1fr 1fr;}
+  .gcm-nota{margin:0;font-size:12px;color:var(--ink-soft);line-height:1.5;padding:9px 12px;border-radius:10px;background:var(--cp-inset);border:1px solid var(--cp-hair);}
+  .gcm-nota b{color:var(--ink);}
+  .gcm-nota.is-info{background:var(--info-bg);border-color:transparent;}
+  .gcm-nota.is-warn{background:var(--warn-bg);border-color:transparent;}
+  .gcm-nota.is-ok{background:var(--ok-bg);border-color:transparent;}
+  .gcm-dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 14px;margin:0;padding:12px 14px;border-radius:12px;background:var(--cp-inset);border:1px solid var(--cp-hair);}
+  .gcm-dl div{min-width:0;}
+  .gcm-dl dt{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:3px;}
+  .gcm-dl dd{margin:0;font-size:12.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;}
+  .gcm-blk-t{margin:2px 0 -4px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:8px;}
+  .gcm-blk-t small{margin-left:auto;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink-dim);font-size:11px;}
+  .gcm-comp{display:flex;flex-direction:column;gap:8px;}
+  .gcm-comp-r{display:grid;grid-template-columns:minmax(0,1fr) 150px 28px;gap:8px;align-items:center;}
+  .gcm-x{background:none;border:none;color:var(--ink-dim);font-size:17px;line-height:1;cursor:pointer;padding:4px;border-radius:6px;}
+  .gcm-x:hover{color:var(--danger);}
+  .gcm-link{background:none;border:none;padding:0;font:600 12px 'Inter',sans-serif;color:var(--teal);cursor:pointer;align-self:flex-start;}
+  .gcm-link:hover{text-decoration:underline;}
+  .gcm-chk{display:flex !important;flex-direction:row !important;align-items:flex-start;gap:9px !important;font-size:12.5px !important;text-transform:none !important;letter-spacing:0 !important;color:var(--ink) !important;cursor:pointer;}
+  .gcm-chk input{width:auto !important;margin-top:2px;}
+  .gcm-req{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none;}
+  .gcm-req li{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink);}
+  .gcm-req li i{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;font-style:normal;font-size:11px;font-weight:700;background:var(--ok-bg);color:var(--ok);}
+  .gcm-req li.is-no{color:var(--ink-soft);}
+  .gcm-req li.is-no i{background:var(--danger-bg);color:var(--danger);}
+  .gcm-dup{display:flex;flex-direction:column;gap:6px;}
+  .gcm-dup-it{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--warn-bg);border:1px solid color-mix(in srgb, var(--warn) 25%, transparent);animation:gerSube .3s var(--ease-emphasized) both;}
+  .gcm-dup-it b{display:block;font-size:12.5px;color:var(--ink);}
+  .gcm-dup-it span{font-size:11px;color:var(--ink-soft);}
+  .gcm-dup-it.is-exacta{background:var(--danger-bg);border-color:color-mix(in srgb, var(--danger) 30%, transparent);}
+  .gcm-dup-ok{font-size:11.5px;color:var(--ok);display:flex;align-items:center;gap:6px;}
+  .gcm-chks{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:12px;background:var(--cp-inset);border:1px solid var(--cp-hair);}
+  /* Traslado lead → oportunidad (simulación) */
+  .gcm-tr{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);gap:8px;align-items:stretch;}
+  .gcm-tr-box{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:14px;background:var(--cp-inset);border:1px solid var(--cp-hair);min-width:0;}
+  .gcm-tr-box.is-dest{background:color-mix(in srgb, var(--teal) 7%, var(--surface));border-color:color-mix(in srgb, var(--teal) 30%, transparent);}
+  .gcm-tr-box h5{margin:0;font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:700;color:var(--ink);}
+  .gcm-tr-box p{margin:0;font-size:11.5px;color:var(--ink-dim);}
+  .gcm-tr-ar{display:flex;align-items:center;justify-content:center;color:var(--teal);}
+  .gcm-tr-ar svg{width:26px;height:26px;animation:gcmLatido 1.4s var(--ease) infinite;}
+  @keyframes gcmLatido{0%,100%{transform:translateX(-3px);opacity:.6;}50%{transform:translateX(3px);opacity:1;}}
+  .gcm-tr-it{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px dashed var(--cp-hair);font-size:12px;color:var(--ink);animation:gcmLlega .5s var(--ease-emphasized) both;animation-delay:calc(var(--i, 0) * 110ms + 250ms);}
+  .gcm-tr-it em{font-style:normal;color:var(--ink-dim);font-size:11px;display:block;}
+  .gcm-tr-it i{font-style:normal;color:var(--teal);font-weight:700;}
+  @keyframes gcmLlega{from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){ .gcm-tr-ar svg,.gcm-tr-it,.gcm-dup-it,.gcm-emp.is-flash{animation:none;} }
+  .gcm-drw{max-width:560px;display:flex;flex-direction:column;}
+  .gcm-drw .drawer-body{flex:1;}
+  .gcm-drw .drawer-head{align-items:flex-start;gap:12px;z-index:2;}
+  .gcm-drw-t{display:flex;flex-direction:column;gap:5px;min-width:0;}
+  .gcm-drw-t h3{font-size:17px;line-height:1.25;}
+  .gcm-drw-t p{margin:0;font-size:12px;color:var(--ink-soft);}
+  .gcm-drw-t .gcm-drw-ch{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .gcm-drw .subtabs{margin:0;align-self:flex-start;}
+  .gcm-drw .subtab-btn{font-size:12px;padding:6px 12px;}
+  .gcm-drw .drawer-footer{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface);}
+  .gcm-campos{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;}
+  .gcm-campos label{display:flex;flex-direction:column;gap:5px;font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);}
+  .gcm-campos label.is-req::after{content:"Requerido para conversión";font-size:10px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--violet);order:3;}
+  .gcm-campos label.is-ok{color:var(--ink-soft);}
+  .gcm-in{background:var(--surface-alt);border:1px solid var(--line);color:var(--ink);font:13px 'Inter',sans-serif;padding:8px 10px;border-radius:8px;outline:none;text-transform:none;letter-spacing:0;width:100%;min-width:0;
+    transition:border-color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease);}
+  .gcm-in:focus{border-color:var(--teal);box-shadow:0 0 0 3px var(--ok-bg);}
+  textarea.gcm-in{resize:vertical;min-height:58px;}
+  .gcm-tl{display:flex;flex-direction:column;gap:0;position:relative;padding-left:18px;}
+  .gcm-tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--line);}
+  .gcm-tl-it{position:relative;padding:4px 0 12px;}
+  .gcm-tl-it::before{content:"";position:absolute;left:-17px;top:8px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--c, var(--ink-dim));}
+  .gcm-tl-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--ink-dim);}
+  .gcm-tl-b{margin-top:4px;padding:9px 11px;border-radius:10px;background:var(--cp-inset);border:1px solid var(--cp-hair);font-size:12.5px;color:var(--ink);line-height:1.5;}
+  .gcm-tl-b.is-btn{cursor:pointer;transition:border-color var(--dur-1) var(--ease);}
+  .gcm-tl-b.is-btn:hover{border-color:color-mix(in srgb, var(--teal) 40%, var(--cp-hair));}
+  .gcm-tl-b ul{margin:6px 0 0;padding-left:16px;color:var(--ink-soft);font-size:12px;}
+  .gcm-tar{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--cp-hair);}
+  .gcm-tar input{width:16px;height:16px;accent-color:var(--teal);cursor:pointer;}
+  .gcm-tar b{display:block;font-size:12.5px;font-weight:500;color:var(--ink);}
+  .gcm-tar small{font-size:11px;color:var(--ink-dim);}
+  .gcm-tar.is-hecho b{text-decoration:line-through;color:var(--ink-dim);}
+  .gcm-tar .is-venc{color:var(--danger);font-weight:600;}
+  .gcm-add{display:grid;grid-template-columns:minmax(0,1fr) 140px auto;gap:8px;align-items:center;}
+  .gcm-banner{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;font-size:12px;line-height:1.5;color:var(--ink);}
+  .gcm-banner.is-conv{background:var(--violet-bg);}
+  .gcm-banner.is-ok{background:var(--ok-bg);}
+  .gcm-banner svg{width:17px;height:17px;flex-shrink:0;margin-top:1px;}
+  .gcm-banner.is-conv svg{color:var(--violet);} .gcm-banner.is-ok svg{color:var(--ok);}
+  @media (max-width:1180px){
+    .gcm-kpis{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .gcm-week{grid-template-columns:repeat(4,minmax(0,1fr));}
+    .gcm-day{min-height:170px;}
+  }
+  @media (max-width:900px){
+    .gcm-row,.gcm-emps{grid-template-columns:1fr;}
+  }
+  @media (max-width:767px){
+    .gcm-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .gcm-top{flex-direction:column;align-items:stretch;}
+    .gcm-demo{border-radius:12px;}
+    .gcm-week{grid-template-columns:1fr;gap:6px;}
+    .gcm-day{min-height:0;}
+    .gcm-day-add{opacity:1;}
+    .gcm-month{gap:3px;}
+    .gcm-mday{min-height:52px;padding:4px;}
+    .gcm-mev span{display:none;}
+    .gcm-mev{padding:2px;width:auto;}
+    .gcm-mday-evs{display:flex;flex-wrap:wrap;gap:2px;}
+    .gcm-mmas{display:none;}
+    .gcm-cal-sum{margin-left:0;width:100%;}
+    .gcm-funnel{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .gcm-dl{grid-template-columns:1fr 1fr;}
+    .gcm-tr{grid-template-columns:1fr;}
+    .gcm-tr-ar svg{transform:rotate(90deg);animation:none;}
+  }
+  @media (max-width:520px){
+    .gcm-fgrid,.gcm-fgrid.is-3,.gcm-campos{grid-template-columns:1fr;}
+    .gcm-comp-r,.gcm-add{grid-template-columns:1fr;}
+    .gcm-bar{grid-template-columns:86px minmax(0,1fr) 56px;}
+    .gcm-con{grid-template-columns:34px minmax(0,1fr);}
+    .gcm-con-c{grid-column:2;justify-content:flex-start;}
+  }
+  @media print{ #gcom,#gcm-modal,#gcm-drawer{display:none !important;} }
 </style>
 </head>
 <body>
@@ -6410,10 +6711,18 @@
         <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18M3 14.5h18M9 9v11"/></svg>
         <span class="side-label">Detalle de oportunidades</span></button>
     </div>
+    <!-- Gestión Comercial (Fase 1 · maqueta): agenda, leads y cartera con datos
+         de demostración en memoria. No lee ni escribe Supabase. -->
+    <div class="side-group" role="group" aria-labelledby="side-g-com" data-op="peru">
+      <p class="side-group-label" id="side-g-com">Comercial</p>
+      <button type="button" class="tab-btn side-item" data-tab="gcom" data-side-label="Gestión Comercial">
+        <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M3 12.5h18M10.5 12.5V14h3v-1.5"/></svg>
+        <span class="side-label">Gestión Comercial</span></button>
+    </div>
     <div class="side-group" role="group" aria-labelledby="side-g-ges" data-op="peru">
       <p class="side-group-label" id="side-g-ges">Gestión</p>
-      <!-- Gerencia: oculta hasta que el perfil confirme un rol que edita (admin /
-           editor). El visor no la ve: ver aplicarPermisosDeRol. -->
+      <!-- Gerencia: oculta hasta que el perfil confirme rol admin. Editor y
+           visor no la ven: ver aplicarPermisosDeRol. -->
       <button type="button" class="tab-btn side-item" data-tab="gerencia" data-side-label="Gerencia" hidden>
         <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M5 20v-6M10 20V9M15 20v-4M20 20V5"/><path d="m4 9 5-4 5 4 6-5"/></svg>
         <span class="side-label">Gerencia</span></button>
@@ -7332,6 +7641,55 @@
           <button class="btn-primary" onclick="applyImportExcel()">📥 Aplicar actualización</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ GESTIÓN COMERCIAL — maqueta Fase 1 ============
+       Mi gestión · Agenda · Leads · Cartera. Datos ficticios en memoria (GCM):
+       no lee ni escribe Supabase, no toca oportunidades ni tareas existentes y
+       se reinicia al recargar. Lo pinta gcmRender(). -->
+  <div class="tab-panel" id="gcom">
+    <h2 class="print-only-title">Gestión Comercial</h2>
+    <div class="gcm" id="gcm-root">
+      <div class="gcm-top">
+        <div class="subtabs" data-subtabs="gcm" role="tablist" aria-label="Vistas de Gestión Comercial">
+          <button type="button" role="tab" class="subtab-btn active" data-gcm-sv="mi" aria-selected="true" onclick="gcmIr('mi')">Mi gestión</button>
+          <button type="button" role="tab" class="subtab-btn" data-gcm-sv="agenda" aria-selected="false" onclick="gcmIr('agenda')">Agenda</button>
+          <button type="button" role="tab" class="subtab-btn" data-gcm-sv="leads" aria-selected="false" onclick="gcmIr('leads')">Leads</button>
+          <button type="button" role="tab" class="subtab-btn" data-gcm-sv="cartera" aria-selected="false" onclick="gcmIr('cartera')">Cartera</button>
+        </div>
+        <div class="gcm-demo" role="note">
+          <b>Demo</b><span>Datos ficticios en memoria · no se guardan ni se conectan a Supabase</span>
+          <button type="button" class="btn-mini" onclick="gcmReiniciar()">Reiniciar</button>
+        </div>
+      </div>
+      <section class="gcm-sv is-on" id="gcm-sv-mi" aria-label="Mi gestión"></section>
+      <section class="gcm-sv" id="gcm-sv-agenda" aria-label="Agenda"></section>
+      <section class="gcm-sv" id="gcm-sv-leads" aria-label="Leads"></section>
+      <section class="gcm-sv" id="gcm-sv-cartera" aria-label="Cartera"></section>
+    </div>
+  </div>
+
+  <!-- Gestión Comercial: modal genérico (actividades, leads, empresas, Planner). -->
+  <div class="modal-overlay hidden" id="gcm-modal" onclick="if(event.target===this) gcmModalCerrar()">
+    <div class="modal-box gcm-mbox" role="dialog" aria-modal="true" aria-labelledby="gcm-m-t">
+      <div class="modal-header">
+        <h3 id="gcm-m-t">—</h3>
+        <button type="button" class="modal-close" onclick="gcmModalCerrar()" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="modal-body" id="gcm-m-body"></div>
+      <div class="modal-footer" id="gcm-m-foot"></div>
+    </div>
+  </div>
+  <!-- Gestión Comercial: ficha del lead (drawer lateral). -->
+  <div class="drawer-overlay hidden" id="gcm-drawer" onclick="if(event.target===this) gcmLeadCerrar()">
+    <div class="drawer-panel gcm-drw" role="dialog" aria-modal="true" aria-labelledby="gcm-d-t">
+      <div class="drawer-head">
+        <div class="gcm-drw-t" id="gcm-d-head"><h3 id="gcm-d-t">—</h3></div>
+        <button type="button" class="drawer-close" onclick="gcmLeadCerrar()" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="drawer-body" id="gcm-d-body"></div>
+      <div class="drawer-footer" id="gcm-d-foot"></div>
     </div>
   </div>
 
@@ -13639,7 +13997,14 @@ function detAvisoInicio(){
 }
 /* ---------- Selector Oportunidades / Entregas (dentro de Detalle) ---------- */
 let detailView = 'oportunidades';
+/* Vistas solo para admin: Gestión Comercial y Entregables (en las dos
+   operaciones). Gerencia y Colombia tienen su propio control
+   (puedeVerGerencia / coOperacionesPermitidas). */
+function vistaSoloAdmin(tab, detalle){
+  return tab === 'gcom' || (tab === 'detalle' && detalle === 'entregables');
+}
 function setDetailView(view){
+  if(view === 'entregables' && !esAdmin()) view = 'oportunidades';
   /* 'entregables' es la vista Entregables de Colombia; 'apoyo', la bandeja de
      solicitudes de Colombia que atiende Perú. Cada una solo en su operación. */
   /* 'entregables' existe en las dos operaciones (en Perú, sin solicitudes). */
@@ -18202,12 +18567,12 @@ function gerDescargarInforme(){
    Cada subvista pide su propio permiso (no depende de puedeEditar), así
    más adelante se puede dar Planner a un rol sin darle Gerente (o
    viceversa) cambiando solo PERMISOS_POR_ROL — o leyéndolo de la base
-   cuando exista una tabla de permisos. La pestaña Gerencia en sí sigue
-   exigiendo un rol que edita (puedeVerGerencia).
+   cuando exista una tabla de permisos. La pestaña Gerencia en sí es solo
+   para admin (puedeVerGerencia).
    ============================================================ */
 const PERMISOS_POR_ROL = {
   admin:  ['gerencia.gerente', 'gerencia.planner', 'gerencia.operaciones'],
-  editor: ['gerencia.gerente', 'gerencia.planner'],
+  editor: [],
   visor:  [],
 };
 function tienePermiso(p){
@@ -20518,10 +20883,10 @@ function coRenderInicio(){
 }
 /* ---------- Selector de operación + campana ---------- */
 function coOperacionesPermitidas(){
-  /* Etapa 1: todo rol confirmado con acceso completo puede ver las dos
-     operaciones (el visor, en solo lectura). El perfil operativo restringido
-     sigue limitado a Perú. Un permiso por país por usuario llega en la etapa 2. */
-  if(!rolConfirmado || perfilRestringido) return ['peru'];
+  /* Solo el admin tiene doble acceso (Perú + Colombia). Editor, visor y el
+     perfil operativo restringido quedan en Perú. Un permiso por país por
+     usuario llega en la etapa 2. */
+  if(!rolConfirmado || !esAdmin()) return ['peru'];
   return ['peru', 'colombia'];
 }
 var coAccesoAplicado = false;
@@ -20540,7 +20905,8 @@ function coAplicarAccesoOperaciones(){
 function coAplicarNavegacion(){
   document.documentElement.setAttribute('data-operacion', operacionActiva);
   document.querySelectorAll('.app-sidebar .side-group[data-op]').forEach(g=>{
-    g.hidden = g.dataset.op !== operacionActiva || (perfilRestringido && !g.querySelector('.tab-btn:not([hidden])'));
+    /* Un grupo sin ninguna vista visible (p. ej. Comercial para quien no es admin) se oculta entero. */
+    g.hidden = g.dataset.op !== operacionActiva || !g.querySelector('.tab-btn:not([hidden])');
   });
   const brand = document.querySelector('.side-brand-txt span');
   if(brand) brand.textContent = esOperacionCO() ? 'Oportunidades · CO' : 'Oportunidades';
@@ -20704,6 +21070,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     /* Gerencia no está disponible para el visor (ni antes de confirmar el rol). */
     if(btn.dataset.tab === 'gerencia' && !puedeVerGerencia()) return;
+    if(vistaSoloAdmin(btn.dataset.tab, btn.dataset.detailView) && !esAdmin()) return;
     if(!vistaPermitida(btn.dataset.tab, btn.dataset.cargaVista)) return;
     /* Los filtros que dejó Inicio solo valen para ese salto: al navegar por
        la barra se quitan (no aplica mientras Inicio está navegando). */
@@ -20771,6 +21138,7 @@ function sideSincronizar(){
   /* Gestión de equipos es una sola entrada lateral; el título nombra la subvista. */
   if(tab === 'carga' && !esOperacionCO()) nombre += ' · ' + ({carga:'Carga laboral', equipo:'Equipo de trabajo', desempeno:'Desempeño'}[cargaVista] || 'Carga laboral');
   if(tab === 'gerencia' && gerSv) nombre = 'Gerencia · ' + gerSv.label;
+  if(tab === 'gcom' && typeof gcmLabel === 'function') nombre = 'Gestión Comercial · ' + gcmLabel();
   const n = document.getElementById('view-context-name');
   const m = document.getElementById('side-mobilebar-title');
   if(n) n.textContent = nombre;
@@ -20932,9 +21300,9 @@ let appIniciada = false;  // evita recargar datos/realtime en cada TOKEN_REFRESH
    así que el panel no ofrece botones que el servidor después va a rechazar. */
 const ROLES_QUE_EDITAN = ['admin', 'editor'];
 
-/* Gerencia: la pestaña se ve si el rol edita y tiene al menos una subvista
-   permitida (ver PERMISOS_POR_ROL / GER_SUBVISTAS). */
-function puedeVerGerencia(){ return rolConfirmado && puedeEditar && gerSubvistasVisibles().length > 0; }
+/* Gerencia: solo admin, y con al menos una subvista permitida (ver
+   PERMISOS_POR_ROL / GER_SUBVISTAS). */
+function puedeVerGerencia(){ return rolConfirmado && esAdmin() && gerSubvistasVisibles().length > 0; }
 function aplicarPermisosDeRol(){
   document.body.classList.toggle('solo-lectura', !puedeEditar);
   document.body.classList.toggle('perfil-restringido', perfilRestringido);
@@ -20944,10 +21312,22 @@ function aplicarPermisosDeRol(){
      la tenía abierta, vuelve a Carga laboral. */
   document.getElementById('subtab-desempeno').hidden = !puedeVerDesempeno();
   if(!puedeVerDesempeno() && cargaVista === 'desempeno') setCargaVista('carga');
-  /* Gerencia: solo roles que editan (admin / editor). Si un visor la tenía
-     abierta, vuelve a Revisión semanal. */
+  /* Gerencia: solo admin. Si otro rol la tenía abierta, vuelve a Revisión
+     semanal. */
   const btnGer = document.querySelector('.app-sidebar .tab-btn[data-tab="gerencia"]');
   if(btnGer) btnGer.hidden = !puedeVerGerencia();
+  /* Gestión Comercial y Entregables: solo admin. Si otro rol tenía abierta
+     una de ellas, vuelve a Revisión semanal. */
+  document.querySelectorAll('.app-sidebar .tab-btn').forEach(b=>{
+    if(vistaSoloAdmin(b.dataset.tab, b.dataset.detailView) && !esAdmin()) b.hidden = true;
+  });
+  const panelCom = document.getElementById('gcom');
+  if(!esAdmin() && ((panelCom && panelCom.classList.contains('active')) || detailView === 'entregables')){
+    if(detailView === 'entregables') setDetailView('oportunidades');
+    const btnRev = document.querySelector('.app-sidebar .tab-btn[data-tab="revision"]');
+    if(btnRev && panelCom && panelCom.classList.contains('active')) btnRev.click();
+  }
+  coAplicarNavegacion();
   const panelGer = document.getElementById('gerencia');
   if(!puedeVerGerencia() && panelGer && panelGer.classList.contains('active')){
     const btnRev = document.querySelector('.app-sidebar .tab-btn[data-tab="revision"]');
@@ -21105,6 +21485,1130 @@ window.addEventListener('DOMContentLoaded', function(){
     }
   });
 });
+
+/* ============================================================
+   GESTIÓN COMERCIAL — MAQUETA (Fase 1)
+   Mi gestión · Agenda · Leads · Cartera. Todo vive en memoria (GCM.d) con
+   datos ficticios: no lee ni escribe Supabase ni localStorage, no toca
+   oportunidades, tareas ni filtros del panel. Al recargar (o «Reiniciar»)
+   vuelve a la semilla de demostración.
+   Reglas que simula:
+   · Una visita NO crea leads sola: el lead se crea a mano (opcionalmente
+     desde la visita, quedando vinculada).
+   · Una empresa puede existir sin leads ni oportunidades.
+   · Un lead acumula visitas, comentarios y tareas.
+   · Conversión a oportunidad y propuestas de actualización de oportunidades
+     pasan por la bandeja del Planner.
+   · Las oportunidades siguen en el módulo actual: aquí solo se referencian
+     (OP-DEMO-…), nunca se crean registros reales.
+   ============================================================ */
+const GCM_EJECUTIVOS = ['Andrea Demo','Bruno Demo','Camila Demo'];
+const GCM_ZONAS = ['Lima Norte','Lima Sur','Ica','La Libertad','Piura','Arequipa'];
+const GCM_CATS = [{k:'Prospección',c:'pro'},{k:'Oportunidades',c:'opo'},{k:'Fidelización',c:'fid'}];
+const GCM_TIPOS = ['Visita','Reunión','Llamada','Compromiso'];
+const GCM_EST_ACT = {Programada:'tone-info', Realizada:'tone-ok', Reprogramada:'tone-warn', Cancelada:'tone-neutral'};
+const GCM_EST_LEAD = ['Nuevo','En seguimiento','Calificado','Conversión solicitada','Convertido','Descartado'];
+const GCM_TONO_LEAD = {'Nuevo':'tone-info','En seguimiento':'tone-neutral','Calificado':'tone-ok','Conversión solicitada':'tone-warn','Convertido':'tone-ok','Descartado':'tone-neutral'};
+const GCM_ORIGENES = ['Visita','Referido','Llamada entrante','Web / correo','Feria o evento','Cartera existente'];
+const GCM_RESULTADOS = ['Positivo','Neutral','Negativo','Sin contacto'];
+const GCM_CAMPOS = [
+  {k:'tipoProyecto', l:'Tipo de proyecto', tipo:'sel', ops:['Cámara de frío','Túnel de congelado','Planta de proceso','Almacén frigorífico','Mantenimiento / ampliación']},
+  {k:'ubicacion', l:'Ubicación del proyecto', tipo:'txt', ph:'Distrito, provincia'},
+  {k:'capacidad', l:'Capacidad estimada', tipo:'txt', ph:'p. ej. 800 m³ · 20 t/día'},
+  {k:'presupuesto', l:'Presupuesto referencial', tipo:'sel', ops:['< USD 100 mil','USD 100–300 mil','USD 300–800 mil','> USD 800 mil']},
+  {k:'fechaDecision', l:'Fecha estimada de decisión', tipo:'date'},
+  {k:'decisor', l:'Decisor / comité', tipo:'txt', ph:'Quién aprueba la inversión'},
+  {k:'competencia', l:'Competencia identificada', tipo:'txt', ph:'Opcional'}
+];
+const GCM_REQ_CONV = ['tipoProyecto','presupuesto','fechaDecision'];
+const GCM_MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const GCM_MES_L = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const GCM_DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+
+/* ---------- utilidades ---------- */
+function gcmE(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function gcmHoyD(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+function gcmISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function gcmD(n){ const d = gcmHoyD(); d.setDate(d.getDate()+(n||0)); return gcmISO(d); }
+function gcmParse(s){ const p = String(s).split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function gcmAdd(s, n){ const d = gcmParse(s); d.setDate(d.getDate()+n); return gcmISO(d); }
+function gcmLunes(s){ const d = gcmParse(s); d.setDate(d.getDate()-((d.getDay()+6)%7)); return gcmISO(d); }
+function gcmFmt(s){ if(!s) return '—'; const d = gcmParse(s); return d.getDate()+' '+GCM_MES[d.getMonth()]; }
+function gcmFmtL(s){ if(!s) return '—'; const d = gcmParse(s); return GCM_DOW[(d.getDay()+6)%7].toLowerCase()+' '+d.getDate()+' '+GCM_MES[d.getMonth()]; }
+function gcmDias(s){ return Math.round((gcmParse(s) - gcmHoyD())/864e5); }
+function gcmRel(s){
+  const n = gcmDias(s);
+  if(n === 0) return 'Hoy'; if(n === 1) return 'Mañana'; if(n === -1) return 'Ayer';
+  return n > 0 ? 'En '+n+' días' : 'Hace '+(-n)+' días';
+}
+function gcmIni(n){ return String(n||'?').split(' ').filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase(); }
+function gcmCorto(n){ return String(n||'').replace(/\s+(S\.?A\.?C\.?|S\.?A\.?A\.?|S\.?A\.?|E\.?I\.?R\.?L\.?|S\.?R\.?L\.?)$/i,''); }
+function gcmCatC(k){ return (GCM_CATS.find(c=>c.k===k) || GCM_CATS[0]).c; }
+function gcmTag(cat){ return '<span class="gcm-tag gcm-cat-'+gcmCatC(cat)+'">'+gcmE(cat)+'</span>'; }
+function gcmChipAct(e){ return '<span class="chip chip-sm '+(GCM_EST_ACT[e]||'tone-neutral')+'">'+gcmE(e)+'</span>'; }
+function gcmChipLead(e){ return '<span class="chip chip-sm '+(GCM_TONO_LEAD[e]||'tone-neutral')+'">'+gcmE(e)+'</span>'; }
+function gcmOpts(list, sel, vacio){ return (vacio!=null ? '<option value="">'+gcmE(vacio)+'</option>' : '') + list.map(v=>{ const val = typeof v === 'object' ? v.v : v, txt = typeof v === 'object' ? v.t : v; return '<option value="'+gcmE(val)+'"'+(val===sel?' selected':'')+'>'+gcmE(txt)+'</option>'; }).join(''); }
+function gcmVal(id){ const el = document.getElementById(id); return el ? String(el.value||'').trim() : ''; }
+function gcmFechaBox(s){ const d = gcmParse(s); return '<span class="cp-row-fecha"><b>'+d.getDate()+'</b><small>'+GCM_MES[d.getMonth()]+'</small></span>'; }
+const GCM_ICO_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+const GCM_ICO_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>';
+
+/* ---------- semilla de demostración (fechas relativas a hoy) ---------- */
+function gcmSemilla(){
+  const d = gcmD;
+  const act = (id, o)=>Object.assign({id, tipo:'Visita', categoria:'Prospección', estado:'Programada', fecha:d(0), hora:'10:00', ejecutivo:'Andrea Demo', acompanante:'', empresaId:'', contactoId:'', leadId:'', opRef:'', titulo:'', resultado:'', comentarios:'', compromisos:[], reprogDe:'', motivo:''}, o);
+  return {
+    seq:{act:40, lead:5, emp:6, con:9, sol:2, op:52, x:100},
+    ops:[
+      {id:'OP-DEMO-027', t:'Cámara de conservación · 1 200 m³', emp:'e2'},
+      {id:'OP-DEMO-031', t:'Túnel de congelado IQF', emp:'e3'},
+      {id:'OP-DEMO-044', t:'Ampliación de cámara de producto terminado', emp:'e4'}
+    ],
+    empresas:[
+      {id:'e1', nombre:'Agroexportadora Demo Norte S.A.C.', ruc:'20000000011', rubro:'Agroexportación'},
+      {id:'e2', nombre:'Frutícola Ejemplo del Sur S.A.', ruc:'20000000022', rubro:'Agroexportación'},
+      {id:'e3', nombre:'Pesquera Demo Pacífico S.A.C.', ruc:'20000000033', rubro:'Pesca y congelados'},
+      {id:'e4', nombre:'Lácteos Muestra Andina S.A.', ruc:'20000000044', rubro:'Lácteos'},
+      {id:'e5', nombre:'Distribuidora Ficticia Lima E.I.R.L.', ruc:'20000000055', rubro:'Distribución y retail'},
+      {id:'e6', nombre:'Cárnicos Prueba del Centro S.A.C.', ruc:'20000000066', rubro:'Cárnicos'}
+    ],
+    contactos:[
+      {id:'c1', empresaId:'e1', nombre:'Rosa Demo Paredes', cargo:'Gerente de operaciones', tel:'+51 900 000 001', email:'rosa@agro-demo.pe', ejecutivo:'Andrea Demo', zona:'La Libertad', compartido:[]},
+      {id:'c2', empresaId:'e1', nombre:'Martín Demo Quispe', cargo:'Jefe de mantenimiento', tel:'+51 900 000 002', email:'martin@agro-demo.pe', ejecutivo:'Andrea Demo', zona:'La Libertad', compartido:['Bruno Demo']},
+      {id:'c3', empresaId:'e2', nombre:'Lucía Demo Torres', cargo:'Gerente general', tel:'+51 900 000 003', email:'lucia@fruticola-demo.pe', ejecutivo:'Andrea Demo', zona:'Ica', compartido:[]},
+      {id:'c4', empresaId:'e2', nombre:'Jorge Demo Salas', cargo:'Jefe de planta', tel:'+51 900 000 004', email:'jorge@fruticola-demo.pe', ejecutivo:'Andrea Demo', zona:'Ica', compartido:[]},
+      {id:'c5', empresaId:'e3', nombre:'Pedro Demo Castillo', cargo:'Gerente de producción', tel:'+51 900 000 005', email:'pedro@pesquera-demo.pe', ejecutivo:'Bruno Demo', zona:'Piura', compartido:['Andrea Demo']},
+      {id:'c6', empresaId:'e4', nombre:'Elena Demo Vargas', cargo:'Jefa de calidad', tel:'+51 900 000 006', email:'elena@lacteos-demo.pe', ejecutivo:'Camila Demo', zona:'Arequipa', compartido:[]},
+      {id:'c7', empresaId:'e4', nombre:'Raúl Demo Medina', cargo:'Gerente de proyectos', tel:'+51 900 000 007', email:'raul@lacteos-demo.pe', ejecutivo:'Camila Demo', zona:'Arequipa', compartido:[]},
+      {id:'c8', empresaId:'e5', nombre:'Sofía Demo Ríos', cargo:'Gerente de logística', tel:'+51 900 000 008', email:'sofia@distri-demo.pe', ejecutivo:'Camila Demo', zona:'Lima Norte', compartido:[]},
+      {id:'c9', empresaId:'e6', nombre:'Hugo Demo Flores', cargo:'Administrador', tel:'+51 900 000 009', email:'hugo@carnicos-demo.pe', ejecutivo:'Camila Demo', zona:'Lima Sur', compartido:[]}
+    ],
+    leads:[
+      {id:'L-DEMO-001', empresaId:'e1', contactoId:'c1', titulo:'Cámara de conservación para arándanos', ejecutivo:'Andrea Demo', estado:'En seguimiento', origen:'Visita', creado:d(-14), opId:'',
+        campos:{tipoProyecto:'Cámara de frío', ubicacion:'Chao, La Libertad'},
+        comentarios:[{id:'k1', f:d(-6), autor:'Andrea Demo', t:'Interés en ampliar capacidad para la campaña de marzo. Piden referencia de proyectos similares.'}],
+        tareas:[{id:'t1', t:'Enviar ficha técnica de paneles', f:d(-3), hecho:true}, {id:'t2', t:'Coordinar visita técnica con Arquitectura', f:d(4), hecho:false}]},
+      {id:'L-DEMO-002', empresaId:'e2', contactoId:'c4', titulo:'Renovación de túnel de preenfriado', ejecutivo:'Andrea Demo', estado:'Calificado', origen:'Cartera existente', creado:d(-20), opId:'',
+        campos:{tipoProyecto:'Túnel de congelado', ubicacion:'Pisco, Ica', capacidad:'12 pallets por ciclo', presupuesto:'USD 100–300 mil', decisor:'Gerencia general'},
+        comentarios:[{id:'k2', f:d(-12), autor:'Andrea Demo', t:'El túnel actual tiene 15 años; buscan reducir consumo energético.'}],
+        tareas:[{id:'t3', t:'Enviar propuesta preliminar', f:d(2), hecho:false}]},
+      {id:'L-DEMO-003', empresaId:'e3', contactoId:'c5', titulo:'Planta de congelado de pota', ejecutivo:'Bruno Demo', estado:'Conversión solicitada', origen:'Referido', creado:d(-25), opId:'',
+        campos:{tipoProyecto:'Planta de proceso', ubicacion:'Paita, Piura', capacidad:'30 t/día', presupuesto:'USD 300–800 mil', fechaDecision:d(40), decisor:'Directorio'},
+        comentarios:[{id:'k3', f:d(-8), autor:'Bruno Demo', t:'Validaron layout preliminar. Esperan cotización formal.'}, {id:'k4', f:d(-3), autor:'Andrea Demo', t:'Acompañé la última visita: interés alto, plazo ajustado.'}],
+        tareas:[{id:'t4', t:'Solicitar planos de la nave existente', f:d(1), hecho:false}, {id:'t5', t:'Confirmar potencia eléctrica disponible', f:d(5), hecho:false}]},
+      {id:'L-DEMO-004', empresaId:'e5', contactoId:'c8', titulo:'Almacén de frío para distribución', ejecutivo:'Camila Demo', estado:'Nuevo', origen:'Web / correo', creado:d(-4), opId:'',
+        campos:{}, comentarios:[], tareas:[{id:'t6', t:'Llamar para agendar primera visita', f:d(-2), hecho:false}]},
+      {id:'L-DEMO-005', empresaId:'e4', contactoId:'c7', titulo:'Ampliación de cámara de producto terminado', ejecutivo:'Camila Demo', estado:'Convertido', origen:'Visita', creado:d(-60), opId:'OP-DEMO-044',
+        campos:{tipoProyecto:'Mantenimiento / ampliación', ubicacion:'Arequipa', capacidad:'400 m³', presupuesto:'< USD 100 mil', fechaDecision:d(-10), decisor:'Gerencia de proyectos'},
+        comentarios:[{id:'k5', f:d(-30), autor:'Camila Demo', t:'Aprobado por el Planner. Pasa a oportunidad.', tras:true}],
+        tareas:[{id:'t7', t:'Enviar cronograma tentativo', f:d(-20), hecho:false, tras:true}]}
+    ],
+    actividades:[
+      act('A-01', {fecha:d(-6), hora:'10:00', empresaId:'e1', contactoId:'c1', leadId:'L-DEMO-001', titulo:'Presentación de soluciones de frío', estado:'Realizada', resultado:'Positivo', comentarios:'Recorrimos la planta. La cámara actual está al límite en campaña.', compromisos:[{t:'Enviar ficha técnica de paneles', f:d(-3)}]}),
+      act('A-02', {tipo:'Llamada', categoria:'Fidelización', fecha:d(-5), hora:'15:30', ejecutivo:'Bruno Demo', empresaId:'e4', contactoId:'c6', titulo:'Seguimiento post-instalación', estado:'Realizada', resultado:'Positivo', comentarios:'Conformes con el servicio. Mencionan posible ampliación.'}),
+      act('A-03', {fecha:d(-2), hora:'09:00', ejecutivo:'Camila Demo', empresaId:'e5', contactoId:'c8', titulo:'Visita de prospección (sin lead)', estado:'Realizada', resultado:'Neutral', comentarios:'Primera visita. Aún sin necesidad concreta: no se crea lead.'}),
+      act('A-04', {tipo:'Reunión', categoria:'Oportunidades', fecha:d(-1), hora:'11:00', empresaId:'e2', contactoId:'c3', opRef:'OP-DEMO-027', titulo:'Revisión de alcance técnico', estado:'Realizada', resultado:'Positivo', comentarios:'Confirman ampliar alcance a dos cámaras.', compromisos:[{t:'Actualizar planos con segunda cámara', f:d(3)}]}),
+      act('A-05', {fecha:d(0), hora:'10:00', empresaId:'e1', contactoId:'c2', leadId:'L-DEMO-001', titulo:'Relevamiento técnico de la sala de máquinas'}),
+      act('A-06', {tipo:'Llamada', fecha:d(0), hora:'16:00', ejecutivo:'Bruno Demo', empresaId:'e3', contactoId:'c5', leadId:'L-DEMO-003', titulo:'Confirmar fecha de entrega de planos'}),
+      act('A-07', {categoria:'Oportunidades', fecha:d(1), hora:'09:30', ejecutivo:'Bruno Demo', acompanante:'Andrea Demo', empresaId:'e3', contactoId:'c5', opRef:'OP-DEMO-031', titulo:'Visita técnica · túnel IQF'}),
+      act('A-08', {tipo:'Reunión', categoria:'Fidelización', fecha:d(2), hora:'11:00', ejecutivo:'Camila Demo', empresaId:'e4', contactoId:'c6', titulo:'Revisión anual de mantenimiento'}),
+      act('A-09', {tipo:'Compromiso', fecha:d(2), hora:'15:00', empresaId:'e2', contactoId:'c4', leadId:'L-DEMO-002', titulo:'Enviar propuesta preliminar'}),
+      act('A-10', {fecha:d(3), hora:'10:00', ejecutivo:'Camila Demo', empresaId:'e6', contactoId:'c9', titulo:'Presentación institucional', estado:'Reprogramada', reprogDe:d(-1), motivo:'El cliente pidió moverla por auditoría interna.'}),
+      act('A-11', {fecha:d(-3), hora:'12:00', ejecutivo:'Bruno Demo', acompanante:'Andrea Demo', empresaId:'e3', contactoId:'c5', leadId:'L-DEMO-003', titulo:'Validación de layout', estado:'Realizada', resultado:'Positivo', comentarios:'Validaron layout preliminar con producción.'}),
+      act('A-12', {fecha:d(-9), hora:'10:30', ejecutivo:'Bruno Demo', empresaId:'e3', contactoId:'c5', leadId:'L-DEMO-003', titulo:'Primera visita a planta', estado:'Realizada', resultado:'Positivo', comentarios:'Necesidad clara de congelado para exportación.'}),
+      act('A-13', {categoria:'Fidelización', fecha:d(6), hora:'10:00', empresaId:'e1', contactoId:'c1', titulo:'Visita de relación · cierre de campaña'}),
+      act('A-14', {tipo:'Reunión', categoria:'Oportunidades', fecha:d(8), hora:'14:00', ejecutivo:'Camila Demo', empresaId:'e4', contactoId:'c7', opRef:'OP-DEMO-044', titulo:'Presentación de propuesta técnica'}),
+      act('A-15', {tipo:'Llamada', fecha:d(-4), hora:'17:00', ejecutivo:'Camila Demo', empresaId:'e5', contactoId:'c8', titulo:'Contacto inicial', estado:'Cancelada', motivo:'Contacto no disponible; se reagendará por correo.'}),
+      act('A-16', {fecha:d(13), hora:'09:00', ejecutivo:'Bruno Demo', empresaId:'e5', contactoId:'c8', titulo:'Visita conjunta con Camila', acompanante:'Camila Demo'}),
+      act('A-17', {fecha:d(-12), hora:'11:00', empresaId:'e2', contactoId:'c3', leadId:'L-DEMO-002', titulo:'Diagnóstico del túnel actual', estado:'Realizada', resultado:'Positivo', comentarios:'Túnel de 15 años, alto consumo. Interés en renovación.'}),
+      act('A-18', {tipo:'Llamada', fecha:d(-1), hora:'15:00', ejecutivo:'Camila Demo', empresaId:'e5', contactoId:'c8', leadId:'L-DEMO-004', titulo:'Agendar primera visita'}),
+      act('A-19', {tipo:'Visita', categoria:'Prospección', fecha:d(17), hora:'10:00', ejecutivo:'Andrea Demo', empresaId:'e6', contactoId:'c9', titulo:'Visita de prospección'}),
+      act('A-20', {tipo:'Llamada', fecha:d(-2), hora:'12:30', empresaId:'e2', contactoId:'c4', leadId:'L-DEMO-002', titulo:'Confirmar datos de consumo energético'})
+    ],
+    solicitudes:[
+      {id:'S-01', tipo:'conversion', leadId:'L-DEMO-003', ejecutivo:'Bruno Demo', fecha:d(-1), estado:'Pendiente', detalle:'Cliente validó layout y espera cotización formal. Se requiere asignar equipo de Arquitectura.'},
+      {id:'S-02', tipo:'actualizacion', opRef:'OP-DEMO-027', actId:'A-04', ejecutivo:'Andrea Demo', fecha:d(-1), estado:'Pendiente', detalle:'Ampliar alcance a dos cámaras y mover la fecha estimada de cierre a la primera quincena de diciembre.'}
+    ]
+  };
+}
+
+let GCM = {
+  sv:'mi', yo:'Andrea Demo', d:gcmSemilla(), anim:true,
+  cal:{vista:'semana', ref:gcmD(0), ej:'', cat:''},
+  lf:{q:'', estado:'activos', ej:''},
+  cf:{q:'', zona:'', ej:''},
+  built:{}, leadAbierto:null, leadTab:'info', alCrearEmpresa:null
+};
+
+/* ---------- lecturas ---------- */
+const gcmEmp = id=>GCM.d.empresas.find(e=>e.id===id);
+const gcmCon = id=>GCM.d.contactos.find(c=>c.id===id);
+const gcmLead = id=>GCM.d.leads.find(l=>l.id===id);
+const gcmAct = id=>GCM.d.actividades.find(a=>a.id===id);
+const gcmOp = id=>GCM.d.ops.find(o=>o.id===id);
+const gcmAbierta = a=>a.estado==='Programada' || a.estado==='Reprogramada';
+const gcmOrdAct = (a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora);
+function gcmLeadActivo(l){ return l.estado!=='Convertido' && l.estado!=='Descartado'; }
+function gcmLeadActs(l){ return GCM.d.actividades.filter(a=>a.leadId===l.id); }
+function gcmLeadPerfil(l){ const n = GCM_CAMPOS.filter(c=>l.campos[c.k]).length; return {n, t:GCM_CAMPOS.length, pct:Math.round(n*100/GCM_CAMPOS.length)}; }
+function gcmLeadUltima(l){ const r = gcmLeadActs(l).filter(a=>a.estado==='Realizada').sort(gcmOrdAct); return r.length ? r[r.length-1] : null; }
+function gcmLeadProxima(l){
+  const hoy = gcmD(0);
+  const a = gcmLeadActs(l).filter(x=>gcmAbierta(x) && x.fecha>=hoy).sort(gcmOrdAct)[0];
+  const t = l.tareas.filter(x=>!x.hecho && !x.tras).sort((x,y)=>String(x.f).localeCompare(String(y.f)))[0];
+  if(a && (!t || a.fecha <= t.f)) return {f:a.fecha, t:a.tipo+' · '+(a.titulo||'')};
+  if(t) return {f:t.f, t:t.t, tarea:true};
+  return null;
+}
+/* Motivo por el que un lead activo pide atención (o null). */
+function gcmLeadPendiente(l){
+  if(!gcmLeadActivo(l)) return null;
+  const hoy = gcmD(0);
+  const venc = l.tareas.filter(t=>!t.hecho && t.f && t.f < hoy);
+  if(venc.length) return venc.length === 1 ? 'Tarea vencida: '+venc[0].t : venc.length+' tareas vencidas';
+  const actVenc = gcmLeadActs(l).filter(a=>gcmAbierta(a) && a.fecha < hoy);
+  if(actVenc.length) return 'Actividad sin registrar del '+gcmFmt(actVenc[0].fecha);
+  if(l.estado === 'Conversión solicitada') return null;
+  if(!gcmLeadProxima(l)) return 'Sin próxima acción programada';
+  return null;
+}
+function gcmReqConv(l){
+  const r = GCM_REQ_CONV.map(k=>{ const c = GCM_CAMPOS.find(x=>x.k===k); return {t:c.l, ok:!!l.campos[k]}; });
+  r.push({t:'Al menos una visita realizada', ok:gcmLeadActs(l).some(a=>a.tipo==='Visita' && a.estado==='Realizada')});
+  r.push({t:'Contacto principal definido', ok:!!l.contactoId});
+  return r;
+}
+/* Lo que viaja del lead a la oportunidad al convertirse. */
+function gcmTraslado(l){
+  const acts = gcmLeadActs(l);
+  return {
+    visitas: acts.filter(a=>a.estado==='Realizada').sort(gcmOrdAct),
+    futuras: acts.filter(gcmAbierta).sort(gcmOrdAct),
+    comentarios: l.comentarios.concat(acts.filter(a=>a.comentarios).map(a=>({f:a.fecha, t:a.comentarios, autor:a.ejecutivo}))),
+    tareas: l.tareas.filter(t=>!t.hecho)
+  };
+}
+function gcmSeq(k, pref, pad){ GCM.d.seq[k]++; return pref + String(GCM.d.seq[k]).padStart(pad||2,'0'); }
+
+/* ---------- navegación ---------- */
+function gcmLabel(){ return {mi:'Mi gestión', agenda:'Agenda', leads:'Leads', cartera:'Cartera'}[GCM.sv] || 'Mi gestión'; }
+function gcmIr(sv, opts){
+  opts = opts || {};
+  GCM.sv = sv;
+  document.querySelectorAll('[data-gcm-sv]').forEach(b=>{ const on = b.dataset.gcmSv === sv; b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+  document.querySelectorAll('#gcm-root .gcm-sv').forEach(s=>s.classList.toggle('is-on', s.id === 'gcm-sv-'+sv));
+  if(sv === 'leads'){
+    gcmLeadsBuild();
+    if(opts.estado != null){ GCM.lf.estado = opts.estado; const s = document.getElementById('gcm-lf-estado'); if(s) s.value = opts.estado; }
+    if(opts.ej != null){ GCM.lf.ej = opts.ej; const s = document.getElementById('gcm-lf-ej'); if(s) s.value = opts.ej; }
+  }
+  if(sv === 'agenda'){
+    if(opts.fecha) GCM.cal.ref = opts.fecha;
+    if(opts.ej != null) GCM.cal.ej = opts.ej;
+  }
+  if(sv === 'mi') GCM.anim = true;
+  gcmRender();
+  if(typeof sideSincronizar === 'function') sideSincronizar();
+}
+function gcmRender(){
+  ({mi:gcmRenderMi, agenda:gcmRenderAgenda, leads:gcmRenderLeads, cartera:gcmRenderCartera}[GCM.sv] || gcmRenderMi)();
+}
+function gcmRefrescar(){ gcmRender(); if(GCM.leadAbierto) gcmLeadRender(); }
+function gcmReiniciar(){
+  GCM.d = gcmSemilla();
+  GCM.built = {}; GCM.lf = {q:'', estado:'activos', ej:''}; GCM.cf = {q:'', zona:'', ej:''};
+  GCM.cal = {vista:'semana', ref:gcmD(0), ej:'', cat:''};
+  gcmModalCerrar(); gcmLeadCerrar();
+  ['agenda','leads','cartera'].forEach(k=>{ const el = document.getElementById('gcm-sv-'+k); if(el) el.innerHTML = ''; });
+  GCM.anim = true;
+  gcmRender();
+  showToast('Demo reiniciada con los datos ficticios originales.', 'info');
+}
+
+/* ============ 1 · MI GESTIÓN ============ */
+function gcmRenderMi(){
+  const el = document.getElementById('gcm-sv-mi'); if(!el) return;
+  const yo = GCM.yo, hoy = gcmD(0), lun = gcmLunes(hoy), dom = gcmAdd(lun, 6), mesIni = hoy.slice(0,8)+'01', ini30 = gcmAdd(hoy, -30);
+  const mia = a=>!yo || a.ejecutivo === yo || a.acompanante === yo;
+  const acts = GCM.d.actividades.filter(mia);
+  const visSem = acts.filter(a=>a.tipo==='Visita' && a.fecha>=lun && a.fecha<=dom && a.estado!=='Cancelada');
+  const visSemR = visSem.filter(a=>a.estado==='Realizada').length;
+  const visMes = acts.filter(a=>a.tipo==='Visita' && a.estado==='Realizada' && a.fecha>=mesIni && a.fecha<=hoy).length;
+  const leads = GCM.d.leads.filter(l=>!yo || l.ejecutivo===yo);
+  const activos = leads.filter(gcmLeadActivo);
+  const pend = activos.map(l=>({l, r:gcmLeadPendiente(l)})).filter(x=>x.r);
+  const base = acts.filter(a=>a.fecha>=ini30 && a.fecha<=hoy && a.estado!=='Cancelada' && (a.estado==='Realizada' || a.fecha<hoy));
+  const real = base.filter(a=>a.estado==='Realizada').length;
+  const cumpl = base.length ? Math.round(real*100/base.length) : 0;
+  const conv = leads.filter(l=>l.estado==='Convertido').length;
+  const convPct = leads.length ? Math.round(conv*100/leads.length) : 0;
+  const venc = acts.filter(a=>gcmAbierta(a) && a.fecha<hoy).sort(gcmOrdAct);
+  const prox = acts.filter(a=>gcmAbierta(a) && a.fecha>=hoy).sort(gcmOrdAct).slice(0, 6);
+  const sols = GCM.d.solicitudes.filter(s=>s.estado==='Pendiente');
+  const quien = yo ? yo : 'todo el equipo';
+
+  const kpi = (cls, k, n, s, fn, pct)=>`<button type="button" class="coi-kpi ${cls}" onclick="${fn}"><span class="coi-kpi-k">${k}</span><span class="coi-kpi-n">${n}</span><span class="coi-kpi-s">${s}</span>${pct!=null?`<span class="gcm-kpi-bar"><i style="width:${Math.min(100,pct)}%"></i></span>`:''}</button>`;
+  const itAct = a=>{
+    const e = gcmEmp(a.empresaId), vencida = a.fecha < hoy;
+    return `<button type="button" class="gcm-it gcm-cat-${gcmCatC(a.categoria)}${vencida?' is-vencida':''}" onclick="gcmActAbrir('${a.id}')">
+      ${gcmFechaBox(a.fecha)}
+      <span class="gcm-it-m"><b>${gcmE(a.tipo)} · ${gcmE(e ? gcmCorto(e.nombre) : '—')}</b><span>${gcmE(a.hora)} · ${gcmE(a.titulo||'Sin objetivo')}${!yo || a.ejecutivo!==yo ? ' · '+gcmE(a.ejecutivo) : (a.acompanante ? ' · con '+gcmE(a.acompanante) : '')}</span></span>
+      <span class="gcm-it-r">${gcmTag(a.categoria)}<small>${vencida ? '<span style="color:var(--danger);font-weight:600">Sin registrar</span>' : gcmRel(a.fecha)}</small></span>
+    </button>`;
+  };
+  const itSol = s=>{
+    const esConv = s.tipo === 'conversion', l = esConv ? gcmLead(s.leadId) : null, op = !esConv ? gcmOp(s.opRef) : null;
+    const tit = esConv ? (l ? l.titulo : s.leadId) : (s.opRef + (op ? ' · '+op.t : ''));
+    return `<div class="gcm-pl">
+      <span class="gcm-pl-m"><span><span class="gcm-tag ${esConv?'gcm-tipo-conv':'gcm-tipo-act'}">${esConv?'Conversión a oportunidad':'Actualización de oportunidad'}</span></span><b>${gcmE(tit)}</b><span>${gcmE(s.ejecutivo)} · ${gcmRel(s.fecha).toLowerCase()}</span></span>
+      <button type="button" class="btn-mini" onclick="gcmSolRevisar('${s.id}')">Revisar</button>
+    </div>`;
+  };
+  const cats = GCM_CATS.map(c=>{
+    const b = base.filter(a=>a.categoria===c.k), r = b.filter(a=>a.estado==='Realizada').length, p = b.length ? Math.round(r*100/b.length) : 0;
+    return `<div class="gcm-bar gcm-cat-${c.c}"><span class="gcm-bar-k">${c.k}</span><span class="gcm-bar-t"><i style="width:${p}%"></i></span><span class="gcm-bar-v"><b>${r}</b>/ ${b.length}</span></div>`;
+  }).join('');
+  const embudo = ['Nuevo','En seguimiento','Calificado','Conversión solicitada','Convertido'].map(e=>{
+    const n = leads.filter(l=>l.estado===e).length;
+    return `<button type="button" class="gcm-fn${e==='Convertido'?' is-ok':''}" onclick="gcmIr('leads',{estado:'${e}', ej:'${yo}'})"><b>${n}</b><span>${e}</span></button>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="gcm-head">
+      <div class="gcm-head-t"><h3>Resumen de actividad comercial</h3><span>Semana del ${gcmFmt(lun)} al ${gcmFmt(dom)} · ${gcmE(quien)}</span></div>
+      <div class="gcm-head-c">
+        <select class="gcm-sel" aria-label="Ver la gestión de" onchange="GCM.yo=this.value;GCM.anim=true;gcmRenderMi()">${gcmOpts(GCM_EJECUTIVOS, yo, 'Todo el equipo')}</select>
+        <button type="button" class="btn-primary" onclick="gcmActNueva({ejecutivo:GCM.yo})">+ Registrar actividad</button>
+      </div>
+    </div>
+    <div class="gcm-kpis">
+      ${kpi('is-info','Visitas de la semana', visSem.length, `<b>${visSemR}</b> realizada${visSemR===1?'':'s'} · ${visSem.length-visSemR} por hacer`, "gcmIr('agenda',{fecha:gcmD(0)})")}
+      ${kpi('is-teal','Visitas realizadas', visMes, 'En lo que va de '+GCM_MES_L[gcmHoyD().getMonth()], "gcmIr('agenda',{fecha:gcmD(0)})")}
+      ${kpi('is-violet','Leads activos', activos.length, `${(n=>n+' calificado'+(n===1?'':'s'))(leads.filter(l=>l.estado==='Calificado').length)}`, `gcmIr('leads',{estado:'activos', ej:'${yo}'})`)}
+      ${kpi(pend.length?'is-warn':'is-ok','Leads pendientes', pend.length, pend.length?'Requieren una acción':'Todo al día', `gcmIr('leads',{estado:'pendientes', ej:'${yo}'})`)}
+      ${kpi(cumpl>=80?'is-ok':cumpl>=60?'is-warn':'is-danger','Cumplimiento', cumpl+'%', `${real} de ${base.length} · últimos 30 días`, "gcmIr('agenda')", cumpl)}
+      ${kpi('is-teal','Conversión', convPct+'%', `${conv} de ${leads.length} leads a oportunidad`, `gcmIr('leads',{estado:'todos', ej:'${yo}'})`, convPct)}
+    </div>
+    <div class="gcm-row">
+      <section class="ger-card">
+        <div class="ger-card-head"><h4 class="ger-card-t">Próximas actividades</h4><span class="ger-card-sub">${prox.length} en agenda${venc.length?` · <span style="color:var(--danger);font-weight:600">${venc.length} sin registrar</span>`:''}</span></div>
+        <div class="gcm-list">
+          ${venc.map(itAct).join('')}
+          ${venc.length && prox.length ? '<div class="gcm-sep"></div>' : ''}
+          ${prox.map(itAct).join('') || (venc.length ? '' : '<p class="gcm-empty">Sin actividades programadas.</p>')}
+        </div>
+      </section>
+      <section class="ger-card">
+        <div class="ger-card-head"><h4 class="ger-card-t">Revisión del Planner</h4><span class="ger-card-sub">${sols.length} pendiente${sols.length===1?'':'s'} · simulación</span></div>
+        <div class="gcm-list">${sols.map(itSol).join('') || '<p class="gcm-empty">No hay solicitudes esperando revisión.</p>'}</div>
+        <p class="gcm-nota" style="margin-top:auto">Las conversiones de lead y las propuestas de actualización de oportunidades solo se aplican cuando el Planner las aprueba.</p>
+      </section>
+    </div>
+    <div class="gcm-row">
+      <section class="ger-card">
+        <div class="ger-card-head"><h4 class="ger-card-t">Leads que requieren atención</h4><span class="ger-card-sub">${pend.length} de ${activos.length} activos</span></div>
+        <div class="gcm-list">${pend.map(x=>{ const e = gcmEmp(x.l.empresaId); return `<button type="button" class="gcm-it" onclick="gcmLeadAbrir('${x.l.id}')">
+          <span class="gcm-av">${gcmIni(e?gcmCorto(e.nombre):'')}</span>
+          <span class="gcm-it-m"><b>${gcmE(x.l.titulo)}</b><span>${gcmE(e?gcmCorto(e.nombre):'')} · ${gcmE(x.l.ejecutivo)}</span></span>
+          <span class="gcm-it-r"><span class="chip chip-sm tone-warn">${gcmE(x.r)}</span></span></button>`; }).join('') || '<p class="gcm-empty">Todos los leads activos tienen su próxima acción.</p>'}</div>
+      </section>
+      <section class="ger-card">
+        <div class="ger-card-head"><h4 class="ger-card-t">Cumplimiento y conversión</h4><span class="ger-card-sub">Realizadas / planificadas · 30 días</span></div>
+        <div class="gcm-bars">${cats}</div>
+        <p class="gcm-sub-t" style="margin-top:14px">Embudo de leads</p>
+        <div class="gcm-funnel">${embudo}</div>
+      </section>
+    </div>`;
+  const root = document.getElementById('gcm-root');
+  if(root){ root.classList.toggle('is-anim', !!GCM.anim); }
+  GCM.anim = false;
+}
+
+/* ============ 2 · AGENDA ============ */
+function gcmAgendaFiltradas(){
+  const f = GCM.cal;
+  return GCM.d.actividades.filter(a=>(!f.ej || a.ejecutivo===f.ej || a.acompanante===f.ej) && (!f.cat || a.categoria===f.cat));
+}
+function gcmCalMover(n){
+  const f = GCM.cal;
+  if(n === 0) f.ref = gcmD(0);
+  else if(f.vista === 'semana') f.ref = gcmAdd(f.ref, 7*n);
+  else { const d = gcmParse(f.ref); d.setDate(1); d.setMonth(d.getMonth()+n); f.ref = gcmISO(d); }
+  gcmRenderAgenda();
+}
+function gcmRenderAgenda(){
+  const el = document.getElementById('gcm-sv-agenda'); if(!el) return;
+  const f = GCM.cal, hoy = gcmD(0), acts = gcmAgendaFiltradas();
+  const svgL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
+  const svgR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+  let ini, fin, lbl, cuerpo;
+  const evSt = a=>a.estado==='Realizada' ? '✓' : a.estado==='Reprogramada' ? '↻' : a.estado==='Cancelada' ? '✕' : '';
+  const evCls = a=>' is-'+a.estado.toLowerCase()+(gcmAbierta(a) && a.fecha<hoy ? ' is-vencida' : '');
+  if(f.vista === 'semana'){
+    ini = gcmLunes(f.ref); fin = gcmAdd(ini, 6);
+    const a1 = gcmParse(ini), a2 = gcmParse(fin);
+    lbl = a1.getDate()+(a1.getMonth()!==a2.getMonth()?' '+GCM_MES[a1.getMonth()]:'')+' – '+a2.getDate()+' '+GCM_MES[a2.getMonth()]+' '+a2.getFullYear();
+    cuerpo = '<div class="gcm-week">' + [0,1,2,3,4,5,6].map(i=>{
+      const dia = gcmAdd(ini, i), dd = gcmParse(dia);
+      const evs = acts.filter(a=>a.fecha===dia).sort(gcmOrdAct);
+      return `<div class="gcm-day${dia===hoy?' is-hoy':''}${i>4?' is-finde':''}" onclick="if(!event.target.closest('.gcm-ev')) gcmActNueva({fecha:'${dia}', ejecutivo:GCM.cal.ej, categoria:GCM.cal.cat})" title="Clic en un espacio libre para programar">
+        <div class="gcm-day-h"><span>${GCM_DOW[i]}</span><b>${dd.getDate()}</b></div>
+        ${evs.map(a=>{ const e = gcmEmp(a.empresaId), c = gcmCon(a.contactoId); return `<button type="button" class="gcm-ev gcm-cat-${gcmCatC(a.categoria)}${evCls(a)}" onclick="event.stopPropagation();gcmActAbrir('${a.id}')" title="${gcmE(a.estado+' · '+a.titulo)}">
+          <small>${gcmE(a.hora)} · ${gcmE(a.tipo)}<span class="gcm-st">${evSt(a)}</span></small><b>${gcmE(e?gcmCorto(e.nombre):'—')}</b><span>${gcmE(c ? c.nombre : a.titulo)}</span><span>${gcmE(a.ejecutivo.replace(' Demo',''))}${a.acompanante?' + '+gcmE(a.acompanante.replace(' Demo','')):''}</span></button>`; }).join('')}
+        <span class="gcm-day-add">+ Programar</span>
+      </div>`;
+    }).join('') + '</div>';
+  } else {
+    const r = gcmParse(f.ref); const m1 = new Date(r.getFullYear(), r.getMonth(), 1), m2 = new Date(r.getFullYear(), r.getMonth()+1, 0);
+    ini = gcmLunes(gcmISO(m1));
+    const semanas = Math.ceil((((m1.getDay()+6)%7) + m2.getDate())/7);
+    fin = gcmAdd(ini, semanas*7-1);
+    lbl = GCM_MES_L[r.getMonth()].replace(/^./, c=>c.toUpperCase())+' '+r.getFullYear();
+    let celdas = GCM_DOW.map(d=>`<div class="gcm-dow">${d}</div>`).join('');
+    for(let i=0;i<semanas*7;i++){
+      const dia = gcmAdd(ini, i), dd = gcmParse(dia), fuera = dd.getMonth()!==r.getMonth();
+      const evs = acts.filter(a=>a.fecha===dia).sort(gcmOrdAct);
+      celdas += `<div class="gcm-mday${fuera?' is-fuera':''}${dia===hoy?' is-hoy':''}" onclick="if(!event.target.closest('.gcm-mev')) gcmActNueva({fecha:'${dia}', ejecutivo:GCM.cal.ej, categoria:GCM.cal.cat})">
+        <span class="gcm-mday-n">${dd.getDate()}</span>
+        <div class="gcm-mday-evs">${evs.slice(0,3).map(a=>{ const e = gcmEmp(a.empresaId); return `<button type="button" class="gcm-mev gcm-cat-${gcmCatC(a.categoria)} is-${a.estado.toLowerCase()}" onclick="event.stopPropagation();gcmActAbrir('${a.id}')" title="${gcmE(a.hora+' · '+a.tipo+' · '+(e?e.nombre:'')+' · '+a.estado)}"><i></i><span>${gcmE(a.hora)} ${gcmE(e?gcmCorto(e.nombre):'')}</span></button>`; }).join('')}
+        ${evs.length>3?`<span class="gcm-mmas">+${evs.length-3} más</span>`:''}</div>
+      </div>`;
+    }
+    cuerpo = '<div class="gcm-month">'+celdas+'</div>';
+  }
+  const rango = acts.filter(a=>a.fecha>=ini && a.fecha<=fin);
+  const n = k=>rango.filter(a=>a.estado===k).length;
+  el.innerHTML = `
+    <div class="gcm-cal-bar">
+      <div class="gcm-seg" role="group" aria-label="Vista del calendario">
+        <button type="button" class="${f.vista==='semana'?'is-on':''}" onclick="GCM.cal.vista='semana';gcmRenderAgenda()">Semana</button>
+        <button type="button" class="${f.vista==='mes'?'is-on':''}" onclick="GCM.cal.vista='mes';gcmRenderAgenda()">Mes</button>
+      </div>
+      <div class="gcm-cal-nav">
+        <button type="button" class="gcm-ico-btn" onclick="gcmCalMover(-1)" aria-label="Anterior">${svgL}</button>
+        <button type="button" class="btn-mini" onclick="gcmCalMover(0)">Hoy</button>
+        <button type="button" class="gcm-ico-btn" onclick="gcmCalMover(1)" aria-label="Siguiente">${svgR}</button>
+        <span class="gcm-cal-lbl">${lbl}</span>
+      </div>
+      <div class="gcm-head-c" style="margin-left:auto">
+        <select class="gcm-sel" aria-label="Ejecutivo" onchange="GCM.cal.ej=this.value;gcmRenderAgenda()">${gcmOpts(GCM_EJECUTIVOS, f.ej, 'Todos los ejecutivos')}</select>
+        <select class="gcm-sel" aria-label="Tipo de gestión" onchange="GCM.cal.cat=this.value;gcmRenderAgenda()">${gcmOpts(GCM_CATS.map(c=>c.k), f.cat, 'Todas las gestiones')}</select>
+        <button type="button" class="btn-primary" onclick="gcmActNueva({ejecutivo:GCM.cal.ej, categoria:GCM.cal.cat})">+ Nueva actividad</button>
+      </div>
+    </div>
+    <div class="gcm-cal-bar">
+      <div class="gcm-ley">${GCM_CATS.map(c=>`<span class="gcm-cat-${c.c}"><i></i>${c.k}</span>`).join('')}<span>✓ Realizada</span><span>↻ Reprogramada</span><span>✕ Cancelada</span></div>
+      <span class="gcm-cal-sum">${rango.length} actividades · ${n('Realizada')} realizadas · ${n('Programada')+n('Reprogramada')} por hacer · ${n('Cancelada')} canceladas</span>
+    </div>
+    ${cuerpo}`;
+}
+
+/* ---------- modal genérico ---------- */
+let gcmFocoPrevio = null;
+function gcmModal(titulo, html, botones, opts){
+  opts = opts || {};
+  const ov = document.getElementById('gcm-modal');
+  const box = ov.querySelector('.gcm-mbox');
+  document.getElementById('gcm-m-t').textContent = titulo;
+  document.getElementById('gcm-m-body').innerHTML = html;
+  const foot = document.getElementById('gcm-m-foot');
+  foot.innerHTML = '';
+  (botones || []).forEach(b=>{
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = b.cls || 'btn-secondary'; el.textContent = b.t;
+    if(b.id) el.id = b.id;
+    if(b.dis) el.disabled = true;
+    if(b.izq) el.style.marginRight = 'auto';
+    el.addEventListener('click', b.fn || gcmModalCerrar);
+    foot.appendChild(el);
+  });
+  box.classList.toggle('is-wide', !!opts.wide);
+  if(ov.classList.contains('hidden')){
+    gcmFocoPrevio = document.activeElement;
+    ov.classList.remove('hidden');
+  }
+  box.scrollTop = 0;
+  setTimeout(()=>{ const f = box.querySelector('.modal-body input:not([type=checkbox]):not([type=date]):not([type=time]), .modal-body textarea'); if(f && opts.foco !== false) f.focus({preventScroll:true}); }, 40);
+}
+function gcmModalCerrar(){
+  const ov = document.getElementById('gcm-modal');
+  if(!ov || ov.classList.contains('hidden')) return;
+  ov.classList.add('hidden');
+  GCM.alCrearEmpresa = null;
+  if(gcmFocoPrevio && document.contains(gcmFocoPrevio)) try{ gcmFocoPrevio.focus({preventScroll:true}); }catch(e){}
+}
+document.addEventListener('keydown', e=>{
+  if(e.key !== 'Escape') return;
+  const ov = document.getElementById('gcm-modal');
+  if(ov && !ov.classList.contains('hidden')){ gcmModalCerrar(); return; }
+  const dr = document.getElementById('gcm-drawer');
+  if(dr && !dr.classList.contains('hidden')) gcmLeadCerrar();
+});
+
+/* ---------- actividades: crear ---------- */
+function gcmActNueva(pre){
+  pre = pre || {};
+  const cat = pre.categoria || 'Prospección';
+  const tipo = pre.tipo || 'Visita';
+  const html = `
+    <div class="gcm-seg" role="radiogroup" aria-label="Tipo de actividad" id="gcm-f-tipo">${GCM_TIPOS.map(t=>`<button type="button" role="radio" aria-checked="${t===tipo}" class="${t===tipo?'is-on':''}" data-v="${t}" onclick="gcmSeg(this)">${t}</button>`).join('')}</div>
+    <div class="gcm-fgrid">
+      <label>Tipo de gestión<select id="gcm-f-cat" onchange="gcmFormVinculo()">${gcmOpts(GCM_CATS.map(c=>c.k), cat)}</select></label>
+      <label>Ejecutivo<select id="gcm-f-ej">${gcmOpts(GCM_EJECUTIVOS, pre.ejecutivo || GCM.yo || GCM_EJECUTIVOS[0])}</select></label>
+      <label>Fecha<input type="date" id="gcm-f-fecha" value="${pre.fecha || gcmD(0)}"></label>
+      <label>Hora<input type="time" id="gcm-f-hora" value="${pre.hora || '10:00'}"></label>
+      <label class="full">Empresa<select id="gcm-f-emp" onchange="gcmFormEmp()">${gcmOpts(GCM.d.empresas.map(e=>({v:e.id, t:e.nombre})), pre.empresaId || '', 'Selecciona una empresa…')}</select></label>
+      <label>Contacto<select id="gcm-f-con"></select></label>
+      <label>Acompaña (gestión compartida)<select id="gcm-f-acomp">${gcmOpts(GCM_EJECUTIVOS, pre.acompanante || '', 'Nadie')}</select></label>
+      <label class="full" id="gcm-f-vinc-l"><span id="gcm-f-vinc-t">Lead vinculado (opcional)</span><select id="gcm-f-vinc"></select></label>
+      <label class="full">Objetivo<input type="text" id="gcm-f-tit" maxlength="90" placeholder="p. ej. Presentar soluciones de conservación" value="${gcmE(pre.titulo||'')}"></label>
+    </div>
+    <p class="gcm-nota" id="gcm-f-nota"></p>`;
+  gcmModal('Nueva actividad', html, [
+    {t:'Cancelar'},
+    {t:'Programar actividad', cls:'btn-primary', fn:()=>gcmActCrear(pre)}
+  ]);
+  GCM._pre = pre;
+  gcmFormEmp(pre.contactoId, pre.leadId || pre.opRef);
+}
+function gcmSeg(btn){ btn.parentElement.querySelectorAll('button').forEach(b=>{ const on = b===btn; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', on); }); }
+function gcmFormEmp(conSel, vincSel){
+  const emp = gcmVal('gcm-f-emp');
+  const cons = GCM.d.contactos.filter(c=>c.empresaId===emp);
+  const sc = document.getElementById('gcm-f-con');
+  if(sc) sc.innerHTML = emp ? gcmOpts(cons.map(c=>({v:c.id, t:c.nombre+' · '+c.cargo})), conSel || (cons[0] && cons[0].id) || '', cons.length ? null : 'Sin contactos registrados') : '<option value="">Elige primero la empresa</option>';
+  gcmFormVinculo(vincSel);
+}
+function gcmFormVinculo(sel){
+  const emp = gcmVal('gcm-f-emp'), cat = gcmVal('gcm-f-cat');
+  const s = document.getElementById('gcm-f-vinc'), t = document.getElementById('gcm-f-vinc-t'), nota = document.getElementById('gcm-f-nota');
+  if(!s) return;
+  if(cat === 'Oportunidades'){
+    const ops = GCM.d.ops.filter(o=>!emp || o.emp===emp);
+    t.textContent = 'Oportunidad (módulo actual)';
+    s.innerHTML = gcmOpts(ops.map(o=>({v:o.id, t:o.id+' · '+o.t})), sel || '', ops.length ? 'Selecciona la oportunidad…' : 'La empresa no tiene oportunidades');
+    nota.innerHTML = 'Las tareas que surjan conservan su vínculo con la <b>ficha de la oportunidad</b> en el módulo actual. Los cambios que propongas pasan por el Planner.';
+  } else {
+    const leads = GCM.d.leads.filter(l=>l.empresaId===emp && gcmLeadActivo(l));
+    t.textContent = 'Lead vinculado (opcional)';
+    s.innerHTML = gcmOpts(leads.map(l=>({v:l.id, t:l.id+' · '+l.titulo})), sel || '', emp ? (leads.length ? 'Sin lead · gestión de la empresa' : 'La empresa no tiene leads activos') : 'Elige primero la empresa');
+    nota.innerHTML = cat === 'Prospección'
+      ? 'Registrar una visita <b>no crea un lead</b>. Si al completarla detectas una necesidad concreta, podrás crear el lead desde la propia actividad.'
+      : 'Gestión de relación con un cliente de la cartera. No genera leads ni modifica oportunidades.';
+  }
+}
+function gcmActCrear(pre){
+  const emp = gcmVal('gcm-f-emp'), fecha = gcmVal('gcm-f-fecha'), cat = gcmVal('gcm-f-cat'), vinc = gcmVal('gcm-f-vinc');
+  if(!emp){ showToast('Selecciona la empresa de la actividad.', 'warn'); document.getElementById('gcm-f-emp').focus(); return; }
+  if(!fecha){ showToast('Indica la fecha de la actividad.', 'warn'); return; }
+  if(cat === 'Oportunidades' && !vinc){ showToast('Una gestión de Oportunidades debe referirse a una oportunidad existente.', 'warn'); return; }
+  const tipoBtn = document.querySelector('#gcm-f-tipo .is-on');
+  const ej = gcmVal('gcm-f-ej'), acomp = gcmVal('gcm-f-acomp');
+  const a = {id:gcmSeq('act','A-'), tipo:tipoBtn ? tipoBtn.dataset.v : 'Visita', categoria:cat, estado:'Programada', fecha, hora:gcmVal('gcm-f-hora') || '09:00',
+    ejecutivo:ej, acompanante:acomp && acomp!==ej ? acomp : '', empresaId:emp, contactoId:gcmVal('gcm-f-con'),
+    leadId:cat==='Oportunidades' ? '' : vinc, opRef:cat==='Oportunidades' ? vinc : '', titulo:gcmVal('gcm-f-tit') || 'Sin objetivo definido', resultado:'', comentarios:'', compromisos:[], reprogDe:'', motivo:''};
+  GCM.d.actividades.push(a);
+  gcmModalCerrar();
+  showToast(a.tipo+' programada para el '+gcmFmtL(a.fecha)+' (demo).', 'ok');
+  gcmRefrescar();
+}
+
+/* ---------- actividades: abrir, completar, reprogramar, cancelar ---------- */
+function gcmActMeta(a){
+  const e = gcmEmp(a.empresaId), c = gcmCon(a.contactoId), l = a.leadId ? gcmLead(a.leadId) : null, op = a.opRef ? gcmOp(a.opRef) : null;
+  return `<dl class="gcm-dl">
+    <div><dt>Fecha</dt><dd>${gcmFmtL(a.fecha)} · ${gcmE(a.hora)}</dd></div>
+    <div><dt>Estado</dt><dd>${gcmChipAct(a.estado)}</dd></div>
+    <div><dt>Gestión</dt><dd>${gcmTag(a.categoria)}</dd></div>
+    <div><dt>Empresa</dt><dd title="${gcmE(e?e.nombre:'')}">${gcmE(e?e.nombre:'—')}</dd></div>
+    <div><dt>Contacto</dt><dd>${gcmE(c?c.nombre:'—')}</dd></div>
+    <div><dt>Ejecutivo</dt><dd>${gcmE(a.ejecutivo)}${a.acompanante?' <span style="color:var(--ink-dim)">+ '+gcmE(a.acompanante)+'</span>':''}</dd></div>
+    <div style="grid-column:1/-1"><dt>Vínculo</dt><dd>${l ? `<button type="button" class="gcm-link" onclick="gcmModalCerrar();gcmLeadAbrir('${l.id}')">${gcmE(l.id)} · ${gcmE(l.titulo)}</button>` : op ? `<span class="gcm-id">${gcmE(op.id)}</span> · ${gcmE(op.t)} <span style="color:var(--ink-dim)">(ficha en Detalle de oportunidades)</span>` : '<span style="color:var(--ink-dim)">Sin lead ni oportunidad · gestión de la empresa</span>'}</dd></div>
+  </dl>`;
+}
+function gcmActAbrir(id, modo){
+  const a = gcmAct(id); if(!a) return;
+  const e = gcmEmp(a.empresaId);
+  const titulo = a.tipo+' · '+(e ? gcmCorto(e.nombre) : '');
+  const objetivo = `<p class="gcm-nota"><b>Objetivo:</b> ${gcmE(a.titulo || '—')}${a.reprogDe?` · <span style="color:var(--warn)">Reprogramada desde el ${gcmFmt(a.reprogDe)}</span>`:''}${a.motivo?`<br><b>Motivo:</b> ${gcmE(a.motivo)}`:''}</p>`;
+  if(modo === 'reprog' || modo === 'cancelar'){
+    const rep = modo === 'reprog';
+    gcmModal(titulo, gcmActMeta(a) + `
+      <p class="gcm-blk-t">${rep ? 'Reprogramar actividad' : 'Cancelar actividad'}</p>
+      ${rep ? `<div class="gcm-fgrid"><label>Nueva fecha<input type="date" id="gcm-r-fecha" value="${gcmAdd(a.fecha < gcmD(0) ? gcmD(0) : a.fecha, 1)}"></label><label>Hora<input type="time" id="gcm-r-hora" value="${a.hora}"></label></div>` : ''}
+      <label>Motivo<textarea id="gcm-r-mot" rows="2" placeholder="${rep ? 'p. ej. El cliente pidió mover la reunión' : 'p. ej. El cliente ya no está disponible'}"></textarea></label>`, [
+      {t:'Volver', fn:()=>gcmActAbrir(id)},
+      {t:rep ? 'Confirmar reprogramación' : 'Cancelar actividad', cls:rep ? 'btn-primary' : 'btn-delete', fn:()=>gcmActCambiar(id, modo)}
+    ]);
+    return;
+  }
+  if(gcmAbierta(a)){
+    const l = a.leadId ? gcmLead(a.leadId) : null;
+    const destino = l ? `Los compromisos se agregarán como <b>tareas pendientes del lead ${gcmE(l.id)}</b>.`
+      : a.opRef ? `Los compromisos quedan vinculados a la <b>ficha de ${gcmE(a.opRef)}</b> (módulo actual, simulado).`
+      : 'Esta actividad no está vinculada a un lead: <b>registrarla no crea uno</b>. Podrás crearlo manualmente después.';
+    gcmModal(titulo, gcmActMeta(a) + objetivo + `
+      <p class="gcm-blk-t">Registrar resultado</p>
+      <div class="gcm-fgrid">
+        <label>Resultado<select id="gcm-c-res">${gcmOpts(GCM_RESULTADOS, 'Positivo')}</select></label>
+        <label>Fecha realizada<input type="date" id="gcm-c-fecha" value="${a.fecha > gcmD(0) ? gcmD(0) : a.fecha}"></label>
+        <label class="full">Comentarios<textarea id="gcm-c-com" rows="3" placeholder="Qué se conversó, hallazgos, nivel de interés…"></textarea></label>
+      </div>
+      <p class="gcm-blk-t">Compromisos <small>${a.opRef ? 'vinculados a '+gcmE(a.opRef) : l ? 'pasan a pendientes del lead' : 'quedan en la actividad'}</small></p>
+      <div class="gcm-comp" id="gcm-comp"></div>
+      <button type="button" class="gcm-link" onclick="gcmCompFila()">+ Agregar compromiso</button>
+      ${a.opRef ? `<label class="gcm-chk"><input type="checkbox" id="gcm-c-prop" onchange="document.getElementById('gcm-c-prop-t').hidden=!this.checked"> Proponer una actualización de ${gcmE(a.opRef)} al Planner</label>
+        <textarea id="gcm-c-prop-t" class="gcm-in" rows="2" hidden placeholder="p. ej. Ampliar alcance, mover fecha estimada de cierre…"></textarea>` : ''}
+      <p class="gcm-nota is-info">${destino}</p>`, [
+      {t:'Cancelar actividad', cls:'btn-secondary', izq:true, fn:()=>gcmActAbrir(id, 'cancelar')},
+      {t:'Reprogramar', fn:()=>gcmActAbrir(id, 'reprog')},
+      {t:'Guardar como realizada', cls:'btn-primary', fn:()=>gcmActCompletar(id)}
+    ], {wide:true, foco:false});
+    gcmCompFila();
+    return;
+  }
+  /* Realizada o cancelada: lectura. */
+  const botones = [{t:'Cerrar', cls:'btn-primary'}];
+  if(a.estado === 'Realizada' && !a.leadId && !a.opRef && a.categoria === 'Prospección')
+    botones.unshift({t:'Crear lead desde esta visita', izq:true, fn:()=>gcmLeadNuevo({empresaId:a.empresaId, contactoId:a.contactoId, ejecutivo:a.ejecutivo, origen:'Visita', actId:a.id, titulo:''})});
+  gcmModal(titulo, gcmActMeta(a) + objetivo + (a.estado === 'Realizada' ? `
+    <p class="gcm-blk-t">Resultado <small>${gcmE(a.resultado||'—')}</small></p>
+    <p class="gcm-nota">${gcmE(a.comentarios || 'Sin comentarios.')}</p>
+    ${a.compromisos.length ? `<p class="gcm-blk-t">Compromisos</p><ul class="gcm-req">${a.compromisos.map(c=>`<li><i>•</i>${gcmE(c.t)} <span style="color:var(--ink-dim);font-size:11.5px">· ${gcmFmt(c.f)}</span></li>`).join('')}</ul>` : ''}
+    ${!a.leadId && !a.opRef && a.categoria === 'Prospección' ? '<p class="gcm-nota is-info">Visita sin lead: la empresa queda registrada en la cartera sin generar un lead automáticamente.</p>' : ''}` : ''), botones, {foco:false});
+}
+function gcmCompFila(){
+  const box = document.getElementById('gcm-comp'); if(!box) return;
+  box.insertAdjacentHTML('beforeend', `<div class="gcm-comp-r"><input type="text" class="gcm-in" placeholder="Compromiso (p. ej. enviar propuesta)" maxlength="90"><input type="date" class="gcm-in" value="${gcmD(3)}"><button type="button" class="gcm-x" onclick="this.parentElement.remove()" aria-label="Quitar">&times;</button></div>`);
+}
+function gcmActCompletar(id){
+  const a = gcmAct(id); if(!a) return;
+  const comps = [...document.querySelectorAll('#gcm-comp .gcm-comp-r')].map(r=>{ const i = r.querySelectorAll('input'); return {t:i[0].value.trim(), f:i[1].value}; }).filter(c=>c.t);
+  a.estado = 'Realizada';
+  a.fecha = gcmVal('gcm-c-fecha') || a.fecha;
+  a.resultado = gcmVal('gcm-c-res');
+  a.comentarios = gcmVal('gcm-c-com');
+  a.compromisos = comps;
+  const partes = [];
+  if(a.leadId){
+    const l = gcmLead(a.leadId);
+    if(l){
+      comps.forEach(c=>l.tareas.push({id:gcmSeq('x','t'), t:c.t, f:c.f, hecho:false, origen:a.id}));
+      if(l.estado === 'Nuevo') l.estado = 'En seguimiento';
+      if(comps.length) partes.push(comps.length+' compromiso'+(comps.length>1?'s':'')+' agregado'+(comps.length>1?'s':'')+' a '+l.id);
+    }
+  } else if(a.opRef && comps.length) partes.push('compromisos vinculados a '+a.opRef);
+  const prop = document.getElementById('gcm-c-prop');
+  if(prop && prop.checked){
+    const txt = gcmVal('gcm-c-prop-t');
+    if(txt){
+      GCM.d.solicitudes.push({id:gcmSeq('sol','S-'), tipo:'actualizacion', opRef:a.opRef, actId:a.id, ejecutivo:a.ejecutivo, fecha:gcmD(0), estado:'Pendiente', detalle:txt});
+      partes.push('propuesta enviada al Planner');
+    }
+  }
+  gcmModalCerrar();
+  showToast('Actividad registrada como realizada'+(partes.length?' · '+partes.join(' · '):'')+'.', 'ok');
+  gcmRefrescar();
+}
+function gcmActCambiar(id, modo){
+  const a = gcmAct(id); if(!a) return;
+  const mot = gcmVal('gcm-r-mot');
+  if(modo === 'reprog'){
+    const f = gcmVal('gcm-r-fecha');
+    if(!f){ showToast('Indica la nueva fecha.', 'warn'); return; }
+    a.reprogDe = a.fecha; a.fecha = f; a.hora = gcmVal('gcm-r-hora') || a.hora; a.estado = 'Reprogramada'; a.motivo = mot;
+    showToast('Actividad reprogramada para el '+gcmFmtL(f)+'.', 'warn');
+  } else {
+    a.estado = 'Cancelada'; a.motivo = mot;
+    showToast('Actividad cancelada.', 'info');
+  }
+  gcmModalCerrar();
+  gcmRefrescar();
+}
+
+/* ============ 3 · LEADS ============ */
+function gcmLeadsBuild(){
+  const el = document.getElementById('gcm-sv-leads'); if(!el || GCM.built.leads) return;
+  GCM.built.leads = true;
+  el.innerHTML = `
+    <div id="gcm-l-strip"></div>
+    <div class="filters" style="margin:0">
+      <input type="text" id="gcm-lf-q" placeholder="🔍 Buscar lead, empresa o contacto..." oninput="GCM.lf.q=this.value;gcmRenderLeadsLista()" value="${gcmE(GCM.lf.q)}">
+      <select id="gcm-lf-estado" aria-label="Estado" onchange="GCM.lf.estado=this.value;gcmRenderLeadsLista()">
+        ${gcmOpts([{v:'activos',t:'Activos'},{v:'pendientes',t:'Requieren atención'},{v:'todos',t:'Todos los estados'}].concat(GCM_EST_LEAD.map(e=>({v:e,t:e}))), GCM.lf.estado)}
+      </select>
+      <select id="gcm-lf-ej" aria-label="Ejecutivo" onchange="GCM.lf.ej=this.value;gcmRenderLeadsLista()">${gcmOpts(GCM_EJECUTIVOS, GCM.lf.ej, 'Todos los ejecutivos')}</select>
+      <button class="filter-reset" onclick="gcmLeadsLimpiar()" aria-label="Limpiar filtros"><span aria-hidden="true">🧹</span><span class="tt">Limpiar filtros</span></button>
+      <span class="gcm-cal-sum" id="gcm-l-cuenta"></span>
+      <button type="button" class="btn-primary" onclick="gcmLeadNuevo({ejecutivo:GCM.lf.ej||GCM.yo})">+ Nuevo lead</button>
+    </div>
+    <section class="ger-card"><div class="gcm-tabla-wrap" id="gcm-l-tabla"></div></section>`;
+}
+function gcmLeadsLimpiar(){
+  GCM.lf = {q:'', estado:'activos', ej:''};
+  ['gcm-lf-q','gcm-lf-ej'].forEach(i=>{ const s = document.getElementById(i); if(s) s.value = ''; });
+  const s = document.getElementById('gcm-lf-estado'); if(s) s.value = 'activos';
+  gcmRenderLeadsLista();
+}
+function gcmRenderLeads(){ gcmLeadsBuild(); gcmRenderLeadsLista(); }
+function gcmRenderLeadsLista(){
+  const tabla = document.getElementById('gcm-l-tabla'); if(!tabla) return;
+  const f = GCM.lf, q = gcmNorm(f.q), hoy = gcmD(0);
+  const orden = {'Conversión solicitada':0,'Calificado':1,'En seguimiento':2,'Nuevo':3,'Convertido':4,'Descartado':5};
+  const lista = GCM.d.leads.filter(l=>{
+    if(f.ej && l.ejecutivo !== f.ej) return false;
+    if(f.estado === 'activos' && !gcmLeadActivo(l)) return false;
+    if(f.estado === 'pendientes' && !gcmLeadPendiente(l)) return false;
+    if(!['activos','pendientes','todos'].includes(f.estado) && l.estado !== f.estado) return false;
+    if(q){ const e = gcmEmp(l.empresaId), c = gcmCon(l.contactoId); if(!gcmNorm([l.id, l.titulo, e&&e.nombre, c&&c.nombre].join(' ')).includes(q)) return false; }
+    return true;
+  }).sort((a,b)=>(orden[a.estado]-orden[b.estado]) || b.creado.localeCompare(a.creado));
+  const cuenta = document.getElementById('gcm-l-cuenta');
+  if(cuenta) cuenta.textContent = lista.length+' de '+GCM.d.leads.length+' leads';
+  const sols = GCM.d.solicitudes.filter(s=>s.estado==='Pendiente' && s.tipo==='conversion');
+  const strip = document.getElementById('gcm-l-strip');
+  if(strip) strip.innerHTML = sols.length ? `<div class="gcm-strip"><span class="gcm-tag gcm-tipo-conv">Planner</span><span><b>${sols.length}</b> solicitud${sols.length>1?'es':''} de conversión esperando revisión</span>${sols.map(s=>`<button type="button" class="btn-mini" onclick="gcmSolRevisar('${s.id}')">Revisar ${gcmE(s.leadId)}</button>`).join('')}</div>` : '';
+  if(!lista.length){ tabla.innerHTML = '<p class="gcm-empty">No hay leads con estos filtros.</p>'; return; }
+  tabla.innerHTML = `<table class="gcm-tabla"><thead><tr><th>Lead</th><th>Contacto</th><th>Ejecutivo</th><th>Estado</th><th>Perfil</th><th>Última gestión</th><th>Próxima acción</th></tr></thead><tbody>
+    ${lista.map(l=>{
+      const e = gcmEmp(l.empresaId), c = gcmCon(l.contactoId), p = gcmLeadPerfil(l), u = gcmLeadUltima(l), nx = gcmLeadProxima(l), pend = gcmLeadPendiente(l);
+      return `<tr tabindex="0" onclick="gcmLeadAbrir('${l.id}')" onkeydown="if(event.key==='Enter')gcmLeadAbrir('${l.id}')">
+        <td><span class="gcm-id">${gcmE(l.id)}</span><b>${gcmE(l.titulo)}</b><small>${gcmE(e?e.nombre:'—')}</small></td>
+        <td><b style="font-weight:500;font-size:12.5px">${gcmE(c?c.nombre:'—')}</b><small>${gcmE(c?c.cargo:'')}</small></td>
+        <td>${gcmE(l.ejecutivo)}</td>
+        <td>${gcmChipLead(l.estado)}${l.opId?`<small class="gcm-id" style="margin-top:3px">${gcmE(l.opId)}</small>`:''}</td>
+        <td><span class="gcm-prog" title="${p.n} de ${p.t} campos complementarios"><span><i style="width:${p.pct}%"></i></span>${p.n}/${p.t}</span></td>
+        <td>${u ? `<b style="font-weight:500;font-size:12.5px">${gcmFmt(u.fecha)}</b><small>${gcmE(u.tipo)}</small>` : '<small>Sin gestiones</small>'}</td>
+        <td class="${pend?'is-warn':''}">${!gcmLeadActivo(l) ? '<small>—</small>' : nx ? `<b style="font-weight:500;font-size:12.5px">${gcmFmt(nx.f)}${nx.f<hoy?' · vencida':''}</b><small title="${gcmE(nx.t)}">${gcmE(nx.t)}</small>` : '<small>Sin próxima acción</small>'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+/* ---------- lead: crear ---------- */
+function gcmLeadNuevo(pre){
+  pre = pre || {};
+  const html = `
+    <p class="gcm-nota">Solo lo mínimo para empezar. La información comercial se completa en la ficha a medida que avanza la gestión.</p>
+    <div class="gcm-fgrid">
+      <label class="full">Empresa<select id="gcm-n-emp" onchange="gcmNuevoLeadEmp()">${gcmOpts(GCM.d.empresas.map(e=>({v:e.id, t:e.nombre})), pre.empresaId || '', 'Selecciona una empresa de la cartera…')}</select></label>
+      <button type="button" class="gcm-link full" style="margin-top:-6px" onclick="gcmLeadNuevoEmpresa()">¿No está en la cartera? Registrar empresa (con búsqueda de duplicados)</button>
+      <label>Contacto<select id="gcm-n-con"></select></label>
+      <label>Ejecutivo responsable<select id="gcm-n-ej">${gcmOpts(GCM_EJECUTIVOS, pre.ejecutivo || GCM.yo || GCM_EJECUTIVOS[0])}</select></label>
+      <label class="full">Necesidad detectada<input type="text" id="gcm-n-tit" maxlength="90" placeholder="p. ej. Cámara de conservación para fruta" value="${gcmE(pre.titulo||'')}"></label>
+      <label>Origen<select id="gcm-n-ori">${gcmOpts(GCM_ORIGENES, pre.origen || 'Visita')}</select></label>
+    </div>
+    ${pre.actId ? `<p class="gcm-nota is-info">La actividad <b>${gcmE(pre.actId)}</b> quedará vinculada como primera gestión del lead.</p>` : ''}`;
+  gcmModal('Nuevo lead', html, [{t:'Cancelar'}, {t:'Crear lead', cls:'btn-primary', fn:()=>gcmLeadCrear(pre)}]);
+  gcmNuevoLeadEmp(pre.contactoId);
+}
+function gcmNuevoLeadEmp(sel){
+  const emp = gcmVal('gcm-n-emp'), s = document.getElementById('gcm-n-con'); if(!s) return;
+  const cons = GCM.d.contactos.filter(c=>c.empresaId===emp);
+  s.innerHTML = emp ? gcmOpts(cons.map(c=>({v:c.id, t:c.nombre})), sel || '', 'Sin contacto por ahora') : '<option value="">Elige primero la empresa</option>';
+}
+function gcmLeadNuevoEmpresa(){
+  const pre = {ejecutivo:gcmVal('gcm-n-ej'), titulo:gcmVal('gcm-n-tit'), origen:gcmVal('gcm-n-ori')};
+  gcmEmpresaNueva({alCrear:id=>gcmLeadNuevo(Object.assign(pre, {empresaId:id}))});
+}
+function gcmLeadCrear(pre){
+  const emp = gcmVal('gcm-n-emp'), tit = gcmVal('gcm-n-tit');
+  if(!emp){ showToast('Selecciona o registra la empresa del lead.', 'warn'); return; }
+  if(!tit){ showToast('Describe brevemente la necesidad detectada.', 'warn'); document.getElementById('gcm-n-tit').focus(); return; }
+  const l = {id:gcmSeq('lead','L-DEMO-',3), empresaId:emp, contactoId:gcmVal('gcm-n-con'), titulo:tit, ejecutivo:gcmVal('gcm-n-ej'), estado:'Nuevo', origen:gcmVal('gcm-n-ori'), creado:gcmD(0), opId:'', campos:{}, comentarios:[], tareas:[]};
+  if(pre.actId){ const a = gcmAct(pre.actId); if(a){ a.leadId = l.id; l.estado = 'En seguimiento'; } }
+  GCM.d.leads.push(l);
+  gcmModalCerrar();
+  showToast('Lead '+l.id+' creado (demo).', 'ok');
+  if(GCM.sv !== 'leads') gcmIr('leads', {estado:'activos'}); else gcmRefrescar();
+  gcmLeadAbrir(l.id);
+}
+
+/* ---------- lead: ficha (drawer) ---------- */
+function gcmLeadAbrir(id){
+  const dr = document.getElementById('gcm-drawer');
+  if(GCM.leadAbierto !== id) GCM.leadTab = 'info';
+  GCM.leadAbierto = id;
+  gcmLeadRender();
+  if(dr.classList.contains('hidden')){ GCM._focoDrw = document.activeElement; dr.classList.remove('hidden'); }
+  dr.querySelector('.drawer-panel').scrollTop = 0;
+}
+function gcmLeadCerrar(){
+  const dr = document.getElementById('gcm-drawer');
+  if(!dr || dr.classList.contains('hidden')) return;
+  dr.classList.add('hidden');
+  GCM.leadAbierto = null;
+  if(GCM._focoDrw && document.contains(GCM._focoDrw)) try{ GCM._focoDrw.focus({preventScroll:true}); }catch(e){}
+}
+function gcmLeadTab(t){ GCM.leadTab = t; gcmLeadRender(); }
+function gcmLeadRender(){
+  const l = gcmLead(GCM.leadAbierto); if(!l) return;
+  const e = gcmEmp(l.empresaId), c = gcmCon(l.contactoId), p = gcmLeadPerfil(l), acts = gcmLeadActs(l).sort(gcmOrdAct).reverse();
+  const pendientes = l.tareas.filter(t=>!t.hecho), activo = gcmLeadActivo(l), hoy = gcmD(0);
+  const editable = activo && l.estado !== 'Conversión solicitada';
+  document.getElementById('gcm-d-head').innerHTML = `
+    <span class="gcm-drw-ch"><span class="gcm-id">${gcmE(l.id)}</span>${gcmChipLead(l.estado)}${l.opId?`<span class="chip chip-sm tone-info">${gcmE(l.opId)}</span>`:''}</span>
+    <h3 id="gcm-d-t">${gcmE(l.titulo)}</h3>
+    <p>${gcmE(e?e.nombre:'—')}${c?' · '+gcmE(c.nombre):''}</p>`;
+  const tabs = `<div class="subtabs" role="tablist">
+    ${[['info','Información'],['hist','Historial',acts.length + l.comentarios.length],['pend','Pendientes',pendientes.length]].map(t=>`<button type="button" role="tab" class="subtab-btn${GCM.leadTab===t[0]?' active':''}" aria-selected="${GCM.leadTab===t[0]}" onclick="gcmLeadTab('${t[0]}')">${t[1]}${t[2]!=null?' · '+t[2]:''}</button>`).join('')}
+  </div>`;
+  const sol = GCM.d.solicitudes.find(s=>s.tipo==='conversion' && s.leadId===l.id && s.estado==='Pendiente');
+  let banner = '';
+  if(l.estado === 'Conversión solicitada') banner = `<div class="gcm-banner is-conv">${GCM_ICO_INFO}<span><b>En revisión del Planner.</b> Solicitado por ${gcmE(sol?sol.ejecutivo:l.ejecutivo)} ${sol?gcmRel(sol.fecha).toLowerCase():''}. Mientras tanto la ficha queda en solo lectura.${sol?` <button type="button" class="gcm-link" onclick="gcmSolRevisar('${sol.id}')">Revisar como Planner</button>`:''}</span></div>`;
+  if(l.estado === 'Convertido') banner = `<div class="gcm-banner is-ok">${GCM_ICO_CHECK}<span><b>Convertido en ${gcmE(l.opId)}.</b> Visitas, comentarios y tareas pendientes se trasladaron a la ficha de la oportunidad, que se gestiona en <b>Detalle de oportunidades</b> (simulado).</span></div>`;
+  let cuerpo = '';
+  if(GCM.leadTab === 'info'){
+    cuerpo = `
+      <p class="gcm-blk-t">Datos mínimos</p>
+      <dl class="gcm-dl" style="grid-template-columns:1fr 1fr">
+        <div><dt>Empresa</dt><dd>${gcmE(e?e.nombre:'—')}</dd></div>
+        <div><dt>Contacto</dt><dd>${c ? gcmE(c.nombre)+'<br><span style="color:var(--ink-dim);font-size:11.5px">'+gcmE(c.cargo)+' · '+gcmE(c.tel)+'</span>' : '—'}</dd></div>
+        <div><dt>Ejecutivo</dt><dd>${gcmE(l.ejecutivo)}</dd></div>
+        <div><dt>Origen · creado</dt><dd>${gcmE(l.origen)} · ${gcmFmt(l.creado)}</dd></div>
+        <div><dt>Estado</dt><dd>${editable ? `<select class="gcm-sel is-sm" onchange="gcmLeadSet('${l.id}','estado',this.value)">${gcmOpts(['Nuevo','En seguimiento','Calificado','Descartado'], l.estado)}</select>` : gcmChipLead(l.estado)}</dd></div>
+      </dl>
+      <p class="gcm-blk-t">Información complementaria <small>${p.n} de ${p.t} completados</small></p>
+      <span class="gcm-prog" style="margin-top:-4px"><span style="width:100%"><i style="width:${p.pct}%"></i></span></span>
+      <div class="gcm-campos">${GCM_CAMPOS.map(cp=>{
+        const v = l.campos[cp.k] || '', req = GCM_REQ_CONV.includes(cp.k);
+        const dis = editable ? '' : ' disabled';
+        const ctrl = cp.tipo === 'sel' ? `<select class="gcm-in" onchange="gcmLeadCampo('${l.id}','${cp.k}',this.value)"${dis}>${gcmOpts(cp.ops, v, 'Sin definir')}</select>`
+          : `<input class="gcm-in" type="${cp.tipo==='date'?'date':'text'}" value="${gcmE(v)}" placeholder="${gcmE(cp.ph||'')}" onchange="gcmLeadCampo('${l.id}','${cp.k}',this.value)"${dis}>`;
+        return `<label class="${req && !v ? 'is-req' : ''}${v?' is-ok':''}">${cp.l}${ctrl}</label>`;
+      }).join('')}</div>`;
+  } else if(GCM.leadTab === 'hist'){
+    const items = acts.map(a=>({f:a.fecha+a.hora, html:`<div class="gcm-tl-it gcm-cat-${gcmCatC(a.categoria)}">
+        <div class="gcm-tl-h"><b style="color:var(--ink)">${gcmE(a.tipo)}</b> · ${gcmFmtL(a.fecha)} ${gcmE(a.hora)} · ${gcmE(a.ejecutivo)} ${gcmChipAct(a.estado)}${a.opRef?` <span class="gcm-id">→ ${gcmE(a.opRef)}</span>`:''}</div>
+        <div class="gcm-tl-b is-btn" onclick="gcmActAbrir('${a.id}')" title="Abrir actividad">${gcmE(a.titulo)}${a.comentarios?`<br><span style="color:var(--ink-soft)">${gcmE(a.comentarios)}</span>`:''}${a.compromisos.length?`<ul>${a.compromisos.map(x=>`<li>${gcmE(x.t)}</li>`).join('')}</ul>`:''}</div></div>`}))
+      .concat(l.comentarios.map(k=>({f:k.f+'99', html:`<div class="gcm-tl-it">
+        <div class="gcm-tl-h"><b style="color:var(--ink)">Comentario</b> · ${gcmFmt(k.f)} · ${gcmE(k.autor)}${k.tras?` <span class="gcm-id">→ trasladado</span>`:''}</div>
+        <div class="gcm-tl-b">${gcmE(k.t)}</div></div>`})))
+      .sort((a,b)=>b.f.localeCompare(a.f));
+    cuerpo = `
+      ${activo ? `<div class="gcm-add" style="grid-template-columns:minmax(0,1fr) auto"><textarea class="gcm-in" id="gcm-d-com" rows="2" placeholder="Agregar un comentario al lead…"></textarea><button type="button" class="btn-mini" onclick="gcmLeadComentar('${l.id}')">Agregar</button></div>` : ''}
+      <div class="gcm-tl">${items.map(i=>i.html).join('') || '<p class="gcm-empty">Sin gestiones registradas todavía.</p>'}</div>`;
+  } else {
+    const ord = l.tareas.slice().sort((a,b)=>(a.hecho-b.hecho) || String(a.f).localeCompare(String(b.f)));
+    cuerpo = `
+      ${activo ? `<div class="gcm-add"><input type="text" class="gcm-in" id="gcm-d-tar" maxlength="90" placeholder="Nueva tarea pendiente…" onkeydown="if(event.key==='Enter')gcmLeadTarea('${l.id}')"><input type="date" class="gcm-in" id="gcm-d-tarf" value="${gcmD(3)}"><button type="button" class="btn-mini" onclick="gcmLeadTarea('${l.id}')">Agregar</button></div>` : ''}
+      <div>${ord.map(t=>`<div class="gcm-tar${t.hecho?' is-hecho':''}">
+        <input type="checkbox" ${t.hecho?'checked':''} ${activo?'':'disabled'} onchange="gcmLeadTareaToggle('${l.id}','${t.id}',this.checked)" aria-label="Marcar como cumplida">
+        <span><b>${gcmE(t.t)}</b><small class="${!t.hecho && t.f && t.f<hoy ? 'is-venc' : ''}">${t.f ? gcmFmtL(t.f)+(!t.hecho && t.f<hoy?' · vencida':'') : 'Sin fecha'}${t.origen?' · de '+gcmE(t.origen):''}</small></span>
+        ${t.tras ? `<span class="gcm-id">→ ${gcmE(l.opId)}</span>` : ''}
+      </div>`).join('') || '<p class="gcm-empty">Sin tareas pendientes.</p>'}</div>`;
+  }
+  document.getElementById('gcm-d-body').innerHTML = banner + tabs + cuerpo;
+  const pide = activo && l.estado !== 'Conversión solicitada';
+  document.getElementById('gcm-d-foot').innerHTML = `
+    ${activo ? `<button type="button" class="btn-secondary" onclick="gcmActNueva({empresaId:'${l.empresaId}', contactoId:'${l.contactoId}', leadId:'${l.id}', ejecutivo:'${l.ejecutivo}'})">Programar actividad</button>` : ''}
+    ${pide ? `<button type="button" class="btn-primary" onclick="gcmLeadSolicitar('${l.id}')">Solicitar conversión a oportunidad</button>` : ''}
+    ${!activo ? '<button type="button" class="btn-secondary" onclick="gcmLeadCerrar()">Cerrar</button>' : ''}`;
+}
+function gcmLeadSet(id, k, v){ const l = gcmLead(id); if(!l) return; l[k] = v; showToast('Estado del lead: '+v+'.', 'info'); gcmRefrescar(); }
+function gcmLeadCampo(id, k, v){
+  const l = gcmLead(id); if(!l) return;
+  if(v) l.campos[k] = v; else delete l.campos[k];
+  gcmRefrescar();
+}
+function gcmLeadComentar(id){
+  const l = gcmLead(id), t = gcmVal('gcm-d-com'); if(!l || !t) return;
+  l.comentarios.push({id:gcmSeq('x','k'), f:gcmD(0), autor:l.ejecutivo, t});
+  gcmRefrescar();
+}
+function gcmLeadTarea(id){
+  const l = gcmLead(id), t = gcmVal('gcm-d-tar'); if(!l || !t) return;
+  l.tareas.push({id:gcmSeq('x','t'), t, f:gcmVal('gcm-d-tarf'), hecho:false});
+  gcmRefrescar();
+  const i = document.getElementById('gcm-d-tar'); if(i) i.focus();
+}
+function gcmLeadTareaToggle(id, tid, on){
+  const l = gcmLead(id); if(!l) return;
+  const t = l.tareas.find(x=>x.id===tid); if(t) t.hecho = on;
+  gcmRefrescar();
+}
+
+/* ---------- conversión: solicitud (ejecutivo) ---------- */
+function gcmLeadSolicitar(id){
+  const l = gcmLead(id); if(!l) return;
+  const req = gcmReqConv(l), ok = req.every(r=>r.ok), tr = gcmTraslado(l);
+  gcmModal('Solicitar conversión a oportunidad', `
+    <p class="gcm-nota">La solicitud llega a la <b>bandeja del Planner</b>. Si la aprueba, se crea la oportunidad en el módulo actual con el historial del lead.</p>
+    <p class="gcm-blk-t">Requisitos mínimos</p>
+    <ul class="gcm-req">${req.map(r=>`<li class="${r.ok?'':'is-no'}"><i>${r.ok?'✓':'✕'}</i>${gcmE(r.t)}</li>`).join('')}</ul>
+    ${ok ? '' : `<p class="gcm-nota is-warn">Completa los requisitos faltantes en la ficha del lead antes de enviar. <button type="button" class="gcm-link" onclick="gcmModalCerrar();gcmLeadTab('info')">Ir a la información</button></p>`}
+    <p class="gcm-blk-t">Se trasladará a la oportunidad</p>
+    <dl class="gcm-dl"><div><dt>Visitas y gestiones</dt><dd>${tr.visitas.length} realizada${tr.visitas.length===1?"":"s"}</dd></div><div><dt>Comentarios</dt><dd>${tr.comentarios.length}</dd></div><div><dt>Tareas pendientes</dt><dd>${tr.tareas.length}</dd></div></dl>
+    <label>Nota para el Planner<textarea id="gcm-s-nota" rows="3" placeholder="Contexto: por qué está listo, urgencia, equipo sugerido…"></textarea></label>`,
+    [{t:'Cancelar'}, {t:'Enviar al Planner', cls:'btn-primary', dis:!ok, fn:()=>{
+      GCM.d.solicitudes.push({id:gcmSeq('sol','S-'), tipo:'conversion', leadId:l.id, ejecutivo:l.ejecutivo, fecha:gcmD(0), estado:'Pendiente', detalle:gcmVal('gcm-s-nota') || 'Sin nota.'});
+      l.estado = 'Conversión solicitada';
+      gcmModalCerrar();
+      showToast('Solicitud de conversión de '+l.id+' enviada al Planner.', 'ok');
+      gcmRefrescar();
+    }}], {foco:false});
+}
+
+/* ---------- bandeja del Planner ---------- */
+function gcmSolRevisar(sid){
+  const s = GCM.d.solicitudes.find(x=>x.id===sid); if(!s) return;
+  if(s.tipo === 'conversion'){
+    const l = gcmLead(s.leadId); if(!l) return;
+    const e = gcmEmp(l.empresaId), req = gcmReqConv(l), tr = gcmTraslado(l);
+    gcmModal('Revisión del Planner · conversión', `
+      <dl class="gcm-dl">
+        <div style="grid-column:1/-1"><dt>Lead</dt><dd><span class="gcm-id">${gcmE(l.id)}</span> · ${gcmE(l.titulo)}</dd></div>
+        <div><dt>Empresa</dt><dd>${gcmE(e?gcmCorto(e.nombre):'—')}</dd></div><div><dt>Solicita</dt><dd>${gcmE(s.ejecutivo)} · ${gcmFmt(s.fecha)}</dd></div><div><dt>Presupuesto</dt><dd>${gcmE(l.campos.presupuesto||'—')}</dd></div>
+        <div><dt>Tipo de proyecto</dt><dd>${gcmE(l.campos.tipoProyecto||'—')}</dd></div><div><dt>Decisión estimada</dt><dd>${gcmFmt(l.campos.fechaDecision)}</dd></div><div><dt>Capacidad</dt><dd>${gcmE(l.campos.capacidad||'—')}</dd></div>
+      </dl>
+      <p class="gcm-nota"><b>Nota del ejecutivo:</b> ${gcmE(s.detalle)}</p>
+      <ul class="gcm-req">${req.map(r=>`<li class="${r.ok?'':'is-no'}"><i>${r.ok?'✓':'✕'}</i>${gcmE(r.t)}</li>`).join('')}</ul>
+      <p class="gcm-nota is-info">Al aprobar se trasladan <b>${tr.visitas.length} gestiones</b>, <b>${tr.comentarios.length} comentarios</b> y <b>${tr.tareas.length} tareas pendientes</b> a la nueva oportunidad.</p>
+      <label>Comentario del Planner (opcional)<textarea id="gcm-p-nota" rows="2" placeholder="p. ej. Asignar a Arquitectura con prioridad media"></textarea></label>`,
+      [{t:'Rechazar', cls:'btn-delete', izq:true, fn:()=>gcmSolResolver(sid, false)}, {t:'Cancelar'}, {t:'Aprobar y convertir', cls:'btn-primary', fn:()=>gcmSolResolver(sid, true)}], {foco:false});
+  } else {
+    const op = gcmOp(s.opRef), a = s.actId ? gcmAct(s.actId) : null;
+    gcmModal('Revisión del Planner · actualización', `
+      <dl class="gcm-dl">
+        <div style="grid-column:1/-1"><dt>Oportunidad</dt><dd><span class="gcm-id">${gcmE(s.opRef)}</span> · ${gcmE(op?op.t:'')}</dd></div>
+        <div><dt>Propone</dt><dd>${gcmE(s.ejecutivo)}</dd></div><div><dt>Fecha</dt><dd>${gcmFmt(s.fecha)}</dd></div><div><dt>Origen</dt><dd>${a?`<button type="button" class="gcm-link" onclick="gcmActAbrir('${a.id}')">${gcmE(a.tipo)} del ${gcmFmt(a.fecha)}</button>`:'—'}</dd></div>
+      </dl>
+      <p class="gcm-nota"><b>Propuesta:</b> ${gcmE(s.detalle)}</p>
+      <p class="gcm-nota is-info">La ficha de la oportunidad <b>no se modifica</b> hasta que el Planner apruebe. En esta maqueta la aprobación solo se registra (no toca el módulo actual).</p>
+      <label>Comentario del Planner (opcional)<textarea id="gcm-p-nota" rows="2"></textarea></label>`,
+      [{t:'Rechazar', cls:'btn-delete', izq:true, fn:()=>gcmSolResolver(sid, false)}, {t:'Cancelar'}, {t:'Aprobar propuesta', cls:'btn-primary', fn:()=>gcmSolResolver(sid, true)}], {foco:false});
+  }
+}
+function gcmSolResolver(sid, aprobar){
+  const s = GCM.d.solicitudes.find(x=>x.id===sid); if(!s) return;
+  s.estado = aprobar ? 'Aprobada' : 'Rechazada'; s.notaPlanner = gcmVal('gcm-p-nota');
+  if(s.tipo === 'conversion'){
+    const l = gcmLead(s.leadId);
+    if(!aprobar){
+      if(l){ l.estado = 'Calificado'; l.comentarios.push({id:gcmSeq('x','k'), f:gcmD(0), autor:'Planner', t:'Conversión rechazada'+(s.notaPlanner?': '+s.notaPlanner:'.')}); }
+      gcmModalCerrar(); showToast('Conversión rechazada: el lead vuelve a Calificado.', 'warn'); gcmRefrescar(); return;
+    }
+    gcmConvertir(l, s);
+    return;
+  }
+  gcmModalCerrar();
+  showToast(aprobar ? 'Propuesta aprobada · se aplicaría en la ficha de '+s.opRef+' (simulado).' : 'Propuesta rechazada.', aprobar ? 'ok' : 'warn');
+  gcmRefrescar();
+}
+/* Simulación del traslado lead → oportunidad. */
+function gcmConvertir(l, s){
+  if(!l) return;
+  const tr = gcmTraslado(l), opId = gcmSeq('op','OP-DEMO-0');
+  const e = gcmEmp(l.empresaId);
+  GCM.d.ops.push({id:opId, t:l.titulo, emp:l.empresaId});
+  l.estado = 'Convertido'; l.opId = opId;
+  l.tareas.forEach(t=>{ if(!t.hecho) t.tras = true; });
+  l.comentarios.forEach(k=>{ k.tras = true; });
+  l.comentarios.push({id:gcmSeq('x','k'), f:gcmD(0), autor:'Planner', t:'Conversión aprobada'+(s.notaPlanner?': '+s.notaPlanner:'.')+' Se crea '+opId+'.', tras:true});
+  tr.futuras.forEach(a=>{ a.categoria = 'Oportunidades'; a.opRef = opId; });
+  let i = 0;
+  const it = (ico, t, sub)=>`<div class="gcm-tr-it" style="--i:${i++}"><i>${ico}</i><span>${t}<em>${sub}</em></span></div>`;
+  gcmModal('Lead convertido en oportunidad', `
+    <div class="gcm-tr">
+      <div class="gcm-tr-box"><span class="gcm-id">${gcmE(l.id)}</span><h5>${gcmE(l.titulo)}</h5><p>${gcmE(e?gcmCorto(e.nombre):'')} · ${gcmE(l.ejecutivo)}</p><span>${gcmChipLead('Convertido')}</span>
+        <p style="margin-top:auto">El lead queda como antecedente, en solo lectura.</p></div>
+      <div class="gcm-tr-ar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+      <div class="gcm-tr-box is-dest"><span class="gcm-id">${gcmE(opId)} · borrador</span><h5>${gcmE(l.titulo)}</h5><p>Etapa inicial · Detalle de oportunidades</p>
+        ${tr.visitas.map(a=>it('✓', gcmE(a.tipo)+' del '+gcmFmt(a.fecha), gcmE(a.titulo))).join('')}
+        ${tr.comentarios.length ? it('✓', tr.comentarios.length+' comentario'+(tr.comentarios.length>1?'s':''), 'Historial completo del lead') : ''}
+        ${tr.tareas.map(t=>it('→', gcmE(t.t), 'Tarea pendiente · '+gcmFmt(t.f))).join('')}
+        ${tr.futuras.length ? it('↻', tr.futuras.length+' actividad'+(tr.futuras.length>1?'es':'')+' futura'+(tr.futuras.length>1?'s':''), 'Pasan a gestión de Oportunidades') : ''}
+      </div>
+    </div>
+    <p class="gcm-nota is-info">Las tareas conservan su vínculo y pasan a la ficha de la oportunidad, que sigue gestionándose en el módulo actual. <b>Maqueta:</b> no se crea ningún registro real en Detalle de oportunidades.</p>`,
+    [{t:'Ver ficha del lead', fn:()=>{ gcmModalCerrar(); gcmLeadAbrir(l.id); }}, {t:'Listo', cls:'btn-primary'}], {wide:true, foco:false});
+  showToast('Conversión aprobada: '+l.id+' → '+opId+' (simulado).', 'ok');
+  gcmRefrescar();
+}
+
+/* ============ 4 · CARTERA ============ */
+const GCM_STOP = ['de','del','la','el','los','las','y','e','sociedad','anonima','cerrada','empresa','individual','responsabilidad','limitada','grupo','cia','compania'];
+function gcmNorm(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[.,;:()\-\/&]/g,' ').replace(/\b(s a c|s a a|e i r l|s r l|s a|sac|saa|eirl|srl|sa)\b/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+function gcmTokens(s){ return gcmNorm(s).split(' ').filter(t=>t.length>=3 && !GCM_STOP.includes(t)); }
+/* Coincidencias por RUC exacto o por parecido del nombre (tokens que
+   coinciden o empiezan igual, sin tildes ni forma societaria). */
+function gcmDuplicados(nombre, ruc){
+  const tq = gcmTokens(nombre), r = String(ruc||'').replace(/\D/g,'');
+  return GCM.d.empresas.map(e=>{
+    if(r.length >= 8 && e.ruc === r) return {e, s:1, exacta:true, por:'Mismo RUC'};
+    const te = gcmTokens(e.nombre);
+    if(!tq.length || !te.length) return null;
+    const hit = tq.filter(a=>te.some(b=>b===a || (a.length>=4 && b.startsWith(a)) || (b.length>=4 && a.startsWith(b)))).length;
+    const s = hit / Math.min(tq.length, te.length);
+    return s >= 0.5 ? {e, s, exacta:false, por:hit+' palabra'+(hit>1?'s':'')+' en común'} : null;
+  }).filter(Boolean).sort((a,b)=>b.s-a.s).slice(0,4);
+}
+function gcmCarteraBuild(){
+  const el = document.getElementById('gcm-sv-cartera'); if(!el || GCM.built.cartera) return;
+  GCM.built.cartera = true;
+  el.innerHTML = `
+    <div class="filters" style="margin:0">
+      <input type="text" placeholder="🔍 Buscar empresa, RUC o contacto..." oninput="GCM.cf.q=this.value;gcmRenderCarteraLista()">
+      <select aria-label="Zona comercial" onchange="GCM.cf.zona=this.value;gcmRenderCarteraLista()">${gcmOpts(GCM_ZONAS, '', 'Todas las zonas')}</select>
+      <select aria-label="Ejecutivo" onchange="GCM.cf.ej=this.value;gcmRenderCarteraLista()">${gcmOpts(GCM_EJECUTIVOS, '', 'Todos los ejecutivos')}</select>
+      <span class="gcm-cal-sum" id="gcm-c-cuenta"></span>
+      <button type="button" class="btn-primary" onclick="gcmEmpresaNueva()">+ Nueva empresa</button>
+    </div>
+    <div class="gcm-emps" id="gcm-c-lista"></div>`;
+}
+function gcmRenderCartera(){ gcmCarteraBuild(); gcmRenderCarteraLista(); }
+function gcmRenderCarteraLista(){
+  const box = document.getElementById('gcm-c-lista'); if(!box) return;
+  const f = GCM.cf, q = gcmNorm(f.q);
+  const conOk = c=>(!f.zona || c.zona===f.zona) && (!f.ej || c.ejecutivo===f.ej || c.compartido.includes(f.ej));
+  const lista = GCM.d.empresas.map(e=>{
+    const cons = GCM.d.contactos.filter(c=>c.empresaId===e.id);
+    const filtros = f.zona || f.ej;
+    const visibles = filtros ? cons.filter(conOk) : cons;
+    if(filtros && !visibles.length) return null;
+    if(q && !gcmNorm([e.nombre, e.ruc, e.rubro].concat(cons.map(c=>c.nombre)).join(' ')).includes(q)) return null;
+    return {e, cons:visibles, total:cons.length};
+  }).filter(Boolean);
+  const cuenta = document.getElementById('gcm-c-cuenta');
+  if(cuenta) cuenta.textContent = lista.length+' empresas · '+lista.reduce((s,x)=>s+x.cons.length,0)+' contactos';
+  box.innerHTML = lista.map(({e, cons, total})=>{
+    const leads = GCM.d.leads.filter(l=>l.empresaId===e.id), act = leads.filter(gcmLeadActivo).length;
+    const ops = GCM.d.ops.filter(o=>o.emp===e.id).length;
+    const ult = GCM.d.actividades.filter(a=>a.empresaId===e.id && a.estado==='Realizada').sort(gcmOrdAct).pop();
+    return `<section class="ger-card gcm-emp" id="gcm-emp-${e.id}">
+      <div class="gcm-emp-h"><div><h4>${gcmE(e.nombre)}</h4><p>RUC ${gcmE(e.ruc)} · ${gcmE(e.rubro)}</p></div>
+        <button type="button" class="btn-mini" onclick="gcmActNueva({empresaId:'${e.id}'})">+ Actividad</button></div>
+      <div class="gcm-emp-ch">
+        <span class="chip chip-sm tone-neutral">${total} contacto${total===1?'':'s'}</span>
+        ${act ? `<button type="button" class="chip chip-sm tone-info" style="border:none;cursor:pointer" onclick="gcmLeadsDeEmpresa('${e.id}')">${act} lead${act>1?'s':''} activo${act>1?'s':''}</button>` : ''}
+        ${ops ? `<span class="chip chip-sm tone-ok">${ops} oportunidad${ops>1?'es':''}</span>` : ''}
+        ${!leads.length && !ops ? '<span class="chip chip-sm tone-neutral">Sin leads ni oportunidades</span>' : ''}
+      </div>
+      ${cons.map(c=>`<div class="gcm-con">
+        <span class="gcm-av">${gcmIni(c.nombre.replace(' Demo',''))}</span>
+        <span class="gcm-con-m"><b>${gcmE(c.nombre)}</b><span>${gcmE(c.cargo)} · ${gcmE(c.tel)}</span></span>
+        <span class="gcm-con-c">
+          <select class="gcm-sel is-sm" aria-label="Ejecutivo responsable de ${gcmE(c.nombre)}" onchange="gcmConSet('${c.id}','ejecutivo',this.value)">${gcmOpts(GCM_EJECUTIVOS, c.ejecutivo)}</select>
+          <select class="gcm-sel is-sm" aria-label="Zona comercial de ${gcmE(c.nombre)}" onchange="gcmConSet('${c.id}','zona',this.value)">${gcmOpts(GCM_ZONAS, c.zona)}</select>
+        </span>
+        <span class="gcm-con-sh">${c.compartido.length ? 'Gestión compartida con '+c.compartido.map(x=>`<span class="chip chip-sm tone-info">${gcmE(x)}</span>`).join('') : 'Gestión individual'} · <button type="button" class="gcm-link" style="font-size:11px" onclick="gcmCompartir('${c.id}')">${c.compartido.length?'Editar':'Compartir'}</button></span>
+      </div>`).join('') || '<p class="gcm-empty">Sin contactos registrados.</p>'}
+      <div class="gcm-emp-f"><span>${ult ? 'Última gestión: '+gcmE(ult.tipo.toLowerCase())+' del '+gcmFmt(ult.fecha) : 'Sin gestiones realizadas'}</span><button type="button" class="gcm-link" onclick="gcmContactoNuevo('${e.id}')">+ Contacto</button></div>
+    </section>`;
+  }).join('') || '<p class="gcm-empty" style="grid-column:1/-1">No hay empresas con estos filtros.</p>';
+}
+function gcmLeadsDeEmpresa(eid){
+  const e = gcmEmp(eid); if(!e) return;
+  gcmIr('leads', {estado:'activos', ej:''});
+  GCM.lf.q = gcmCorto(e.nombre);
+  const i = document.getElementById('gcm-lf-q'); if(i) i.value = GCM.lf.q;
+  gcmRenderLeadsLista();
+}
+function gcmConSet(cid, k, v){
+  const c = gcmCon(cid); if(!c) return;
+  c[k] = v;
+  if(k === 'ejecutivo') c.compartido = c.compartido.filter(x=>x!==v);
+  showToast((k==='zona' ? 'Zona comercial' : 'Ejecutivo responsable')+' de '+c.nombre+': '+v+'.', 'ok');
+  gcmRenderCarteraLista();
+}
+function gcmCompartir(cid){
+  const c = gcmCon(cid); if(!c) return;
+  gcmModal('Gestión compartida', `
+    <p class="gcm-nota"><b>${gcmE(c.nombre)}</b> · responsable: ${gcmE(c.ejecutivo)}. Los ejecutivos que compartan la gestión verán sus actividades en su agenda y podrán registrar visitas.</p>
+    <div class="gcm-chks">${GCM_EJECUTIVOS.filter(x=>x!==c.ejecutivo).map(x=>`<label class="gcm-chk"><input type="checkbox" value="${gcmE(x)}" ${c.compartido.includes(x)?'checked':''}> ${gcmE(x)}</label>`).join('')}</div>`,
+    [{t:'Cancelar'}, {t:'Guardar', cls:'btn-primary', fn:()=>{
+      c.compartido = [...document.querySelectorAll('#gcm-m-body .gcm-chks input:checked')].map(i=>i.value);
+      gcmModalCerrar(); showToast('Gestión de '+c.nombre+(c.compartido.length?' compartida con '+c.compartido.join(', '):' individual')+'.', 'ok'); gcmRenderCarteraLista();
+    }}], {foco:false});
+}
+function gcmEmpresaNueva(opts){
+  opts = opts || {};
+  gcmModal('Nueva empresa', `
+    <div class="gcm-fgrid">
+      <label class="full">Razón social<input type="text" id="gcm-e-nom" maxlength="90" placeholder="Escribe el nombre: se buscan coincidencias en la cartera" oninput="gcmDupBuscar()"></label>
+      <label>RUC<input type="text" id="gcm-e-ruc" maxlength="11" inputmode="numeric" placeholder="11 dígitos" oninput="gcmDupBuscar()"></label>
+      <label>Rubro<input type="text" id="gcm-e-rub" maxlength="50" placeholder="p. ej. Agroexportación"></label>
+    </div>
+    <div class="gcm-dup" id="gcm-e-dup" aria-live="polite"></div>
+    <p class="gcm-blk-t">Primer contacto <small>opcional</small></p>
+    <div class="gcm-fgrid">
+      <label>Nombre<input type="text" id="gcm-e-cn" maxlength="60"></label>
+      <label>Cargo<input type="text" id="gcm-e-cc" maxlength="60"></label>
+      <label>Ejecutivo responsable<select id="gcm-e-ce">${gcmOpts(GCM_EJECUTIVOS, GCM.yo || GCM_EJECUTIVOS[0])}</select></label>
+      <label>Zona comercial<select id="gcm-e-cz">${gcmOpts(GCM_ZONAS, GCM_ZONAS[0])}</select></label>
+    </div>
+    <p class="gcm-nota">Una empresa puede quedar en la cartera sin leads ni oportunidades.</p>`,
+    [{t:'Cancelar'}, {t:'Registrar empresa', cls:'btn-primary', id:'gcm-e-ok', fn:gcmEmpresaCrear}]);
+  GCM.alCrearEmpresa = opts.alCrear || null;
+  gcmDupBuscar();
+}
+function gcmDupBuscar(){
+  const box = document.getElementById('gcm-e-dup'); if(!box) return;
+  const nom = gcmVal('gcm-e-nom'), ruc = gcmVal('gcm-e-ruc');
+  const ok = document.getElementById('gcm-e-ok');
+  if(nom.length < 3 && ruc.length < 8){ box.innerHTML = ''; if(ok) ok.disabled = false; return; }
+  const m = gcmDuplicados(nom, ruc);
+  const exacta = m.some(x=>x.exacta);
+  if(ok) ok.disabled = exacta;
+  box.innerHTML = m.length ? `<p class="gcm-blk-t" style="color:var(--warn)">Posibles coincidencias en la cartera</p>` + m.map(x=>`<div class="gcm-dup-it${x.exacta?' is-exacta':''}">
+      <span><b>${gcmE(x.e.nombre)}</b><span>RUC ${gcmE(x.e.ruc)} · ${gcmE(x.por)}${x.exacta?' · no se puede duplicar':''}</span></span>
+      <button type="button" class="btn-mini" onclick="gcmUsarEmpresa('${x.e.id}')">Usar esta empresa</button></div>`).join('')
+    : `<span class="gcm-dup-ok">${GCM_ICO_CHECK.replace('<svg','<svg width="14" height="14"')} Sin coincidencias en la cartera</span>`;
+}
+function gcmUsarEmpresa(id){
+  const cb = GCM.alCrearEmpresa;
+  GCM.alCrearEmpresa = null;
+  if(cb){ cb(id); return; }
+  gcmModalCerrar();
+  if(GCM.sv !== 'cartera') gcmIr('cartera');
+  const card = document.getElementById('gcm-emp-'+id);
+  if(card){ card.scrollIntoView({behavior:'smooth', block:'center'}); card.classList.remove('is-flash'); void card.offsetWidth; card.classList.add('is-flash'); }
+}
+function gcmEmpresaCrear(){
+  const nom = gcmVal('gcm-e-nom'), ruc = gcmVal('gcm-e-ruc').replace(/\D/g,'');
+  if(nom.length < 3){ showToast('Indica la razón social.', 'warn'); return; }
+  if(gcmDuplicados(nom, ruc).some(x=>x.exacta)){ showToast('Ya existe una empresa con ese RUC.', 'error'); return; }
+  const e = {id:gcmSeq('emp','e',1), nombre:nom, ruc:ruc || '—', rubro:gcmVal('gcm-e-rub') || 'Sin rubro'};
+  GCM.d.empresas.push(e);
+  const cn = gcmVal('gcm-e-cn');
+  if(cn) GCM.d.contactos.push({id:gcmSeq('con','c',1), empresaId:e.id, nombre:cn, cargo:gcmVal('gcm-e-cc') || '—', tel:'—', email:'', ejecutivo:gcmVal('gcm-e-ce'), zona:gcmVal('gcm-e-cz'), compartido:[]});
+  showToast('Empresa registrada en la cartera (demo).', 'ok');
+  const cb = GCM.alCrearEmpresa;
+  GCM.alCrearEmpresa = null;
+  if(cb){ cb(e.id); gcmRender(); return; }
+  gcmModalCerrar();
+  gcmRefrescar();
+  gcmUsarEmpresa(e.id);
+}
+function gcmContactoNuevo(eid){
+  const e = gcmEmp(eid); if(!e) return;
+  gcmModal('Nuevo contacto · '+gcmCorto(e.nombre), `
+    <div class="gcm-fgrid">
+      <label>Nombre<input type="text" id="gcm-k-n" maxlength="60"></label>
+      <label>Cargo<input type="text" id="gcm-k-c" maxlength="60"></label>
+      <label>Teléfono<input type="text" id="gcm-k-t" maxlength="20" placeholder="+51 …"></label>
+      <label>Correo<input type="text" id="gcm-k-m" maxlength="60"></label>
+      <label>Ejecutivo responsable<select id="gcm-k-e">${gcmOpts(GCM_EJECUTIVOS, GCM.yo || GCM_EJECUTIVOS[0])}</select></label>
+      <label>Zona comercial<select id="gcm-k-z">${gcmOpts(GCM_ZONAS, (GCM.d.contactos.find(c=>c.empresaId===eid)||{}).zona || GCM_ZONAS[0])}</select></label>
+    </div>`,
+    [{t:'Cancelar'}, {t:'Agregar contacto', cls:'btn-primary', fn:()=>{
+      const n = gcmVal('gcm-k-n'); if(!n){ showToast('Indica el nombre del contacto.', 'warn'); return; }
+      GCM.d.contactos.push({id:gcmSeq('con','c',1), empresaId:eid, nombre:n, cargo:gcmVal('gcm-k-c') || '—', tel:gcmVal('gcm-k-t') || '—', email:gcmVal('gcm-k-m'), ejecutivo:gcmVal('gcm-k-e'), zona:gcmVal('gcm-k-z'), compartido:[]});
+      gcmModalCerrar(); showToast('Contacto agregado a '+gcmCorto(e.nombre)+'.', 'ok'); gcmRefrescar();
+    }}]);
+}
+
+/* Al entrar desde la barra lateral se repinta la subvista activa. */
+(function(){
+  const btn = document.querySelector('.app-sidebar .tab-btn[data-tab="gcom"]');
+  if(btn) btn.addEventListener('click', ()=>{
+    const p = document.getElementById('gcom');
+    if(p && p.classList.contains('active')){ if(GCM.sv === 'mi') GCM.anim = true; gcmRender(); }
+  });
+})();
 </script>
 </body>
 </html>
