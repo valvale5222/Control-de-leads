@@ -14004,7 +14004,7 @@ function vistaSoloAdmin(tab, detalle){
   return tab === 'gcom' || (tab === 'detalle' && detalle === 'entregables');
 }
 function setDetailView(view){
-  if(view === 'entregables' && !esAdmin()) view = 'oportunidades';
+  if((view === 'entregables' || view === 'apoyo') && !esAdmin()) view = 'oportunidades';
   /* 'entregables' es la vista Entregables de Colombia; 'apoyo', la bandeja de
      solicitudes de Colombia que atiende Perú. Cada una solo en su operación. */
   /* 'entregables' existe en las dos operaciones (en Perú, sin solicitudes). */
@@ -19887,6 +19887,10 @@ function coOportunidadPorId(id){ return coCargarStore().oportunidades.find(o=>o.
 function coEsOppCO(o){ return !!o && (!!o.demo || coCargarStore().oportunidades.includes(o)); }
 function coEsEntregableCO(e){ return coCargarStore().oportunidades.some(o=>o.entregables.includes(e)); }
 function coSolicitudes(){
+  /* Todo lo de Colombia es solo para admin: sin solicitudes, en Perú no
+     aparecen la bandeja «Colombia» de Detalle, sus avisos ni los trabajos de
+     Colombia en Carga laboral. */
+  if(!esAdmin()) return [];
   const st = coCargarStore();
   return st.solicitudes.filter(s=>{ const o = st.oportunidades.find(x=>x.id===s.oppId); return o && o.entregables.some(e=>e.id===s.entId); });
 }
@@ -19965,7 +19969,7 @@ function coNotificar(para, tono, titulo, texto, solId){
   st.notificaciones.unshift({id:'N-' + Date.now().toString(36) + Math.random().toString(36).slice(2,5), ts:new Date().toISOString(), para, tono, titulo, texto, solId, leida:false});
   if(st.notificaciones.length > 60) st.notificaciones.length = 60;
 }
-function coNotifsDe(op){ return coCargarStore().notificaciones.filter(n=>n.para===op); }
+function coNotifsDe(op){ return esAdmin() ? coCargarStore().notificaciones.filter(n=>n.para===op) : []; }
 function coNoLeidas(op){ return coNotifsDe(op).filter(n=>!n.leida).length; }
 
 /* ---------- Transiciones de una solicitud ---------- */
