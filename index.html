@@ -26233,9 +26233,22 @@ function gcmTrasCarga(){
   gcmSesionReal();
   const pan = document.getElementById('gcom');
   if(!pan || !pan.classList.contains('active')) return;
-  if(gcmFormAbierto()){ GCM._pendRender = true; return; }
+  if(gcmFormAbierto() || gcmEditandoEnSitio()){ GCM._pendRender = true; return; }
   gcmRender();
 }
+/* Edición en la misma vista (ficha del lead, cartera…): un campo con el foco.
+   La recarga desde la nube (incluido el eco del propio guardado) no repinta
+   mientras tanto: repintar recreaba la ficha a mitad de la escritura, perdía
+   lo tecleado y la devolvía arriba. Se repinta al soltar el último campo. */
+function gcmEditandoEnSitio(){
+  const a = document.activeElement;
+  return !!(a && a.closest && a.matches('input,select,textarea') && a.closest('#gcm-root'));
+}
+document.addEventListener('focusout', ()=>setTimeout(()=>{
+  if(!GCM || !GCM._pendRender || gcmFormAbierto() || gcmEditandoEnSitio()) return;
+  const pan = document.getElementById('gcom');
+  if(pan && pan.classList.contains('active')) gcmRender();
+}, 120));
 function gcmFormAbierto(){
   const sh = document.getElementById('gcm-sheet'), md = document.getElementById('gcm-modal');
   return (sh && !sh.classList.contains('hidden')) || (md && !md.classList.contains('hidden'));
@@ -27022,11 +27035,12 @@ function gcmRenderMi(){
       <div class="gcm-acc2">
         <button type="button" class="btn-primary gcm-btn-sm" onclick="gcmMgNueva({fecha:GCM.mg.dia})">${gcmIco('plus')}Nueva visita</button>
         <button type="button" class="btn-secondary gcm-btn-sm" onclick="gcmTareaForm({vence:GCM.mg.dia>gcmD(0)?GCM.mg.dia:gcmD(1)})">${gcmIco('plus')}Nueva tarea</button>
+        <button type="button" class="btn-secondary gcm-btn-sm" onclick="gcmLeadNuevo({})">${gcmIco('target')}Nuevo lead</button>
       </div>
     </div>
     <div class="gcm-mg-col is-izq">${gcmMgProxHTML()}${gcmMgAgendaHTML()}</div>
     <div class="gcm-mg-col is-der">${gcmMgSinHTML(sin)}${gcmMgPendHTML()}${gcmMgDesempHTML()}</div>
-    <button type="button" class="gcm-mg-fab" onclick="gcmMas()">${gcmIco('plus')}<span>Nueva visita o tarea</span></button>
+    <button type="button" class="gcm-mg-fab" onclick="gcmMas()">${gcmIco('plus')}<span>Visita, tarea o lead</span></button>
   </div>`;
   GCM.anim = false;
   GCM._minMi = new Date().getMinutes();
@@ -28195,6 +28209,7 @@ function gcmRenderAgenda(){
       <span class="gcm-acc2">
         <button type="button" class="btn-primary gcm-btn-sm" onclick="gcmMgNueva({fecha:GCM.cal.ref>=gcmD(0)?GCM.cal.ref:gcmD(0)})">${gcmIco('plus')}Nueva visita</button>
         <button type="button" class="btn-secondary gcm-btn-sm" onclick="gcmTareaForm({vence:GCM.cal.ref>gcmD(0)?GCM.cal.ref:gcmD(1)})">${gcmIco('plus')}Nueva tarea</button>
+        <button type="button" class="btn-secondary gcm-btn-sm" onclick="gcmLeadNuevo({})">${gcmIco('target')}Nuevo lead</button>
       </span>
     </div>
     ${cuerpo}`;
@@ -28347,7 +28362,19 @@ function gcmLeadsBuild(){
       <section class="ger-card gcm-l-det" id="gcm-l-det" aria-live="polite"></section>
     </div>`;
 }
-function gcmRenderLeads(){ gcmLeadsBuild(); gcmRenderLeadsLista(); }
+function gcmRenderLeads(){
+  /* Si la vista se reconstruye (p. ej. tras recargar desde la nube), la ficha
+     nace de nuevo con el scroll en 0: se guarda el lugar de la ficha anterior
+     para que gcmRenderLeadsDet lo restituya sobre el mismo lead. */
+  const det = document.getElementById('gcm-l-det');
+  if(!GCM.built.leads && det && GCM.lsel){
+    const fa = document.activeElement, enDet = fa && det.contains(fa) && fa.dataset;
+    GCM._ldPrev = {id:GCM.lsel, st:det.scrollTop, wy:window.scrollY, fk:enDet ? fa.dataset.k || '' : '',
+      txt:enDet && (fa.tagName === 'TEXTAREA' || (fa.tagName === 'INPUT' && fa.type === 'text')) && fa.value !== fa.defaultValue ? {v:fa.value, s:fa.selectionStart, e:fa.selectionEnd} : null};
+  }
+  gcmLeadsBuild(); gcmRenderLeadsLista();
+  GCM._ldPrev = null;
+}
 function gcmLeadsFiltrados(){
   const f = GCM.lf, q = gcmNorm(f.q);
   const orden = {'Conversión solicitada':0,'Calificado':1,'En seguimiento':2,'Nuevo':3,'Rechazado':4,'Convertido':5,'Descartado':6};
@@ -28524,11 +28551,21 @@ function gcmRenderLeadsDet(){
     <div class="gcm-l-body">${cuerpo}</div>`;
   /* Repintar sin perder el lugar: misma posición de scroll (panel, página y
      sheet) y el foco vuelve al campo en el que estaba el usuario. */
-  const st = enSh ? 0 : box.scrollTop, wy = window.scrollY, fa = document.activeElement;
-  const fk = fa && box.contains(fa) && fa.dataset ? fa.dataset.k || '' : '';
+  const prev = !enSh && GCM._ldPrev && GCM._ldPrev.id === l.id ? GCM._ldPrev : null;
+  GCM._ldPrev = null;
+  const fa = document.activeElement;
+  const st = enSh ? 0 : prev ? prev.st : box.scrollTop, wy = prev ? prev.wy : window.scrollY;
+  const fk = prev ? prev.fk : fa && box.contains(fa) && fa.dataset ? fa.dataset.k || '' : '';
+  /* Texto aún sin guardar en el campo con foco (se guarda al salir): se conserva. */
+  const fTxt = prev ? prev.txt : fk && (fa.tagName === 'TEXTAREA' || (fa.tagName === 'INPUT' && fa.type === 'text')) && fa.value !== fa.defaultValue ? {v:fa.value, s:fa.selectionStart, e:fa.selectionEnd} : null;
   if(enSh){ document.getElementById('gcm-sh-t').textContent = 'Lead'; gcmShBody(fichaHTML); } else { box.innerHTML = fichaHTML; box.scrollTop = st; }
   if(Math.abs(window.scrollY - wy) > 1) window.scrollTo(0, wy);
-  if(fk){ const n = box.querySelector('[data-k="'+fk+'"]'); if(n) try{ n.focus({preventScroll:true}); }catch(e){} }
+  if(fk){ const n = box.querySelector('[data-k="'+fk+'"]'); if(n) try{
+    n.focus({preventScroll:true});
+    if(fTxt){ n.value = fTxt.v; n.setSelectionRange(fTxt.s, fTxt.e); }
+  }catch(e){} }
+  /* El navegador puede reajustar el scroll al recalcular la página: se fija de nuevo. */
+  requestAnimationFrame(()=>{ if(!enSh && Math.abs(box.scrollTop - st) > 1) box.scrollTop = st; if(Math.abs(window.scrollY - wy) > 1) window.scrollTo(0, wy); });
 }
 function gcmLeadCampo(id, k, v){
   const l = gcmLead(id); if(!l) return;
@@ -28626,10 +28663,12 @@ function gcmConvHTML(l, req, nReq, puede){
   if(l.estado === 'Convertido' || l.estado === 'Conversión solicitada') return '';
   const s = gcmSolicitudDe(l);
   const completo = nReq === req.length;
-  const puedeSolicitar = puede && gcmLeadActivo(l) && !gcmLeadBloqueado(l) && gcmPermiso('solicitarConversion');
+  const directa = gcmConvDirectaPuede(l);
+  const puedeSolicitar = !directa && puede && gcmLeadActivo(l) && !gcmLeadBloqueado(l) && gcmPermiso('solicitarConversion');
   return `${s && s.estado === 'Devuelta' && l.estado !== 'Rechazado' ? `<div class="gcm-banner is-conv">${GCM_ICO_INFO}<span><b>Conversión devuelta por ${gcmE(s.resueltoPor || 'administración')}.</b> ${gcmE(s.respuesta || '')} Corrige la información y vuelve a solicitarla.</span></div>` : ''}
-    <details class="gcm-req-box"${completo ? '' : ' open'}><summary><b>Requisitos para convertir en oportunidad</b><small>${nReq} de ${req.length}${completo ? ' · listo para solicitar' : ''}</small></summary>
+    <details class="gcm-req-box"${completo ? '' : ' open'}><summary><b>${directa ? 'Datos para la oportunidad' : 'Requisitos para convertir en oportunidad'}</b><small>${nReq} de ${req.length}${completo ? (directa ? ' · completos' : ' · listo para solicitar') : ''}</small></summary>
       <ul class="gcm-req is-row">${req.map(x=>`<li class="${x.ok?'':'is-no'}"><i>${x.ok?'✓':'·'}</i>${gcmE(x.t)}</li>`).join('')}</ul></details>
+    ${directa ? `<div class="gcm-ld-acc"><button type="button" class="btn-primary" onclick="gcmConvDirecta('${l.id}')">Crear oportunidad</button></div>` : ''}
     ${puedeSolicitar ? `<div class="gcm-ld-acc"><button type="button" class="btn-primary"${completo ? '' : ' disabled title="Completa los requisitos para solicitar la conversión"'} onclick="gcmConvSolicitar('${l.id}')">Solicitar conversión a oportunidad</button></div>` : ''}`;
 }
 /* Estado de la conversión en la cabecera de la ficha del lead. */
@@ -28675,6 +28714,47 @@ function gcmConvSolicitar(id){
       showToast('Solicitud enviada. El lead queda en consulta mientras se revisa.', 'ok');
       gcmConvRefrescar();
     }}]);
+}
+/* Conversión directa: quien aprueba conversiones (Gerencia, administración)
+   y además creó el lead o es su responsable lo pasa a oportunidad sin
+   solicitarlo a otro. Queda una solicitud ya validada que se aprueba en el
+   mismo paso (gcm_aprobar_conversion), así la trazabilidad es la misma. Los
+   requisitos se muestran como aviso, no bloquean: se completan en Planner. */
+function gcmConvDirectaPuede(l){
+  if(!l || !gcmLeadActivo(l) || l.estado === 'Conversión solicitada' || !gcmPermiso('aprobarConversion')) return false;
+  const f = gcmFilas.get(l.id);
+  return l.ejecutivo === GCM.ses || !!(f && f.creado_por && f.creado_por === GCM.ses);
+}
+function gcmConvDirecta(id){
+  const l = gcmLead(id); if(!gcmConvDirectaPuede(l)) return;
+  const falta = gcmReqConv(l).filter(x=>!x.ok);
+  gcmModal('Crear oportunidad', `
+    <p class="gcm-nota"><b>${gcmE(l.titulo)}</b> · ${gcmE(gcmEmpNom(l.empresaId, l) || '—')}<br>
+      Se crea la oportunidad en el Planner de ${gcmE(coOpLabel(l.pais || GCM.pais))} con ${gcmE(l.ejecutivo)} como KAM${l.campos && l.campos.importe ? ' · '+gcmUSD(l.campos.importe) : ''}, sin pasar por solicitud ni aprobación. El lead queda «Convertido».</p>
+    ${falta.length ? `<p class="gcm-nota is-info">Faltan datos: ${gcmE(falta.map(x=>x.t.toLowerCase()).join(', '))}. Puedes completarlos después en Planner.</p>` : ''}
+    <div class="gcm-fgrid"><label class="full">Comentario <small>opcional</small><textarea id="gcm-cv-dir" rows="2" maxlength="600"></textarea></label></div>`,
+    [{t:'Cancelar'}, {t:'Crear oportunidad', cls:'btn-primary', fn:()=>{
+      const nota = gcmVal('gcm-cv-dir');
+      gcmModalCerrar();
+      gcmConvDirectaEjecutar(l.id, nota);
+    }}]);
+}
+async function gcmConvDirectaEjecutar(id, nota){
+  const l = gcmLead(id); if(!gcmConvDirectaPuede(l)) return;
+  const ahora = new Date().toISOString(), por = gcmUsuario();
+  const s = gcmNuevo('solicitud', 'SC', {leadId:l.id, empresaId:l.empresaId, titulo:l.titulo, ejecutivo:l.ejecutivo, pais:l.pais || GCM.pais,
+    estado:'En aprobación', fecha:ahora, solicitadoPor:por, validadoPor:por, validadoEn:ahora, directa:true, nota,
+    campos:Object.assign({}, l.campos), hist:[]});
+  gcmSolHist(s, 'Conversión directa por '+gcmRol().toLowerCase(), nota); gcmGuardar(s);
+  l.conversion = {solicitudId:s.id};
+  gcmLeadHist(l, 'Conversión directa a oportunidad', nota);
+  /* La base aprueba sobre la solicitud ya guardada: se sube antes de aprobar. */
+  if(db && gcmNube === true) for(const x of [s, l]){
+    clearTimeout(gcmSubirT[x.id]); delete gcmSubirT[x.id];
+    const f = gcmFilas.get(x.id);
+    if(f && !(await gcmSubir(f))){ showToast('No se pudo registrar la conversión. Inténtalo de nuevo.', 'warn'); gcmConvRefrescar(); return; }
+  }
+  await gcmConvAprobarEjecutar(s.id, nota);
 }
 function gcmConvValidar(sid){
   const s = gcmSolicitud(sid); if(!gcmConvPuede(s, 'validar')) return;
