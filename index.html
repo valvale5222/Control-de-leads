@@ -27544,7 +27544,7 @@ async function gcmFEmpCrear(){
   if(e && GCM.f) gcmFEmpElegir(e.id);
 }
 /* Alta en la Base Maestra (ID permanente CLI-xxxx) + datos comerciales propios. */
-async function gcmEmpresaRegistrar(nomCrudo, rucCrudo, rubro){
+async function gcmEmpresaRegistrar(nomCrudo, rucCrudo, rubro, extra){
   const nom = String(nomCrudo||'').trim(), ruc = String(rucCrudo||'').replace(/\D/g,''), geo = gcmGeo();
   if(nom.length < 3){ showToast('Indica la razón social.', 'warn'); return null; }
   if(ruc && geo.idLen && ruc.length !== geo.idLen){ showToast('El '+geo.id+' debe tener '+geo.idLen+' dígitos.', 'warn'); return null; }
@@ -27559,6 +27559,8 @@ async function gcmEmpresaRegistrar(nomCrudo, rucCrudo, rubro){
   gcmEmpCache = null;
   const e = gcmEmp(r.c.id) || {id:r.c.id, _t:'empresa', nombre:r.c.nombre, sedes:[]};
   e.ruc = ruc || e.ruc || ''; e.rubro = String(rubro||'').trim() || e.rubro || ''; e.pais = e.pais || GCM.pais;
+  if(extra && extra.segmento) e.segmento = extra.segmento;
+  if(extra && extra.sector) e.sector = extra.sector;
   gcmGuardar(e);
   showToast(r.nuevo ? 'Empresa registrada en la Base Maestra ('+r.c.id+').' : 'La empresa ya estaba en la Base Maestra ('+r.c.id+'): se usa esa.', r.nuevo ? 'ok' : 'info');
   return gcmEmp(r.c.id) || e;
@@ -28436,7 +28438,7 @@ function gcmCampoValTxt(l, cp){
   return String(v);
 }
 function gcmCampoCtrl(l, cp, dis){
-  const v = l.campos[cp.k] == null ? '' : l.campos[cp.k], on = `onchange="gcmLeadCampo('${l.id}','${cp.k}',this.value)"${dis}`;
+  const v = l.campos[cp.k] == null ? '' : l.campos[cp.k], on = `data-k="${cp.k}" onchange="gcmLeadCampo('${l.id}','${cp.k}',this.value)"${dis}`;
   if(cp.tipo === 'sel') return `<select class="gcm-in" ${on}>${gcmOpts(cp.ops, v, 'Pendiente')}</select>`;
   if(cp.tipo === 'sector'){ const seg = l.campos.segmento; const L = seg ? sectoresDeSegmento(seg) : SECTORES.concat(SECTORES_AGRO.filter(x=>!SECTORES.includes(x))); if(v && !L.includes(v)) L.push(v); return `<select class="gcm-in" ${on}>${gcmOpts(L, v, 'Pendiente')}</select>`; }
   if(cp.tipo === 'zona') return `<select class="gcm-in" ${on}>${gcmOpts(gcmGeo(l.pais).zonas, v, 'Pendiente')}</select>`;
@@ -28510,7 +28512,13 @@ function gcmRenderLeadsDet(){
     ${acc.length ? `<div class="gcm-ld-acc">${acc.join('')}</div>` : ''}
     <div class="gcm-seg gcm-ld-tabs" role="tablist">${[['info','Información'],['hist','Historial'],['pend','Tareas',abiertas.length]].map(t=>`<button type="button" role="tab" class="${GCM.ltab===t[0]?'is-on':''}" aria-selected="${GCM.ltab===t[0]}" onclick="gcmLeadTab('${t[0]}')">${t[1]}${t[2]?' · '+t[2]:''}</button>`).join('')}</div>
     <div class="gcm-l-body">${cuerpo}</div>`;
-  if(enSh){ document.getElementById('gcm-sh-t').textContent = 'Lead'; gcmShBody(fichaHTML); } else box.innerHTML = fichaHTML;
+  /* Repintar sin perder el lugar: misma posición de scroll (panel, página y
+     sheet) y el foco vuelve al campo en el que estaba el usuario. */
+  const st = enSh ? 0 : box.scrollTop, wy = window.scrollY, fa = document.activeElement;
+  const fk = fa && box.contains(fa) && fa.dataset ? fa.dataset.k || '' : '';
+  if(enSh){ document.getElementById('gcm-sh-t').textContent = 'Lead'; gcmShBody(fichaHTML); } else { box.innerHTML = fichaHTML; box.scrollTop = st; }
+  if(Math.abs(window.scrollY - wy) > 1) window.scrollTo(0, wy);
+  if(fk){ const n = box.querySelector('[data-k="'+fk+'"]'); if(n) try{ n.focus({preventScroll:true}); }catch(e){} }
 }
 function gcmLeadCampo(id, k, v){
   const l = gcmLead(id); if(!l) return;
@@ -28524,7 +28532,17 @@ function gcmLeadCampo(id, k, v){
   if(k === 'departamento' && !l.campos.zona && l.pais !== 'colombia' && ZONA_POR_REGION[v]) l.campos.zona = (ZONAS.find(z=>z.value===ZONA_POR_REGION[v])||{}).label || '';
   if(k === 'seguimiento') gcmLeadHist(l, 'Seguimiento actualizado', v);
   else gcmLeadHist(l, cp.l+': '+(v === '' ? 'pendiente' : gcmCampoValTxt(l, cp)));
-  gcmRenderLeadsLista();
+  /* Dato del cliente: queda en la empresa para los próximos leads. */
+  const e = GCM_CAMPOS_CLIENTE.includes(k) ? gcmEmp(l.empresaId) : null;
+  if(e && v){
+    e[k] = v; if(k === 'sector') e.rubro = e.rubro || v;
+    if(k === 'segmento' && e.sector && !sectoresDeSegmento(v).includes(e.sector)) e.sector = '';
+    if(k === 'departamento' && l.campos.zona) e.zona = l.campos.zona;
+    delete e._virtual; gcmGuardar(e);
+  }
+  /* Se repinta después de que el foco pasa al siguiente campo (el cambio se
+     guarda al salir del campo): así el clic en el campo siguiente no se pierde. */
+  setTimeout(gcmRenderLeadsLista, 0);
 }
 function gcmLeadTarea(id){
   const l = gcmLead(id), t = gcmVal('gcm-d-tar'), f = gcmVal('gcm-d-tarf'); if(!l || !t) return;
@@ -28844,6 +28862,7 @@ function gcmLeadNuevo(pre){
       <label>Ejecutivo responsable<select id="gcm-n-ej" ${ejs.length > 1 ? '' : 'disabled'}>${gcmOpts(ejs, pre.ejecutivo && ejs.includes(pre.ejecutivo) ? pre.ejecutivo : (ejs.includes(GCM.yo) ? GCM.yo : ejs[0]))}</select></label>
       <label>Origen<select id="gcm-n-ori">${gcmOpts(GCM_ORIGENES, pre.origen || 'Visita')}</select></label>
     </div>
+    <p class="gcm-f-hint" id="gcm-n-her"></p>
     ${pre.actId ? `<p class="gcm-nota is-info">La visita del ${gcmFmt((gcmAct(pre.actId)||{}).fecha)} quedará vinculada como primera gestión del lead.</p>` : ''}`,
     [{t:'Cancelar'}, {t:'Crear lead', cls:'btn-primary', fn:()=>gcmLeadCrear(pre)}], {foco:false});
   gcmNuevoLeadEmp(pre.contactoId);
@@ -28852,19 +28871,44 @@ function gcmPickRefrescar(id, sel){ const w = document.getElementById('gcm-pkw-'
 function gcmNuevoLeadEmp(sel){
   const emp = (GCM._ln || {}).empresaId, s = document.getElementById('gcm-n-con'); if(!s) return;
   const cons = GCM.d.contactos.filter(c=>c.empresaId===emp);
+  const her = document.getElementById('gcm-n-her'), hd = emp ? gcmDatosCliente(emp).txt : '';
+  if(her) her.textContent = hd ? 'Se copian los datos del cliente: '+hd+'. Puedes cambiarlos en la ficha.' : '';
   s.innerHTML = emp ? gcmOpts(cons.map(c=>({v:c.id, t:c.nombre})), sel || (cons.length === 1 ? cons[0].id : ''), cons.length ? 'Sin contacto por ahora' : 'La empresa aún no tiene contactos') : '<option value="">Elige primero la empresa</option>';
 }
 function gcmLeadNuevoEmpresa(){
   const pre = {ejecutivo:gcmVal('gcm-n-ej'), titulo:gcmVal('gcm-n-tit'), origen:gcmVal('gcm-n-ori')};
   gcmEmpresaNueva({alCrear:id=>gcmLeadNuevo(Object.assign(pre, {empresaId:id}))});
 }
+/* Datos que son del CLIENTE y no del proyecto: Agro / No agro, sector, zona y
+   departamento. Un lead nuevo los hereda para no volver a llenarlos. Fuente,
+   en este orden: la empresa, el lead más reciente de la empresa y la
+   oportunidad más reciente del cliente en el Planner. Siguen editables. */
+const GCM_CAMPOS_CLIENTE = ['segmento', 'sector', 'zona', 'departamento'];
+function gcmDatosCliente(eid){
+  const campos = {}; if(!eid) return {campos, txt:''};
+  const e = gcmEmp(eid) || {}, pon = (k, v)=>{ if(v && !campos[k]) campos[k] = v; };
+  pon('segmento', e.segmento); pon('sector', e.sector); pon('departamento', e.departamento); pon('zona', e.zona);
+  GCM.d.leads.filter(l=>l.empresaId === eid && l.campos).sort((a,b)=>String(b.creado).localeCompare(String(a.creado)))
+    .forEach(l=>GCM_CAMPOS_CLIENTE.forEach(k=>pon(k, l.campos[k])));
+  const geo = gcmGeo();
+  gcmOppsDe(GCM.pais).filter(o=>(o.clienteId ? o.clienteId === eid : (cliPorClave(o.cliente)||{}).id === eid)).slice().reverse().forEach(o=>{
+    pon('segmento', o.segmentoCliente);
+    if(o.sector && (!o.segmentoCliente || !campos.segmento || o.segmentoCliente === campos.segmento)) pon('sector', o.sector);
+    if(o.region && geo.deptos.includes(o.region)) pon('departamento', o.region);
+    const z = (ZONAS.find(x=>x.value === o.zona) || {}).label; if(z && geo.zonas.includes(z)) pon('zona', z);
+  });
+  if(campos.sector && campos.segmento && !sectoresDeSegmento(campos.segmento).includes(campos.sector)) delete campos.sector;
+  const txt = [campos.segmento ? (campos.segmento === 'agro' ? 'Agro' : 'No agro') : '', campos.sector, campos.departamento, campos.zona].filter(Boolean).join(' · ');
+  return {campos, txt};
+}
 function gcmLeadCrear(pre){
   const emp = (GCM._ln || {}).empresaId, tit = gcmVal('gcm-n-tit');
   if(!emp){ showToast('Selecciona o registra la empresa del lead.', 'warn'); return; }
   if(!tit){ showToast('Describe brevemente el proyecto o la necesidad.', 'warn'); document.getElementById('gcm-n-tit').focus(); return; }
+  const her = gcmDatosCliente(emp);
   const l = gcmNuevo('lead', 'LD', {empresaId:emp, contactoId:gcmVal('gcm-n-con'), titulo:tit, ejecutivo:gcmVal('gcm-n-ej') || GCM.ses, estado:'Nuevo', origen:gcmVal('gcm-n-ori'),
-    creado:new Date().toISOString(), calif:'', opId:'', campos:{}, hist:[], conversion:null});
-  gcmLeadHist(l, 'Lead registrado');
+    creado:new Date().toISOString(), calif:'', opId:'', campos:Object.assign({}, her.campos), hist:[], conversion:null});
+  gcmLeadHist(l, 'Lead registrado', her.txt ? 'Datos del cliente copiados: '+her.txt : '');
   if(pre.actId){ const a = gcmAct(pre.actId); if(a){ a.leadId = l.id; gcmGuardar(a); l.estado = 'En seguimiento'; gcmLeadHist(l, 'Vinculado a la '+a.tipo.toLowerCase()+' del '+gcmFmt(a.fecha)); } }
   gcmModalCerrar();
   showToast('Lead creado.', 'ok');
@@ -29092,13 +29136,23 @@ function gcmEmpresaNueva(opts){
     <div class="gcm-fgrid">
       <label class="full">Razón social<input type="text" id="gcm-e-nom" maxlength="90" value="${gcmE(ed?ed.nombre:'')}" placeholder="Se buscan coincidencias en la Base Maestra mientras escribes" oninput="gcmDupBuscar()"></label>
       <label>${geo.id}<input type="text" id="gcm-e-ruc" maxlength="15" inputmode="numeric" value="${gcmE(ed?ed.ruc||'':'')}" placeholder="${geo.idLen ? geo.idLen+' dígitos' : 'Opcional'}" oninput="gcmDupBuscar()"></label>
-      <label>Rubro<input type="text" id="gcm-e-rub" maxlength="50" value="${gcmE(ed?ed.rubro||'':'')}" placeholder="p. ej. Agroexportación"></label>
+      <label>Agro / No agro<select id="gcm-e-seg" onchange="gcmEmpSecOpts()">${gcmOpts([{v:'agro', t:'Agro'}, {v:'no_agro', t:'No agro'}], ed ? ed.segmento||'' : '', 'Sin definir')}</select></label>
+      <label>Sector<select id="gcm-e-sec"></select></label>
     </div>
+    <p class="gcm-f-hint">Agro / No agro y Sector se copian a los leads nuevos de esta empresa: no hay que volver a llenarlos.</p>
     ${ed ? `<p class="gcm-f-hint">ID permanente ${gcmE(ed.id)}: cambiar el nombre no rompe los vínculos con leads, contactos ni oportunidades.</p>` : ''}
     <div class="gcm-dup" id="gcm-e-dup" aria-live="polite"></div>`,
     [{t:'Cancelar'}, {t:ed ? 'Guardar cambios' : 'Registrar empresa', cls:'btn-primary', id:'gcm-e-ok', fn:gcmEmpresaCrear}]);
   GCM.alCrearEmpresa = opts.alCrear || null;
+  gcmEmpSecOpts(ed ? ed.sector || '' : '');
   gcmDupBuscar();
+}
+/* Sector según Agro / No agro (mismas listas que la ficha del lead). */
+function gcmEmpSecOpts(sel){
+  const s = document.getElementById('gcm-e-sec'); if(!s) return;
+  const seg = gcmVal('gcm-e-seg'), v = sel != null ? sel : s.value;
+  const L = seg ? sectoresDeSegmento(seg) : SECTORES.concat(SECTORES_AGRO.filter(x=>!SECTORES.includes(x)));
+  s.innerHTML = gcmOpts(L, L.includes(v) ? v : '', 'Sin definir');
 }
 function gcmDupBuscar(){
   const box = document.getElementById('gcm-e-dup'); if(!box) return;
@@ -29114,17 +29168,18 @@ function gcmDupBuscar(){
 }
 function gcmUsarEmpresaSel(id){ const cb = GCM.alCrearEmpresa; GCM.alCrearEmpresa = null; if(cb){ cb(id); return; } gcmUsarEmpresa(id); }
 async function gcmEmpresaCrear(){
-  const nom = gcmVal('gcm-e-nom'), ruc = gcmVal('gcm-e-ruc').replace(/\D/g,''), rub = gcmVal('gcm-e-rub'), ed = GCM._empEdit ? gcmEmp(GCM._empEdit) : null, geo = gcmGeo();
+  const nom = gcmVal('gcm-e-nom'), ruc = gcmVal('gcm-e-ruc').replace(/\D/g,''), ed = GCM._empEdit ? gcmEmp(GCM._empEdit) : null, geo = gcmGeo();
+  const seg = gcmVal('gcm-e-seg'), sec = gcmVal('gcm-e-sec'), rub = sec || (ed ? ed.rubro || '' : '');
   if(ed){
     if(nom.length < 3){ showToast('Indica la razón social.', 'warn'); return; }
     if(ruc && geo.idLen && ruc.length !== geo.idLen){ showToast('El '+geo.id+' debe tener '+geo.idLen+' dígitos.', 'warn'); return; }
     if(cliClave(nom) !== cliClave(ed.nombre)){ const ok = await cliRenombrar(ed.id, nom); if(!ok) return; gcmEmpCache = null; }
     const e = gcmEmp(ed.id) || ed;
-    e.ruc = ruc; e.rubro = rub; e.pais = e.pais || GCM.pais;
+    e.ruc = ruc; e.rubro = rub; e.segmento = seg; e.sector = sec; e.pais = e.pais || GCM.pais;
     gcmGuardar(e);
     gcmModalCerrar(); showToast('Empresa actualizada.', 'ok'); gcmRenderCarteraLista(); return;
   }
-  const e = await gcmEmpresaRegistrar(nom, ruc, rub); if(!e) return;
+  const e = await gcmEmpresaRegistrar(nom, ruc, rub, {segmento:seg, sector:sec}); if(!e) return;
   const cb = GCM.alCrearEmpresa; GCM.alCrearEmpresa = null;
   if(cb){ cb(e.id); return; }
   gcmModalCerrar(); GCM.cf.sel = e.id; GCM.cf.q = '';
