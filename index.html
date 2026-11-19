@@ -7839,6 +7839,15 @@
   :is(#gcm-root,#gcm-sheet) .gcm-ld-h .gcm-id{font:500 11.5px 'IBM Plex Mono',monospace;color:var(--ink-dim);}
   :is(#gcm-root,#gcm-sheet) .gcm-ld-h .gcm-ico-btn{width:30px;height:30px;}
   :is(#gcm-root,#gcm-sheet) .gcm-ld-t{margin:8px 0 3px;font:700 19px/1.25 'Space Grotesk',sans-serif;letter-spacing:-.01em;color:var(--ink);}
+  /* Edición en la misma ficha del lead (sin modal «Editar lead») */
+  :is(#gcm-root,#gcm-sheet) .gcm-ld-tin{display:block;box-sizing:border-box;margin:6px -8px 1px;width:calc(100% + 16px);padding:3px 8px;border:1px solid transparent;border-radius:8px;background:transparent;outline:none;transition:border-color var(--dur-2) var(--ease),background var(--dur-2) var(--ease);}
+  :is(#gcm-root,#gcm-sheet) .gcm-ld-tin:hover{border-color:var(--glass-border);}
+  :is(#gcm-root,#gcm-sheet) .gcm-ld-tin:focus{border-color:var(--teal);background:var(--surface);box-shadow:0 0 0 3px color-mix(in srgb, var(--teal) 16%, transparent);}
+  :is(#gcm-root,#gcm-sheet) .gcm-ld-desc{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border:1px solid transparent;border-radius:var(--radius-pill);background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--ink-dim);cursor:pointer;}
+  :is(#gcm-root,#gcm-sheet) .gcm-ld-desc svg{width:13px;height:13px;}
+  :is(#gcm-root,#gcm-sheet) .gcm-ld-desc:hover{border-color:color-mix(in srgb, var(--danger) 40%, transparent);background:var(--danger-bg);color:var(--danger);}
+  :is(#gcm-root,#gcm-sheet) .gcm-dl dd .gcm-in{width:100%;min-height:32px;padding:4px 8px;font-size:12.5px;}
+  :is(#gcm-root,#gcm-sheet) .gcm-ld-con-m small .gcm-link{font-size:inherit;}
   :is(#gcm-root,#gcm-sheet) .gcm-ld-e{margin:0 0 14px;font-size:13px;}
   :is(#gcm-root,#gcm-sheet) .gcm-link.is-ink{color:var(--ink-soft);font-weight:500;text-align:left;}
   :is(#gcm-root,#gcm-sheet) .gcm-ld-con{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 12px;border-radius:12px;border:1px solid var(--glass-border);}
@@ -27190,7 +27199,7 @@ function gcmMgCard(a, o){
       </div>` : ''}
       ${a.estado === 'Realizada' && puedeRep ? `<div class="gcm-mg-acc"><button type="button" class="btn-secondary" onclick="gcmMgResultado('${a.id}','real')">${gcmIco('edit')}Editar reporte</button>
         <button type="button" class="btn-secondary" onclick="gcmMgNueva({editar:'${a.id}'})">${gcmIco('edit')}Editar visita</button>
-        ${l && gcmLeadPuedeEditar(l) ? `<button type="button" class="btn-secondary" onclick="gcmActEditarLead('${l.id}')">${gcmIco('edit')}Editar lead</button>` : ''}
+        ${l ? `<button type="button" class="btn-secondary" onclick="gcmLeadAbrir('${l.id}')">${gcmIco('target')}Ver lead</button>` : ''}
         ${!l && !a.opRef ? `<button type="button" class="btn-secondary" onclick="gcmActCrearLead('${a.id}')">${gcmIco('target')}Crear lead</button>` : ''}</div>` : ''}
       ${macc}
     </div></div></div>
@@ -28294,7 +28303,7 @@ function gcmActDetalle(id){
     if(a.estado === 'Realizada' && puede){
       bot.push({t:'Editar reporte', fn:()=>gcmMgResultado(a.id, 'real')});
       bot.push({t:'Editar visita', fn:()=>gcmMgNueva({editar:a.id})});
-      if(l && gcmLeadPuedeEditar(l)) bot.push({t:'Editar lead', fn:()=>gcmActEditarLead(l.id)});
+      if(l) bot.push({t:'Ver lead', fn:()=>{ gcmShCerrar(); gcmLeadAbrir(l.id); }});
       if(!l && !a.opRef) bot.push({t:'Crear lead', fn:()=>gcmActCrearLead(a.id)});
     }
     bot.push({t:'Cerrar', cls:'btn-primary'});
@@ -28475,8 +28484,9 @@ function gcmRenderLeadsDet(){
   if(GCM.ltab === 'info'){
     const dis = editable ? '' : ' disabled';
     cuerpo = `<dl class="gcm-dl" style="grid-template-columns:1fr 1fr">
-        <div><dt>Ejecutivo</dt><dd>${gcmE(l.ejecutivo)}</dd></div>
-        <div><dt>Origen · creado</dt><dd>${gcmE(l.origen||'—')} · ${gcmFmt(String(l.creado||'').slice(0,10))}</dd></div>
+        <div><dt>Ejecutivo responsable</dt><dd>${editable && gcmSupervisa() ? `<select class="gcm-in" data-k="ejecutivo" onchange="gcmLeadDato('${l.id}','ejecutivo',this.value)">${gcmOpts(GCM_EJECUTIVOS.includes(l.ejecutivo) ? GCM_EJECUTIVOS : GCM_EJECUTIVOS.concat(l.ejecutivo), l.ejecutivo)}</select>` : gcmE(l.ejecutivo)}</dd></div>
+        <div><dt>Origen</dt><dd>${editable ? `<select class="gcm-in" data-k="origen" onchange="gcmLeadDato('${l.id}','origen',this.value)">${gcmOpts(GCM_ORIGENES.includes(l.origen) || !l.origen ? GCM_ORIGENES : GCM_ORIGENES.concat(l.origen), l.origen||'')}</select>` : gcmE(l.origen||'—')}</dd></div>
+        <div><dt>Creado</dt><dd>${gcmFmt(String(l.creado||'').slice(0,10))}</dd></div>
         <div><dt>País</dt><dd>${gcmE(coOpLabel(l.pais || GCM.pais))}</dd></div>
         <div><dt>Identificador</dt><dd><span class="gcm-id">${gcmE(l.id)}</span></dd></div>
         ${l.opId ? `<div style="grid-column:1/-1"><dt>Oportunidad</dt><dd><button type="button" class="gcm-link" onclick="gcmAbrirOp('${gcmE(l.opId)}')">#${gcmE(l.opId)}</button></dd></div>` : ''}
@@ -28496,12 +28506,12 @@ function gcmRenderLeadsDet(){
   const fichaHTML = `
     <div class="gcm-ld-h">
       <span class="gcm-drw-ch">${gcmChipLead(l.estado)}</span>
-      <span class="gcm-ld-ha">${puede && !gcmLeadBloqueado(l) ? `<button type="button" class="gcm-ico-btn is-ghost" onclick="gcmLeadEditar('${l.id}')" title="Editar lead" aria-label="Editar lead">${gcmIco('edit')}</button>` : ''}${enSh ? `<button type="button" class="gcm-ld-x" onclick="gcmShCerrar()" aria-label="Cerrar">${gcmIco('x')}</button>` : ''}</span>
+      <span class="gcm-ld-ha">${editable ? `<button type="button" class="gcm-ld-desc" onclick="gcmLeadDescartar('${l.id}')" title="Descartar lead (pide el motivo)">${gcmIco('x')}Descartar</button>` : ''}${enSh ? `<button type="button" class="gcm-ld-x" onclick="gcmShCerrar()" aria-label="Cerrar">${gcmIco('x')}</button>` : ''}</span>
     </div>
-    <h3 class="gcm-ld-t">${gcmE(l.titulo)}</h3>
+    ${editable ? `<input type="text" class="gcm-ld-t gcm-ld-tin" data-k="titulo" maxlength="120" value="${gcmE(l.titulo)}" aria-label="Proyecto o necesidad identificada" title="Proyecto o necesidad · haz clic para editar" onchange="gcmLeadDato('${l.id}','titulo',this.value)" onkeydown="if(event.key==='Enter')this.blur()">` : `<h3 class="gcm-ld-t">${gcmE(l.titulo)}</h3>`}
     <p class="gcm-ld-e"><button type="button" class="gcm-link is-ink" onclick="gcmCarteraSel('${l.empresaId}')" title="Ver en Cartera">${gcmE(e?e.nombre:'—')}</button></p>
-    ${c ? `<div class="gcm-ld-con"><span class="gcm-av">${gcmIni(c.nombre)}</span><span class="gcm-ld-con-m"><b>${gcmE(c.nombre)}</b><small>${gcmE(c.cargo||'')}</small></span>${gcmConAcc(c.id)}</div>`
-      : `<div class="gcm-ld-con is-vacio">${gcmIco('user')}<span>Sin contacto principal</span>${editable ? `<button type="button" class="gcm-link" onclick="gcmLeadEditar('${l.id}')">Definir</button>` : ''}</div>`}
+    ${c ? `<div class="gcm-ld-con"><span class="gcm-av">${gcmIni(c.nombre)}</span><span class="gcm-ld-con-m"><b>${gcmE(c.nombre)}</b><small>${gcmE(c.cargo||'')}${editable ? `${c.cargo ? ' · ' : ''}<button type="button" class="gcm-link" onclick="gcmLeadContacto('${l.id}')">Cambiar</button>` : ''}</small></span>${gcmConAcc(c.id)}</div>`
+      : `<div class="gcm-ld-con is-vacio">${gcmIco('user')}<span>Sin contacto principal</span>${editable ? `<button type="button" class="gcm-link" onclick="gcmLeadContacto('${l.id}')">Definir</button>` : ''}</div>`}
     ${nx ? `<div class="gcm-ld-nx${nx.c?' is-'+nx.c:''}"><small>Próxima acción · ${gcmE(nx.fl)}</small><b>${gcmE(nx.t)}</b></div>` : ''}
     <div class="gcm-ld-kp">
       <div><small>Datos comerciales</small><b>${p.n}/${p.t}</b>${gcmSeg7(p)}</div>
@@ -28803,49 +28813,64 @@ function gcmCrearOppLocal(l, pais, nota, forzarCO){
   renderAll();
   return o.id;
 }
-/* Mismo criterio que el lápiz de la ficha del lead. */
-function gcmLeadPuedeEditar(l){ return !!l && (l.ejecutivo === GCM.ses || (gcmSupervisa() && !esGerencia())) && !gcmLeadBloqueado(l); }
-/* Desde una visita (también ya reportada): abre la ficha del lead y su edición. */
-function gcmActEditarLead(id){
-  const l = gcmLead(id); if(!l) return;
-  gcmShCerrar(); gcmLeadAbrir(id);
-  if(gcmLeadPuedeEditar(l)) setTimeout(()=>gcmLeadEditar(id), 60);
-}
 function gcmActCrearLead(actId){
   const a = gcmAct(actId); if(!a) return;
   gcmShCerrar();
   gcmLeadNuevo({empresaId:a.empresaId, contactoId:a.contactoId, ejecutivo:a.ejecutivo, origen:'Visita', actId:a.id, titulo:a.titulo && a.titulo !== 'Sin objetivo' ? a.titulo : ''});
 }
-function gcmLeadEditar(id){
-  const l = gcmLead(id); if(!l) return;
-  const cons = GCM.d.contactos.filter(c=>c.empresaId===l.empresaId);
-  const estados = GCM_EST_LEAD.filter(x=>x !== 'Conversión solicitada' && x !== 'Convertido');
-  gcmModal('Editar lead', `<div class="gcm-fgrid">
-      <label class="full">Proyecto o necesidad identificada<input type="text" id="gcm-le-t" maxlength="120" value="${gcmE(l.titulo)}"></label>
-      <label>Contacto principal<select id="gcm-le-c">${gcmOpts(cons.map(c=>({v:c.id, t:c.nombre})), l.contactoId, 'Sin contacto')}</select></label>
-      <label>Origen<select id="gcm-le-o">${gcmOpts(GCM_ORIGENES, l.origen)}</select></label>
-      ${estados.includes(l.estado) ? `<label>Estado<select id="gcm-le-s">${gcmOpts(estados, l.estado)}</select></label>` : ''}
-      ${gcmSupervisa() ? `<label>Ejecutivo responsable<select id="gcm-le-e">${gcmOpts(GCM_EJECUTIVOS.includes(l.ejecutivo) ? GCM_EJECUTIVOS : GCM_EJECUTIVOS.concat(l.ejecutivo), l.ejecutivo)}</select></label>` : ''}
-      <label class="full">Motivo <small>si el estado pasa a Descartado</small><input type="text" id="gcm-le-m" maxlength="200"></label>
-    </div>
-    <p class="gcm-f-hint">Editar el lead no borra su historial: cada cambio queda registrado.</p>`, [{t:'Cancelar'}, {t:'Guardar', cls:'btn-primary', fn:()=>{
-      const t = gcmVal('gcm-le-t'); if(!t){ showToast('La necesidad no puede quedar vacía.', 'warn'); return; }
-      const cambios = [];
-      if(t !== l.titulo){ cambios.push('Necesidad: '+t); l.titulo = t; }
-      const c = gcmVal('gcm-le-c'); if(c !== (l.contactoId||'')){ l.contactoId = c; cambios.push('Contacto: '+((gcmCon(c)||{}).nombre || 'sin contacto')); }
-      const o = gcmVal('gcm-le-o'); if(o !== l.origen){ l.origen = o; cambios.push('Origen: '+o); }
-      if(document.getElementById('gcm-le-e')){ const ej = gcmVal('gcm-le-e'); if(ej !== l.ejecutivo){ l.ejecutivo = ej; cambios.push('Ejecutivo: '+ej); } }
-      const s = document.getElementById('gcm-le-s') ? gcmVal('gcm-le-s') : l.estado, m = gcmVal('gcm-le-m');
-      if(s !== l.estado){
-        if(s === 'Descartado' && !m){ showToast('Indica el motivo del descarte.', 'warn'); return; }
-        l.estado = s; if(s === 'Calificado') l.calif = l.calif || gcmD(0);
-        gcmLeadHist(l, 'Estado: '+s, m);
-      }
-      if(cambios.length) gcmLeadHist(l, 'Datos del lead editados', cambios.join(' · ')); else gcmGuardar(l);
-      gcmModalCerrar(); showToast('Lead actualizado.', 'ok'); gcmRenderLeadsLista();
-    }}]);
+/* ---------- lead: edición en la misma ficha ----------
+   Sin modal «Editar lead»: necesidad, origen y ejecutivo se editan en la
+   ficha; el contacto con «Definir» / «Cambiar» (y alta de contacto); el
+   descarte con su motivo. Cada cambio queda en el historial del lead. */
+function gcmLeadEditable(l){ return !!l && gcmLeadActivo(l) && (l.ejecutivo === GCM.ses || (gcmSupervisa() && !esGerencia())) && !gcmLeadBloqueado(l); }
+function gcmLeadDato(id, k, v){
+  const l = gcmLead(id); if(!gcmLeadEditable(l)) return;
+  v = String(v == null ? '' : v).replace(/s+/g, ' ').trim();
+  if(k === 'titulo' && !v){ showToast('La necesidad no puede quedar vacía.', 'warn'); setTimeout(gcmRenderLeadsDet, 0); return; }
+  if(v === String(l[k] || '')) return;
+  l[k] = v;
+  gcmLeadHist(l, 'Datos del lead editados', ({titulo:'Necesidad', origen:'Origen', ejecutivo:'Ejecutivo'}[k] || k)+': '+v);
+  if(k === 'ejecutivo') showToast('Lead asignado a '+v+'.', 'ok');
+  setTimeout(gcmRenderLeadsLista, 0);
 }
-
+function gcmLeadSetContacto(id, cid){
+  const l = gcmLead(id), c = gcmCon(cid); if(!l || !c) return;
+  gcmModalCerrar();
+  if(l.contactoId === cid) return;
+  l.contactoId = cid;
+  gcmLeadHist(l, 'Contacto principal: '+c.nombre);
+  showToast('Contacto principal: '+c.nombre+'.', 'ok');
+  gcmRenderLeadsLista();
+}
+/* «Definir» / «Cambiar»: sin contactos en la empresa, directo al alta; con
+   contactos, elegir uno o agregar otro. El nuevo queda como principal. */
+function gcmLeadContacto(id){
+  const l = gcmLead(id); if(!gcmLeadEditable(l)) return;
+  if(!l.empresaId || !gcmEmp(l.empresaId)){ showToast('Este lead aún no tiene una empresa de la Base Maestra vinculada.', 'warn'); return; }
+  const alta = ()=>gcmContactoNuevo(l.empresaId, '', {alGuardar:cid=>gcmLeadSetContacto(id, cid)});
+  const cons = GCM.d.contactos.filter(c=>c.empresaId === l.empresaId);
+  if(!cons.length){ alta(); return; }
+  GCM._lcAlta = alta;
+  gcmModal('Contacto principal · '+gcmCorto(gcmEmpNom(l.empresaId, l)), `<div class="gcm-f-cons">${cons.map(c=>`<button type="button" class="gcm-f-con${l.contactoId===c.id?' is-on':''}" aria-pressed="${l.contactoId===c.id}" onclick="gcmLeadSetContacto('${l.id}','${c.id}')">
+      <span class="gcm-av">${gcmIni(c.nombre)}</span><span><b>${gcmE(c.nombre)}</b><small>${gcmE([c.cargo, c.tel || c.email].filter(Boolean).join(' · '))}</small></span>${l.contactoId===c.id ? gcmIco('check') : ''}</button>`).join('')}</div>`,
+    [{t:'Cancelar'}, {t:'+ Agregar contacto', cls:'btn-primary', fn:()=>{ gcmModalCerrar(); GCM._lcAlta(); }}], {foco:false, compact:true});
+}
+function gcmLeadDescartar(id){
+  const l = gcmLead(id); if(!gcmLeadEditable(l)) return;
+  gcmModal('Descartar lead', `<p class="gcm-nota">«${gcmE(l.titulo)}» pasa a <b>Descartado</b>. No se elimina: su historial se conserva y se puede reactivar.</p>
+    <div class="gcm-fgrid">
+      <label class="full">Motivo <i class="gcm-req-i">*</i><select id="gcm-ld-dm">${gcmOpts(GCM_MOT_DESCARTE, '', 'Elige el motivo')}</select></label>
+      <label class="full">Detalle <small>obligatorio si el motivo es «Otro»</small><textarea id="gcm-ld-dd" rows="2" maxlength="300"></textarea></label>
+    </div>`,
+    [{t:'Cancelar'}, {t:'Descartar lead', cls:'btn-delete', fn:()=>{
+      const m = gcmVal('gcm-ld-dm'), d = gcmVal('gcm-ld-dd');
+      if(!m){ showToast('Elige el motivo del descarte.', 'warn'); return; }
+      if(m === 'Otro' && !d){ showToast('Detalla el motivo del descarte.', 'warn'); return; }
+      l.estado = 'Descartado';
+      gcmLeadHist(l, 'Estado: Descartado', m+(d ? ': '+d : ''));
+      gcmModalCerrar(); showToast('Lead descartado. El historial se conserva.', 'info'); gcmRenderLeadsLista();
+    }}], {foco:false, compact:true});
+}
 /* ---------- lead: crear (lo mínimo) ---------- */
 function gcmLeadNuevo(pre){
   pre = pre || {};
@@ -29187,7 +29212,8 @@ async function gcmEmpresaCrear(){
 }
 /* Contacto: alta o edición del MISMO registro (no se duplica). Conserva la
    empresa y sus relaciones con leads y oportunidades; sede, zona y país. */
-function gcmContactoNuevo(eid, cid){
+function gcmContactoNuevo(eid, cid, opts){
+  opts = opts || {};
   const e = gcmEmp(eid); if(!e) return;
   const c = cid ? gcmCon(cid) : null;
   if(c && !(c.ejecutivo === GCM.ses || (c.compartido||[]).includes(GCM.ses) || gcmSupervisa())){ showToast('Solo el responsable del contacto o un supervisor puede editarlo.', 'warn'); return; }
@@ -29214,9 +29240,11 @@ function gcmContactoNuevo(eid, cid){
       if(gcmDupContactos({nom:n, cel:t, mail:m}, eid).some(x=>x.bloquea && x.c.id !== cid)){ showToast('Ese contacto ya existe en la empresa.', 'error'); return; }
       const ej = gcmVal('gcm-k-e') || respSel, sh = [...document.querySelectorAll('#gcm-m-body .gcm-k-sh:checked')].map(i=>i.value).filter(x=>x!==ej);
       const datos = {nombre:n, cargo, tel:t, email:m, ejecutivo:ej, zona:gcmVal('gcm-k-z'), sedeId:gcmVal('gcm-k-s'), compartido:sh};
+      let nc = c;
       if(c){ Object.assign(c, datos, {editado:{f:new Date().toISOString(), por:gcmUsuario()}}); gcmGuardar(c); }
-      else gcmNuevo('contacto', 'CT', Object.assign({empresaId:eid}, datos));
-      gcmModalCerrar(); showToast(c ? 'Contacto actualizado.' : 'Contacto agregado a '+gcmCorto(e.nombre)+'.', 'ok'); gcmRefrescar();
+      else nc = gcmNuevo('contacto', 'CT', Object.assign({empresaId:eid}, datos));
+      gcmModalCerrar(); showToast(c ? 'Contacto actualizado.' : 'Contacto agregado a '+gcmCorto(e.nombre)+'.', 'ok');
+      if(opts.alGuardar) opts.alGuardar(nc.id); else gcmRefrescar();
     }}]);
 }
 function gcmDupConModal(eid, cid){
