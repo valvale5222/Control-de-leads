@@ -6798,6 +6798,7 @@
   .gcm-mg-fab{display:none;}
   @keyframes gcmFab{from{opacity:0;transform:translateY(18px) scale(.92);}to{opacity:1;transform:none;}}
   /* Bottom sheet (móvil) / diálogo centrado (escritorio) */
+  #confirm-modal-overlay{z-index:110;} /* «¿Descartar cambios?» por encima del sheet y del modal de Gestión Comercial */
   .gcm-sh-ov{position:fixed;inset:0;z-index:101;display:flex;align-items:flex-end;justify-content:center;background:rgba(3,8,14,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:overlayIn .2s var(--ease) both;}
   .gcm-sh-ov.hidden{display:none;}
   :root.gcm-sh-lock body{overflow:hidden;}
@@ -6810,7 +6811,7 @@
   .gcm-sh-head h3{margin:0;font:700 17px 'Space Grotesk',sans-serif;color:var(--ink);}
   .gcm-sh-head .modal-close{width:36px;height:36px;border-radius:50%;}
   .gcm-sh-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:16px;padding:14px 18px 18px;}
-  .gcm-sh-foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface);}
+  .gcm-sh-foot{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface);}
   .gcm-sh-foot button{min-height:44px;}
   @media (prefers-reduced-motion:reduce){ .gcm-sh,.gcm-mg.is-anim > *,.gcm-mg-list,.gcm-mg-st.is-danger,.gcm-mg-bar i{animation:none;} }
   /* Formularios del sheet */
@@ -6922,7 +6923,8 @@
     .gcm-mg-fab:active{transform:scale(.96);}
     .gcm-sh .gcm-in{font-size:16px;min-height:44px;}
     .gcm-sh textarea.gcm-in{min-height:72px;}
-    .gcm-sh-foot > button{flex:1;}
+    .gcm-sh-foot{flex-wrap:wrap;}
+    .gcm-sh-foot > button{flex:1 1 calc(50% - 5px);}
   }
   @media (max-width:400px){
     .gcm-mg-act-h{grid-template-columns:42px minmax(0,1fr) auto 14px;gap:8px;padding-left:12px;}
@@ -7763,6 +7765,15 @@
   #gcm-root .gcm-day.is-hoy .gcm-day-h span{color:var(--teal);}
   #gcm-root .gcm-day .gcm-ofi-tag{margin:0;}
   #gcm-root .gcm-ev{gap:2px;padding:9px 10px;border:1px solid var(--glass-border);border-left:3px solid var(--c);border-radius:10px;background:var(--surface);box-shadow:var(--shadow-xs);transition:transform var(--dur-2) var(--ease-emphasized),box-shadow var(--dur-2) var(--ease);}
+  /* Arrastrar y soltar en la agenda semanal */
+  #gcm-root .gcm-week .gcm-ev[draggable="true"]{cursor:grab;}
+  #gcm-root .gcm-week .gcm-ev[draggable="true"]:active{cursor:grabbing;}
+  #gcm-root .gcm-week .gcm-ev.is-drag{opacity:.4;transform:scale(.97);}
+  #gcm-root .gcm-week .gcm-day.is-drop{outline:2px dashed var(--teal);outline-offset:-2px;background:color-mix(in srgb, var(--teal) 9%, var(--surface));}
+  #gcm-root .gcm-week .gcm-day.is-drop-no{outline:2px dashed color-mix(in srgb, var(--danger) 60%, transparent);outline-offset:-2px;cursor:not-allowed;}
+  #gcm-sv-agenda.is-arrastrando .gcm-drag-nav{outline:2px dashed color-mix(in srgb, var(--teal) 60%, transparent);outline-offset:1px;}
+  #gcm-sv-agenda.is-arrastrando .gcm-drag-nav.is-nav-on{background:color-mix(in srgb, var(--teal) 18%, var(--surface));color:var(--teal);}
+  .toast .gcm-link{margin-left:6px;padding:0;border:none;background:none;font:inherit;font-weight:700;color:inherit;text-decoration:underline;cursor:pointer;}
   #gcm-root .gcm-ev:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm);}
   #gcm-root .gcm-ev.is-sinrep{box-shadow:var(--shadow-xs);}
   #gcm-root .gcm-ev span{white-space:normal;overflow:visible;}
@@ -9888,7 +9899,7 @@
   </div>
 
   <!-- Gestión Comercial: modal genérico (actividades, leads, empresas, Planner). -->
-  <div class="modal-overlay hidden" id="gcm-modal" onclick="if(event.target===this) gcmModalCerrar()">
+  <div class="modal-overlay hidden" id="gcm-modal" onclick="gcmFondoClick(event, 'modal')">
     <div class="modal-box gcm-mbox" role="dialog" aria-modal="true" aria-labelledby="gcm-m-t">
       <div class="modal-header">
         <h3 id="gcm-m-t">—</h3>
@@ -9910,7 +9921,7 @@
     </div>
   </div>
   <!-- Gestión Comercial · Mi gestión: bottom sheet en móvil, diálogo en escritorio. -->
-  <div class="gcm-sh-ov hidden" id="gcm-sheet" onclick="if(event.target===this) gcmShCerrar()">
+  <div class="gcm-sh-ov hidden" id="gcm-sheet" onclick="gcmFondoClick(event, 'sheet')">
     <div class="gcm-sh" role="dialog" aria-modal="true" aria-labelledby="gcm-sh-t">
       <div class="gcm-sh-top">
         <div class="gcm-sh-grip" aria-hidden="true"></div>
@@ -18991,7 +19002,7 @@ function trapFocus(modalEl, onEscape){
   const list = [...focusables].filter(el=>el.offsetParent !== null || el===document.activeElement);
   const first = list[0], last = list[list.length-1];
   function handler(e){
-    if(e.key === 'Escape'){ onEscape(); }
+    if(e.key === 'Escape'){ escSeguro(modalEl, onEscape); }
     else if(e.key === 'Tab' && list.length){
       if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
       else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
@@ -19173,6 +19184,42 @@ function closeModal(){
   if(lastFocusedElement){ lastFocusedElement.focus(); lastFocusedElement = null; }
   atenderRefrescoPendiente();
 }
+/* ---------- Cierre seguro de modales, drawers y sheets (toda la app) ----------
+   1) El clic en el fondo solo cierra si EMPEZÓ y TERMINÓ en el fondo. Antes,
+      seleccionar texto de un campo y soltar el mouse fuera cerraba la ventana.
+   2) Si se escribió o se eligió algo en la ventana, cerrar por el fondo o con
+      Esc pide confirmación. La X y «Cancelar» siguen cerrando directo.
+   Gestión Comercial (#gcm-sheet, #gcm-modal) tiene su propia lógica de
+   cambios (gcmCerrarSeguro); aquí solo se le aplica el punto 1. */
+const FONDO_SEL = '.modal-overlay, .drawer-overlay, .gcm-sh-ov';
+const FONDO_SIN_SUCIO = ['confirm-modal-overlay', 'gcm-sheet', 'gcm-modal', 'hor-panel'];
+let fondoDown = null, fondoForzar = null;
+document.addEventListener('pointerdown', e=>{ fondoDown = e.target; }, true);
+function fondoSucio(ov){ return !!ov && ov.dataset.sucio === '1' && !FONDO_SIN_SUCIO.includes(ov.id); }
+function fondoConfirmar(cerrar){
+  askConfirm('Hiciste cambios en esta ventana. Si no los guardaste, se perderán al cerrarla.', cerrar, null,
+    {title:'¿Cerrar sin guardar?', confirmLabel:'Cerrar sin guardar', confirmClass:'btn-delete'});
+}
+window.addEventListener('click', e=>{
+  const t = e.target;
+  if(!t || !t.matches || !t.matches(FONDO_SEL)) return;
+  if(fondoForzar === t){ fondoForzar = null; return; }
+  if(fondoDown !== t){ e.stopImmediatePropagation(); e.preventDefault(); return; }
+  if(fondoSucio(t)){
+    e.stopImmediatePropagation(); e.preventDefault();
+    fondoConfirmar(()=>{ delete t.dataset.sucio; fondoForzar = t; t.click(); });
+  }
+}, true);
+['input', 'change'].forEach(ev=>document.addEventListener(ev, e=>{
+  const ov = e.target && e.target.closest ? e.target.closest(FONDO_SEL) : null;
+  if(ov && !FONDO_SIN_SUCIO.includes(ov.id)) ov.dataset.sucio = '1';
+}, true));
+/* Esc: con cambios, confirma antes de cerrar. */
+function confirmAbierto(){ const c = document.getElementById('confirm-modal-overlay'); return !!c && !c.classList.contains('hidden'); }
+function escSeguro(ov, cerrar){ if(fondoSucio(ov)) fondoConfirmar(()=>{ delete ov.dataset.sucio; cerrar(); }); else cerrar(); }
+/* Al cerrarse (clase hidden), la ventana vuelve a estar «limpia» para la próxima apertura. */
+new MutationObserver(ms=>ms.forEach(m=>{ const ov = m.target; if(ov.dataset && ov.dataset.sucio && ov.classList.contains('hidden')) delete ov.dataset.sucio; }))
+  .observe(document.body, {subtree:true, attributes:true, attributeFilter:['class']});
 /* ---------- Confirmación genérica (modal propio, sin confirm() nativo) ---------- */
 let pendingConfirmAction = null;
 let pendingConfirmCancel = null;
@@ -21403,7 +21450,7 @@ function gerModalIr(){
   if(fn) fn();
 }
 document.addEventListener('keydown', ev=>{
-  if(ev.key==='Escape' && !document.getElementById('ger-modal').classList.contains('hidden')){ ev.stopPropagation(); gerModalCerrar(); }
+  if(ev.key==='Escape' && !document.getElementById('ger-modal').classList.contains('hidden')){ if(confirmAbierto()) return; ev.stopPropagation(); escSeguro(document.getElementById('ger-modal'), gerModalCerrar); }
 }, true);
 
 /* ---------- Descargas ---------- */
@@ -22489,7 +22536,7 @@ function plnQeGuardar(){
 document.addEventListener('keydown', ev=>{
   const ov = document.getElementById('pln-qe');
   if(!ov || ov.classList.contains('hidden')) return;
-  if(ev.key==='Escape'){ ev.stopPropagation(); plnQeCerrar(); }
+  if(ev.key==='Escape'){ if(confirmAbierto()) return; ev.stopPropagation(); escSeguro(ov, plnQeCerrar); }
   else if(ev.key==='Enter' && (ev.ctrlKey || ev.metaKey)){ ev.preventDefault(); plnQeGuardar(); }
 }, true);
 
@@ -27141,7 +27188,10 @@ function gcmMgCard(a, o){
         <button type="button" class="btn-secondary" onclick="gcmMgResultado('${a.id}','reprog')">${gcmIco('refresh')}Reprogramar</button>
         <button type="button" class="btn-secondary" onclick="gcmMgNueva({editar:'${a.id}'})">${gcmIco('edit')}Editar</button>
       </div>` : ''}
-      ${a.estado === 'Realizada' && puedeRep ? `<div class="gcm-mg-acc"><button type="button" class="btn-secondary" onclick="gcmMgResultado('${a.id}','real')">${gcmIco('edit')}Editar reporte</button></div>` : ''}
+      ${a.estado === 'Realizada' && puedeRep ? `<div class="gcm-mg-acc"><button type="button" class="btn-secondary" onclick="gcmMgResultado('${a.id}','real')">${gcmIco('edit')}Editar reporte</button>
+        <button type="button" class="btn-secondary" onclick="gcmMgNueva({editar:'${a.id}'})">${gcmIco('edit')}Editar visita</button>
+        ${l && gcmLeadPuedeEditar(l) ? `<button type="button" class="btn-secondary" onclick="gcmActEditarLead('${l.id}')">${gcmIco('edit')}Editar lead</button>` : ''}
+        ${!l && !a.opRef ? `<button type="button" class="btn-secondary" onclick="gcmActCrearLead('${a.id}')">${gcmIco('target')}Crear lead</button>` : ''}</div>` : ''}
       ${macc}
     </div></div></div>
   </article>`;
@@ -27257,6 +27307,7 @@ function gcmSh(titulo, html, botones){
   const ov = document.getElementById('gcm-sheet'), sh = ov.querySelector('.gcm-sh');
   ov.classList.toggle('is-lead', GCM.shModo === 'lead');
   document.getElementById('gcm-sh-t').textContent = titulo;
+  GCM._sucio.sheet = false;
   const body = document.getElementById('gcm-sh-body');
   body.innerHTML = html; body.scrollTop = 0;
   gcmShFoot(botones);
@@ -27294,8 +27345,37 @@ function gcmShBody(html){ const b = document.getElementById('gcm-sh-body'), st =
   let y0 = null, dy = 0;
   top.addEventListener('touchstart', e=>{ y0 = e.touches[0].clientY; dy = 0; sh.style.transition = 'none'; }, {passive:true});
   top.addEventListener('touchmove', e=>{ if(y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); sh.style.transform = 'translateY('+dy+'px)'; }, {passive:true});
-  top.addEventListener('touchend', ()=>{ if(y0 == null) return; y0 = null; sh.style.transition = ''; if(dy > 90) gcmShCerrar(); else sh.style.transform = ''; });
+  top.addEventListener('touchend', ()=>{ if(y0 == null) return; y0 = null; sh.style.transition = ''; sh.style.transform = ''; if(dy > 90) gcmCerrarSeguro('sheet'); });
 })();
+/* ---------- cierre seguro (sheet y modal) ----------
+   · El clic en el fondo solo cierra si EMPEZÓ y TERMINÓ en el fondo: al
+     seleccionar texto de un campo y soltar el mouse fuera, ya no se cierra.
+   · Con cambios sin guardar (se escribió o se eligió algo), cerrar por el
+     fondo, Esc o arrastrando pide confirmación antes de descartarlos.
+   La ficha del lead y el detalle de la visita guardan al instante: no preguntan. */
+GCM._sucio = {sheet:false, modal:false};
+function gcmMarcarSucio(e){
+  const t = e.target; if(!t || !t.closest) return;
+  if(e.type === 'click' && !t.closest('.gcm-ch, [role=radio], .gcm-seg button, .gcm-r-op')) return;
+  if(t.closest('#gcm-sh-body')) GCM._sucio.sheet = true;
+  else if(t.closest('#gcm-m-body')) GCM._sucio.modal = true;
+}
+['input', 'change', 'click'].forEach(ev=>document.addEventListener(ev, gcmMarcarSucio, true));
+function gcmHaySucio(cual){
+  if(cual === 'modal') return GCM._sucio.modal;
+  return GCM._sucio.sheet && GCM.shModo !== 'lead' && GCM.shModo !== 'detalle';
+}
+function gcmCerrarSeguro(cual){
+  const cerrar = cual === 'modal' ? gcmModalCerrar : gcmShCerrar;
+  if(!gcmHaySucio(cual)){ cerrar(); return; }
+  askConfirm('Tienes cambios sin guardar en este formulario. Si lo cierras, se perderán.', cerrar, null,
+    {title:'¿Descartar los cambios?', confirmLabel:'Descartar y cerrar', confirmClass:'btn-delete'});
+}
+function gcmFondoClick(e, cual){
+  const ov = e.currentTarget;
+  if(e.target !== ov) return; /* el clic que empieza dentro y termina en el fondo ya lo filtra el cierre seguro global */
+  gcmCerrarSeguro(cual);
+}
 
 /* ---------- nueva actividad / editar (formulario progresivo) ---------- */
 function gcmProxHora(f){
@@ -27925,6 +28005,107 @@ function gcmCalMover(n){
 /* Filtro de tipo de gestión: una categoría o todas. */
 function gcmCalCat(k){ GCM.cal.cats = k && !(GCM.cal.cats.length === 1 && GCM.cal.cats[0] === k) ? [k] : []; gcmRenderAgenda(); }
 function gcmCalModo(m){ GCM.cal.modo = m; if(m === 'mias') GCM.cal.ej = ''; gcmRenderAgenda(); }
+/* ---------- arrastrar y soltar en la agenda semanal (escritorio) ----------
+   · Visitas, reuniones y llamadas aún por hacer (programadas o reprogramadas)
+     y tareas abiertas se arrastran a otro día; la hora no cambia.
+   · Para otra semana: mantener la tarjeta sobre ‹ o › cambia de semana y se
+     suelta en el día que corresponda.
+   · No se mueve a fechas pasadas. Queda en el historial y se puede deshacer
+     desde el aviso. Mover una visita no es «Reprogramar» (no pide motivo ni
+     suma reprogramaciones): equivale a cambiar la fecha en «Editar». */
+function gcmActMovible(a){ return !!a && gcmAbierta(a) && (a.ejecutivo === GCM.ses || gcmSupervisa()); }
+let gcmDrag = null, gcmDragNavT = null, gcmDragUndo = null;
+function gcmDragIni(ev, tipo, id){
+  gcmDrag = {tipo, id};
+  ev.dataTransfer.effectAllowed = 'move';
+  try{ ev.dataTransfer.setData('text/plain', tipo+':'+id); }catch(e){}
+  const el = ev.currentTarget;
+  setTimeout(()=>{ el.classList.add('is-drag'); const r = document.getElementById('gcm-sv-agenda'); if(r) r.classList.add('is-arrastrando'); }, 0);
+}
+function gcmDragLimpiar(){
+  clearTimeout(gcmDragNavT); gcmDragNavT = null;
+  document.querySelectorAll('#gcm-sv-agenda .is-drop, #gcm-sv-agenda .is-drop-no, #gcm-sv-agenda .is-drag, #gcm-sv-agenda .is-nav-on').forEach(x=>x.classList.remove('is-drop', 'is-drop-no', 'is-drag', 'is-nav-on'));
+  const r = document.getElementById('gcm-sv-agenda'); if(r) r.classList.remove('is-arrastrando');
+}
+function gcmDragFin(){ gcmDrag = null; gcmDragLimpiar(); }
+/* Si la tarjeta de origen se repinta durante el arrastre (cambio de semana), su dragend no llega. */
+document.addEventListener('dragend', ()=>{ if(gcmDrag) gcmDragFin(); });
+function gcmDragSobre(ev, dia){
+  if(!gcmDrag) return;
+  ev.preventDefault();
+  const no = dia < gcmD(0);
+  ev.dataTransfer.dropEffect = no ? 'none' : 'move';
+  ev.currentTarget.classList.add(no ? 'is-drop-no' : 'is-drop');
+}
+function gcmDragSale(ev){
+  const d = ev.currentTarget;
+  if(ev.relatedTarget && d.contains(ev.relatedTarget)) return;
+  d.classList.remove('is-drop', 'is-drop-no');
+}
+function gcmDragNav(ev, n){
+  if(!gcmDrag) return;
+  ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
+  ev.currentTarget.classList.add('is-nav-on');
+  if(gcmDragNavT) return;
+  gcmDragNavT = setTimeout(()=>{
+    gcmDragNavT = null; if(!gcmDrag) return;
+    gcmCalMover(n);
+    const r = document.getElementById('gcm-sv-agenda'); if(r) r.classList.add('is-arrastrando');
+  }, 650);
+}
+function gcmDragNavSale(ev){
+  if(ev.type === 'drop') ev.preventDefault();
+  clearTimeout(gcmDragNavT); gcmDragNavT = null;
+  ev.currentTarget.classList.remove('is-nav-on');
+}
+function gcmDragSoltar(ev, dia){
+  ev.preventDefault();
+  const d = gcmDrag; gcmDragFin();
+  if(!d) return;
+  if(dia < gcmD(0)){ showToast('No se puede mover a una fecha pasada.', 'warn'); return; }
+  const ahora = gcmAhora(), por = gcmUsuario();
+  if(d.tipo === 'act'){
+    const a = gcmAct(d.id); if(!a || a.fecha === dia) return;
+    if(!gcmActMovible(a)){ showToast('Esta actividad ya no se puede mover.', 'warn'); return; }
+    gcmDragUndo = {tipo:'act', id:a.id, de:a.fecha, nh:(a.historial||[]).length};
+    gcmHist(a, {tipo:'editada', de:a.fecha, deHora:a.hora, a:dia, aHora:a.hora, motivo:'Movida en la agenda', por, f:ahora});
+    a.fecha = dia;
+    gcmGuardar(a);
+    const L = gcmCruces({id:a.id, fecha:a.fecha, hora:a.hora, dur:a.duracion, ejecutivo:a.ejecutivo});
+    gcmRefrescar();
+    showToast(gcmE(a.tipo)+' movida al '+gcmFmtL(dia)+', '+gcmE(a.hora)+(L.length ? ' · se cruza con '+(L.length===1 ? 'otra actividad' : L.length+' actividades') : '')+'. <button type="button" class="gcm-link" onclick="gcmDragDeshacer(this)">Deshacer</button>', L.length ? 'warn' : 'ok');
+    return;
+  }
+  const t = gcmTarea(d.id); if(!t || t.vence === dia) return;
+  if(t.estado === 'Completada' || !gcmPuedeEditarTarea(t)){ showToast('Esta tarea ya no se puede mover.', 'warn'); return; }
+  const act = t.origen && t.origen.actId ? gcmAct(t.origen.actId) : null, rp = act && act.reporte && act.reporte.tareaId === t.id ? act.reporte : null;
+  gcmDragUndo = {tipo:'tar', id:t.id, de:t.vence, nh:(t.hist||[]).length, rpDe:rp ? rp.proxFecha : null};
+  (t.hist = t.hist || []).push({tipo:'reprogramada', de:t.vence, a:dia, por, f:new Date().toISOString()});
+  t.vence = dia;
+  gcmGuardar(t);
+  /* Compromiso de un reporte: la fecha de la próxima acción sigue a su tarea. */
+  if(rp){ rp.proxFecha = dia; gcmGuardar(act); }
+  gcmRefrescar();
+  showToast('Tarea movida al '+gcmFmtL(dia)+'. <button type="button" class="gcm-link" onclick="gcmDragDeshacer(this)">Deshacer</button>', 'ok');
+}
+function gcmDragDeshacer(btn){
+  const u = gcmDragUndo; gcmDragUndo = null;
+  const toast = btn && btn.closest('.toast'); if(toast) toast.remove();
+  if(!u) return;
+  if(u.tipo === 'act'){
+    const a = gcmAct(u.id); if(!a) return;
+    a.fecha = u.de; if(a.historial) a.historial.length = Math.min(a.historial.length, u.nh);
+    gcmGuardar(a);
+  } else {
+    const t = gcmTarea(u.id); if(!t) return;
+    t.vence = u.de; if(t.hist) t.hist.length = Math.min(t.hist.length, u.nh);
+    gcmGuardar(t);
+    const act = t.origen && t.origen.actId ? gcmAct(t.origen.actId) : null;
+    if(act && act.reporte && act.reporte.tareaId === t.id && u.rpDe != null){ act.reporte.proxFecha = u.rpDe; gcmGuardar(act); }
+  }
+  gcmRefrescar();
+  showToast('Cambio deshecho.', 'info');
+}
 function gcmEvTag(a){
   if(a.estado === 'Realizada') return a.resultado ? '<span class="gcm-evt is-'+(GCM_RES_TONO[a.resultado]||'ok')+'">'+gcmE(a.resultado)+'</span>' : '<span class="gcm-evt is-ok">Realizada</span>';
   if(a.estado === 'Cancelada') return '<span class="gcm-evt is-neutral">No se realizó</span>';
@@ -27936,8 +28117,8 @@ function gcmEvTag(a){
 }
 /* Tarea en el calendario: discreta, con su vencimiento y acceso directo. */
 function gcmEvTarea(x){
-  const t = x.t, e = gcmTareaEstado(t), v = gcmVinculo(t);
-  return `<button type="button" class="gcm-ev gcm-ev-tar is-${GCM_TAREA_TONO[e]||'info'}" onclick="event.stopPropagation();gcmTareaAbrir('${t.id}')" title="${gcmE('Tarea · '+t.titulo+(v ? ' · '+v.txt : '')+' · '+e)}">
+  const t = x.t, e = gcmTareaEstado(t), v = gcmVinculo(t), mov = t.estado !== 'Completada' && gcmPuedeEditarTarea(t);
+  return `<button type="button" class="gcm-ev gcm-ev-tar is-${GCM_TAREA_TONO[e]||'info'}"${mov ? ` draggable="true" ondragstart="gcmDragIni(event,'tar','${t.id}')" ondragend="gcmDragFin()"` : ''} onclick="event.stopPropagation();gcmTareaAbrir('${t.id}')" title="${gcmE('Tarea · '+t.titulo+(v ? ' · '+v.txt : '')+' · '+e+(mov ? ' · arrastra para cambiar el vencimiento' : ''))}">
     <span class="gcm-ev-t">${gcmIco('task')}<span class="gcm-ev-av">${gcmEjAv(t.responsable)}</span></span>
     <b class="gcm-ev-e">${gcmE(t.titulo)}</b>
     <small>${v ? gcmE(v.txt) : 'Tarea'}</small>
@@ -27968,10 +28149,10 @@ function gcmRenderAgenda(){
     const dia = gcmAdd(ini, i), dd = gcmParse(dia);
     const evs = acts.filter(a=>a.fecha===dia).sort(gcmOrdAct), tds = tars.filter(x=>x.dia===dia);
     const ofi = ejOfi && gcmDiaOficina(ejOfi, dia);
-    return `<div class="gcm-day${dia===hoy?' is-hoy':''}${i>4?' is-finde':''}${dia<hoy?' is-pas':''}" onclick="if(!event.target.closest('.gcm-ev')) gcmMgNueva({fecha:'${dia}'})">
+    return `<div class="gcm-day${dia===hoy?' is-hoy':''}${i>4?' is-finde':''}${dia<hoy?' is-pas':''}" onclick="if(!event.target.closest('.gcm-ev')) gcmMgNueva({fecha:'${dia}'})" ondragover="gcmDragSobre(event,'${dia}')" ondragleave="gcmDragSale(event)" ondrop="gcmDragSoltar(event,'${dia}')">
       <div class="gcm-day-h"><span>${GCM_DOW[i].toUpperCase()}</span>${ofi ? '<em class="gcm-ofi-tag" title="Día de oficina · Sin visitas presenciales programadas">Oficina</em>' : ''}<b>${dd.getDate()}</b></div>
-      ${evs.map(a=>{ const e = gcmEmpDe(a), st = gcmMgEstado(a), part = gcmAgendaQuien() && a.ejecutivo !== gcmAgendaQuien();
-        return `<button type="button" class="gcm-ev gcm-cat-${gcmCatC(a.categoria)} is-${a.estado.toLowerCase()}${gcmSinReporte(a)?' is-sinrep':''}${part?' is-part':''}" onclick="event.stopPropagation();gcmActDetalle('${a.id}')" title="${gcmE(a.tipo+' · '+(a.titulo||'')+' · '+a.hora+'–'+gcmFinHora(a)+' · '+st.t+(part ? ' · acompañas a '+a.ejecutivo : ''))}">
+      ${evs.map(a=>{ const e = gcmEmpDe(a), st = gcmMgEstado(a), part = gcmAgendaQuien() && a.ejecutivo !== gcmAgendaQuien(), mov = gcmActMovible(a);
+        return `<button type="button" class="gcm-ev gcm-cat-${gcmCatC(a.categoria)} is-${a.estado.toLowerCase()}${gcmSinReporte(a)?' is-sinrep':''}${part?' is-part':''}"${mov ? ` draggable="true" ondragstart="gcmDragIni(event,'act','${a.id}')" ondragend="gcmDragFin()"` : ''} onclick="event.stopPropagation();gcmActDetalle('${a.id}')" title="${gcmE(a.tipo+' · '+(a.titulo||'')+' · '+a.hora+'–'+gcmFinHora(a)+' · '+st.t+(part ? ' · acompañas a '+a.ejecutivo : '')+(mov ? ' · arrastra para cambiar el día' : ''))}">
           <span class="gcm-ev-t"><b>${gcmE(a.hora)}</b>${gcmIco(GCM_TIPO_IC[a.tipo]||'pin','gcm-ic gcm-ev-ti')}<span class="gcm-ev-av">${gcmEjAv(a.ejecutivo)}${gcmAcompConf(a).map(x=>gcmEjAv(x.nombre)).join('')}</span></span>
           <b class="gcm-ev-e">${gcmE(gcmCorto(e?e.nombre:'—'))}</b>
           <small>${gcmE(a.tipo)} · ${gcmE(gcmCatL(a.categoria))}</small>
@@ -27983,9 +28164,9 @@ function gcmRenderAgenda(){
   const n = k=>acts.filter(a=>a.estado===k).length, sinr = acts.filter(gcmSinReporte).length;
   const porHacer = acts.filter(gcmAbierta).length, tVenc = tars.filter(x=>gcmTareaEstado(x.t) === 'Vencida').length;
   const sub = `<span class="gcm-hd-nav"><span>${lbl}</span>
-      <button type="button" class="gcm-ico-btn is-ghost" onclick="gcmCalMover(-1)" aria-label="Semana anterior">${gcmIco('left')}</button>
+      <button type="button" class="gcm-ico-btn is-ghost gcm-drag-nav" onclick="gcmCalMover(-1)" ondragover="gcmDragNav(event,-1)" ondragleave="gcmDragNavSale(event)" ondrop="gcmDragNavSale(event)" aria-label="Semana anterior" title="Semana anterior · arrastra aquí una visita o tarea para llevarla a la semana anterior">${gcmIco('left')}</button>
       <button type="button" class="btn-mini${hoy>=ini && hoy<=fin?' is-on':''}" onclick="gcmCalMover(0)">Hoy</button>
-      <button type="button" class="gcm-ico-btn is-ghost" onclick="gcmCalMover(1)" aria-label="Semana siguiente">${gcmIco('right')}</button></span>`;
+      <button type="button" class="gcm-ico-btn is-ghost gcm-drag-nav" onclick="gcmCalMover(1)" ondragover="gcmDragNav(event,1)" ondragleave="gcmDragNavSale(event)" ondrop="gcmDragNavSale(event)" aria-label="Semana siguiente" title="Semana siguiente · arrastra aquí una visita o tarea para llevarla a la semana siguiente">${gcmIco('right')}</button></span>`;
   el.innerHTML = `
     ${gcmHead('Agenda', sub)}
     <div class="gcm-cal-bar">
@@ -28016,6 +28197,7 @@ function gcmModal(titulo, html, botones, opts){
   const box = ov.querySelector('.gcm-mbox');
   document.getElementById('gcm-m-t').textContent = titulo;
   document.getElementById('gcm-m-body').innerHTML = html;
+  GCM._sucio.modal = false;
   const foot = document.getElementById('gcm-m-foot');
   foot.innerHTML = '';
   (botones || []).forEach(b=>{
@@ -28046,10 +28228,12 @@ function gcmModalCerrar(){
 }
 document.addEventListener('keydown', e=>{
   if(e.key !== 'Escape') return;
+  const cf = document.getElementById('confirm-modal-overlay');
+  if((cf && !cf.classList.contains('hidden')) || (e.target && e.target.closest && e.target.closest('#confirm-modal-overlay'))) return;
   const ov = document.getElementById('gcm-modal');
-  if(ov && !ov.classList.contains('hidden')){ gcmModalCerrar(); return; }
+  if(ov && !ov.classList.contains('hidden')){ gcmCerrarSeguro('modal'); return; }
   const sh = document.getElementById('gcm-sheet');
-  if(sh && !sh.classList.contains('hidden')){ gcmShCerrar(); return; }
+  if(sh && !sh.classList.contains('hidden')){ gcmCerrarSeguro('sheet'); return; }
   const dr = document.getElementById('gcm-drawer');
   if(dr && !dr.classList.contains('hidden')) gcmLeadCerrar();
 });
@@ -28105,9 +28289,12 @@ function gcmActDetalle(id){
     bot.push({t:'Reprogramar', fn:()=>gcmMgResultado(a.id, 'reprog')});
     bot.push({t:'Reportar', cls:'btn-primary', fn:()=>gcmMgResultado(a.id)});
   } else {
-    if(a.estado === 'Realizada' && puede) bot.push({t:'Editar reporte', fn:()=>gcmMgResultado(a.id, 'real')});
-    if(a.estado === 'Realizada' && !a.leadId && !a.opRef && a.categoria === 'Prospección' && puede)
-      bot.push({t:'Crear lead', fn:()=>{ gcmShCerrar(); gcmLeadNuevo({empresaId:a.empresaId, contactoId:a.contactoId, ejecutivo:a.ejecutivo, origen:'Visita', actId:a.id}); }});
+    if(a.estado === 'Realizada' && puede){
+      bot.push({t:'Editar reporte', fn:()=>gcmMgResultado(a.id, 'real')});
+      bot.push({t:'Editar visita', fn:()=>gcmMgNueva({editar:a.id})});
+      if(l && gcmLeadPuedeEditar(l)) bot.push({t:'Editar lead', fn:()=>gcmActEditarLead(l.id)});
+      if(!l && !a.opRef) bot.push({t:'Crear lead', fn:()=>gcmActCrearLead(a.id)});
+    }
     bot.push({t:'Cerrar', cls:'btn-primary'});
   }
   gcmSh(a.tipo+' · '+gcmCorto(e.nombre||''), html, bot);
@@ -28597,6 +28784,19 @@ function gcmCrearOppLocal(l, pais, nota, forzarCO){
   persistLocal();
   renderAll();
   return o.id;
+}
+/* Mismo criterio que el lápiz de la ficha del lead. */
+function gcmLeadPuedeEditar(l){ return !!l && (l.ejecutivo === GCM.ses || (gcmSupervisa() && !esGerencia())) && !gcmLeadBloqueado(l); }
+/* Desde una visita (también ya reportada): abre la ficha del lead y su edición. */
+function gcmActEditarLead(id){
+  const l = gcmLead(id); if(!l) return;
+  gcmShCerrar(); gcmLeadAbrir(id);
+  if(gcmLeadPuedeEditar(l)) setTimeout(()=>gcmLeadEditar(id), 60);
+}
+function gcmActCrearLead(actId){
+  const a = gcmAct(actId); if(!a) return;
+  gcmShCerrar();
+  gcmLeadNuevo({empresaId:a.empresaId, contactoId:a.contactoId, ejecutivo:a.ejecutivo, origen:'Visita', actId:a.id, titulo:a.titulo && a.titulo !== 'Sin objetivo' ? a.titulo : ''});
 }
 function gcmLeadEditar(id){
   const l = gcmLead(id); if(!l) return;
