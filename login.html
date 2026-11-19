@@ -432,7 +432,12 @@ async function handleLoginSubmit(ev){
   const {error} = await db.auth.signInWithPassword({email, password});
   if(error){
     console.error('Error al iniciar sesión:', error);
-    mostrarError(error.message === 'Invalid login credentials' ? 'Usuario o contraseña incorrectos.' : error.message);
+    /* Una cuenta desactivada desde Gestión de usuarios queda bloqueada en
+       Supabase Auth (supabase/31): se explica en vez de mostrar el error crudo. */
+    const desactivada = /banned/i.test(error.message || '') || error.code === 'user_banned';
+    mostrarError(error.message === 'Invalid login credentials' ? 'Usuario o contraseña incorrectos.'
+      : desactivada ? 'Tu usuario está desactivado. Consultá con administración para reactivarlo.'
+      : error.message);
     btn.disabled = false; btn.textContent = 'Ingresar';
     return;
   }

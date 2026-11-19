@@ -148,6 +148,27 @@
   .pass-ojo.is-visible .ojo-cerrado{display:block;}
   .fila-pass{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;}
   .fila-pass .field{flex:1;min-width:200px;max-width:320px;}
+  /* Perfiles: país, código comercial, estado y resumen de permisos efectivos. */
+  .wrap{max-width:1120px;}
+  td input.input-mini{
+    height:32px;width:150px;padding:0 8px;border-radius:var(--radius-sm);border:1px solid var(--line);
+    background:var(--surface);color:var(--ink);font-family:'IBM Plex Mono',monospace;font-size:12px;margin-top:6px;display:block;
+  }
+  .celda-sub{display:block;font-size:11px;color:var(--ink-dim);margin-top:3px;}
+  tr.is-inactivo td{opacity:.55;}
+  tr.is-inactivo td.acciones-celda{opacity:1;}
+  .chip-estado{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:var(--radius-pill);font-size:10.5px;font-weight:600;vertical-align:middle;}
+  .chip-estado.off{color:var(--danger);background:var(--danger-bg);}
+  .perm-det summary{cursor:pointer;font-size:12px;color:var(--ink-soft);list-style:none;display:inline-flex;align-items:center;gap:6px;}
+  .perm-det summary::-webkit-details-marker{display:none;}
+  .perm-det summary::before{content:'▸';font-size:10px;transition:transform .16s var(--ease);}
+  .perm-det[open] summary::before{transform:rotate(90deg);}
+  .perm-det ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:4px;min-width:260px;}
+  .perm-det li{font-size:12px;color:var(--ink-soft);line-height:1.4;}
+  .perm-det li b{color:var(--ink);font-weight:600;}
+  .perm-det li.no b{color:var(--ink-dim);}
+  .perm-det .btn-mini{margin:8px 0 0;}
+  #nuevo-codigo-wrap[hidden]{display:none;}
   .empty-state, .access-denied{text-align:center;color:var(--ink-soft);padding:30px 10px;font-size:13px;}
   .access-denied h2{font-family:'Space Grotesk',sans-serif;color:var(--ink);}
 </style>
@@ -157,7 +178,7 @@
   <div class="topbar">
     <div>
       <h1>Gestión de usuarios</h1>
-      <p class="subtitulo">Alta de cuentas y roles — Control de Oportunidades</p>
+      <p class="subtitulo">Cuentas, perfiles, países y permisos — Control de Oportunidades</p>
     </div>
     <div class="topbar-actions">
       <a href="index.html" class="link-volver">← Volver al panel</a>
@@ -178,10 +199,36 @@ let rolesDisponibles = [];
 /* Sin la columna usuario.permisos (supabase/25 sin correr) la lista igual
    carga, pero no se pueden asignar permisos. */
 let hayColumnaPermisos = true;
+/* Sin usuario.pais / usuario.codigo_comercial (supabase/31 sin correr) la
+   lista carga con los perfiles de antes y sin país. */
+let hayColumnasPerfil = true;
 
-/* PERFIL OPERATIVO RESTRINGIDO — ver supabase/25_perfil_operativo_restringido.sql.
-   Solo ese rol lleva permisos propios: qué áreas ve y qué acciones puede hacer
-   en ellas. admin / editor / visor siguen funcionando por rol, sin permisos. */
+/* ============================================================
+   PERFILES — ver supabase/31_perfiles_permisos.sql.
+   Cada perfil fija sus países posibles y sus permisos efectivos; la base los
+   aplica (RLS + triggers) y esta vista solo los asigna y los muestra.
+   Perú + Colombia es exclusivo de Administrador y Gerencia.
+   ============================================================ */
+const PERFILES = {
+  admin:                 {label:'Administrador',             paises:['ambos']},
+  gerencia:              {label:'Gerencia',                  paises:['ambos']},
+  ejecutivo:             {label:'Ejecutivo comercial',       paises:['peru', 'colombia']},
+  visor:                 {label:'Visor técnico',             paises:['peru']},
+  operativo_restringido: {label:'Visor técnico restringido', paises:['peru']},
+  editor:                {label:'Editor (perfil anterior)',  paises:['peru']},
+};
+const ORDEN_PERFILES = ['admin', 'gerencia', 'ejecutivo', 'visor', 'operativo_restringido', 'editor'];
+const PAIS_LABEL = {peru:'Perú', colombia:'Colombia', ambos:'Perú + Colombia'};
+function perfilLabel(rol){ return (PERFILES[rol] && PERFILES[rol].label) || rol || 'sin perfil'; }
+function paisesDePerfil(rol){ return (PERFILES[rol] && PERFILES[rol].paises) || ['peru']; }
+/* País que corresponde al perfil, conservando el actual si es válido. */
+function paisParaPerfil(rol, actual){
+  const ok = paisesDePerfil(rol);
+  return ok.indexOf(actual) !== -1 ? actual : ok[0];
+}
+
+/* PERFIL TÉCNICO RESTRINGIDO — ver supabase/25 y 31. Áreas y vistas se
+   configuran por persona; las acciones quedan limitadas a consulta. */
 const ROL_RESTRINGIDO = 'operativo_restringido';
 const AREAS_PERMISO = [
   {value:'comercial',    label:'Comercial'},
@@ -194,15 +241,10 @@ const VISTAS_PERMISO = [
   {value:'carga',     label:'Carga laboral'},
   {value:'desempeno', label:'Desempeño'},
 ];
-const ACCIONES_PERMISO = [
-  {value:'ver',               label:'Ver'},
-  {value:'crear',             label:'Crear tareas'},
-  {value:'editar',            label:'Editar tareas'},
-  {value:'completar_tareas',  label:'Completar tareas'},
-  {value:'actualizar_avance', label:'Actualizar avances'},
-];
-const PERMISOS_INICIALES = {areas:[], vistas:['revision', 'carga'], acciones:{ver:true}};
+const ACCIONES_SOLO_CONSULTA = {ver:true, crear:false, editar:false, completar_tareas:false, actualizar_avance:false};
+const PERMISOS_INICIALES = {areas:[], vistas:['revision', 'carga'], acciones:ACCIONES_SOLO_CONSULTA};
 let permisosPorUsuario = {};
+let usuariosPorId = {};
 
 function rolDescripcion(rolId){
   const r = rolesDisponibles.find(function(x){ return x.identificador === Number(rolId); });
@@ -212,7 +254,6 @@ function rolDescripcion(rolId){
 /* Bloque de casillas. "clave" distingue el formulario de alta de cada fila. */
 function permisosHtml(clave, permisos){
   const p = permisos || PERMISOS_INICIALES;
-  const acciones = p.acciones || {};
   const vistas = Array.isArray(p.vistas) ? p.vistas : PERMISOS_INICIALES.vistas;
   const chk = function(tipo, op, marcado){
     return '<label class="permiso-chk"><input type="checkbox" data-permiso="' + tipo + '" value="' + op.value + '"' + (marcado ? ' checked' : '') + '>' + escapeHtml(op.label) + '</label>';
@@ -224,45 +265,111 @@ function permisosHtml(clave, permisos){
     '<div class="permisos-grupo"><span class="permisos-titulo">Vistas</span><div class="permisos-opciones">' +
       VISTAS_PERMISO.map(function(v){ return chk('vista', v, vistas.indexOf(v.value) !== -1); }).join('') +
     '</div></div>' +
-    '<div class="permisos-grupo"><span class="permisos-titulo">Acciones permitidas</span><div class="permisos-opciones">' +
-      ACCIONES_PERMISO.map(function(a){ return chk('accion', a, acciones[a.value] === true); }).join('') +
+    '<div class="permisos-grupo"><span class="permisos-titulo">Acciones</span><div class="permisos-opciones">' +
+      '<label class="permiso-chk"><input type="checkbox" checked disabled>Ver (solo consulta)</label>' +
     '</div></div>' +
-    '<p class="hint">Ve solo las vistas marcadas, con las tareas de sus áreas y sin importes. Las acciones distintas de <b>Ver</b> quedan guardadas y la base ya las respeta; en el panel se irán habilitando a medida que se conecten.</p>' +
+    '<p class="hint">Ve solo las vistas marcadas, con las tareas de sus áreas y sin importes. El perfil técnico es de consulta: no crea, edita ni completa tareas.</p>' +
   '</div>';
 }
 
 function leerPermisos(clave){
   const caja = document.querySelector('[data-permisos="' + clave + '"]');
-  const areas = [], vistas = [], acciones = {};
+  const areas = [], vistas = [];
   caja.querySelectorAll('input[data-permiso="area"]').forEach(function(i){ if(i.checked) areas.push(i.value); });
   caja.querySelectorAll('input[data-permiso="vista"]').forEach(function(i){ if(i.checked) vistas.push(i.value); });
-  caja.querySelectorAll('input[data-permiso="accion"]').forEach(function(i){ acciones[i.value] = i.checked; });
-  return {areas: areas, vistas: vistas, acciones: acciones};
+  return {areas: areas, vistas: vistas, acciones: Object.assign({}, ACCIONES_SOLO_CONSULTA)};
 }
 
 function permisosValidos(p){
   if(!p.areas.length) return 'Marcá al menos un área.';
-  if(!p.acciones.ver) return 'Sin "Ver" la persona no puede consultar nada.';
   if(!p.vistas.length) return 'Marcá al menos una vista.';
   if(p.vistas.indexOf('desempeno') !== -1 && p.vistas.indexOf('carga') === -1) return 'Desempeño se abre desde Carga laboral: marcá también Carga laboral.';
   return '';
 }
 
-function permisosResumen(p){
-  if(!p || !p.areas || !p.areas.length) return 'Sin permisos asignados';
+function permisosRestringidoTxt(p){
+  if(!p || !p.areas || !p.areas.length) return 'Sin áreas asignadas';
   const areas = p.areas.map(function(a){ const x = AREAS_PERMISO.find(function(y){ return y.value === a; }); return x ? x.label : a; }).join(' + ');
-  const acciones = ACCIONES_PERMISO.filter(function(a){ return p.acciones && p.acciones[a.value] === true; }).map(function(a){ return a.label; });
   const vistas = (Array.isArray(p.vistas) ? p.vistas : PERMISOS_INICIALES.vistas)
     .map(function(v){ const x = VISTAS_PERMISO.find(function(y){ return y.value === v; }); return x ? x.label : v; });
-  return areas + ' · ' + vistas.join(', ') + ' · ' + (acciones.length ? acciones.join(', ') : 'sin acciones');
+  return areas + ' · ' + vistas.join(', ');
 }
 
-/* Usuario sugerido: primer nombre + primer apellido, sin tildes ni espacios
-   ("Thalía Pérez Ruiz" → "thalia.perez"). Se puede cambiar a mano. */
-function usuarioSugerido(nombre){
-  const partes = String(nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .toLowerCase().replace(/[^a-zs]/g, '').trim().split(/s+/).filter(Boolean);
-  return partes.slice(0, 2).join('.');
+/* Permisos efectivos por módulo según perfil y país. Es lo que aplica la base
+   (supabase/31); acá solo se describe. [módulo, texto, permitido] */
+function permisosEfectivos(u){
+  const rol = u.rol, pais = PAIS_LABEL[u.pais] || PAIS_LABEL[paisParaPerfil(rol, u.pais)];
+  const L = [];
+  if(rol === 'admin'){
+    L.push(['Países', 'Perú + Colombia', true]);
+    L.push(['Planner', 'consulta y edita todo', true]);
+    L.push(['Gestión Comercial', 'todo el equipo, los dos países', true]);
+    L.push(['Conversiones', 'valida y aprueba', true]);
+    L.push(['Gerencia', 'todas las subvistas', true]);
+    L.push(['Usuarios', 'administra, cambia contraseñas', true]);
+    L.push(['Eliminación definitiva', 'sí', true]);
+  } else if(rol === 'gerencia'){
+    L.push(['Países', 'Perú + Colombia', true]);
+    L.push(['Planner', 'consulta todo · oportunidades en solo lectura', true]);
+    L.push(['Gestión Comercial', 'consulta todo el equipo, los dos países', true]);
+    L.push(['Conversiones', 'aprueba o rechaza las validadas por administración', true]);
+    L.push(['Gerencia', 'G. Comercial y Operaciones', true]);
+    L.push(['Usuarios', 'no', false]);
+    L.push(['Eliminación', 'no', false]);
+  } else if(rol === 'ejecutivo'){
+    L.push(['País', pais, true]);
+    L.push(['Planner', 'consulta todas las oportunidades de su país, como visor (sin editar)', true]);
+    L.push(['Gestión Comercial', 'crea y edita sus leads, agenda, visitas y tareas', true]);
+    L.push(['Leads y agenda de otros ejecutivos', 'no los ve', false]);
+    L.push(['Código KAM', u.codigo_comercial || 'sin código: sus conversiones quedarán con KAM «otro»', !!u.codigo_comercial]);
+    L.push(['Base Maestra de Clientes', 'compartida: consulta y registra clientes', true]);
+    L.push(['Conversiones', 'solicita · el lead queda en consulta al solicitar', true]);
+    L.push(['Usuarios · eliminación', 'no', false]);
+  } else if(rol === ROL_RESTRINGIDO){
+    L.push(['País', 'Perú', true]);
+    L.push(['Áreas y vistas', permisosRestringidoTxt(u.permisos), true]);
+    L.push(['Acciones', 'solo consulta, sin importes ni márgenes', true]);
+    L.push(['Gestión Comercial · Gerencia', 'no', false]);
+  } else if(rol === 'visor'){
+    L.push(['País', 'Perú', true]);
+    L.push(['Planner', 'consulta (solo lectura)', true]);
+    L.push(['Gestión Comercial', 'solo lo que tenga asignado, en consulta', true]);
+    L.push(['Edición · usuarios', 'no', false]);
+  } else if(rol === 'editor'){
+    L.push(['País', 'Perú', true]);
+    L.push(['Planner', 'consulta y edita', true]);
+    L.push(['Gestión Comercial', 'solo lo propio', true]);
+    L.push(['Usuarios', 'no', false]);
+  } else {
+    L.push(['Acceso', 'sin perfil: no ve datos', false]);
+  }
+  if(u.activo === false) L.unshift(['Estado', 'desactivado: no puede entrar (historial conservado)', false]);
+  return L;
+}
+
+function permisosResumenHtml(u){
+  const items = permisosEfectivos(u);
+  return '<details class="perm-det"><summary>' + escapeHtml(perfilLabel(u.rol)) + ' · ver permisos</summary><ul>' +
+    items.map(function(x){ return '<li class="' + (x[2] ? '' : 'no') + '"><b>' + escapeHtml(x[0]) + ':</b> ' + escapeHtml(x[1]) + '</li>'; }).join('') +
+    '</ul>' +
+    (u.rol === ROL_RESTRINGIDO && hayColumnaPermisos
+      ? '<button type="button" class="btn-mini" onclick="abrirEditorPermisos(&quot;' + escapeHtml(u.identificador) + '&quot;)">Editar áreas y vistas</button>'
+      : '') +
+    (u.rol === ROL_RESTRINGIDO && !hayColumnaPermisos ? '<p class="hint">Falta correr supabase/25.</p>' : '') +
+  '</details>';
+}
+
+/* Sin tildes ni signos, en minúsculas: "Thalía Pérez Ruiz" → ["thalia","perez","ruiz"]. */
+function tokensNombre(nombre){
+  return String(nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z\s]/g, '').trim().split(/\s+/).filter(Boolean);
+}
+/* Usuario sugerido: primer nombre + primer apellido ("thalia.perez"). */
+function usuarioSugerido(nombre){ return tokensNombre(nombre).slice(0, 2).join('.'); }
+/* Código comercial (KAM) sugerido: "hugo_escobar"; en Colombia "co_vivian_castrillon". */
+function codigoSugerido(nombre, pais){
+  const base = tokensNombre(nombre).slice(0, 2).join('_');
+  return base ? (pais === 'colombia' ? 'co_' : '') + base : '';
 }
 
 /* Igual que en login.html: Supabase Auth identifica por correo, así que el
@@ -278,8 +385,10 @@ function correoDesdeUsuario(entrada){
   return v.includes('@') ? v : v + '@' + DOMINIO_USUARIOS;
 }
 
-/* id de la cuenta del admin que usa esta vista: no puede eliminarse a sí mismo. */
+/* id de la cuenta del admin que usa esta vista: no puede eliminarse ni desactivarse. */
 let miUid = null;
+/* Mientras se crea una cuenta, los cambios de sesión de signUp no repintan. */
+let creandoUsuario = false;
 
 /* Input de contraseña con el botón para verla. */
 function passHtml(id){
@@ -304,71 +413,112 @@ function escapeHtml(s){
   });
 }
 
+/* Función RPC que todavía no existe en la base (script sin correr). */
+function faltaFuncion(error, nombre){
+  const m = String((error && (error.message || error.hint)) || '');
+  return (error && (error.code === 'PGRST202' || error.code === '42883')) || m.indexOf(nombre) !== -1;
+}
+
 function renderAccesoDenegado(){
   document.getElementById('contenido').innerHTML =
     '<div class="card access-denied">' +
       '<h2>No tenés acceso a esta vista</h2>' +
-      '<p>Esta sección es solo para usuarios con rol <b>admin</b>. Si creés que deberías tener acceso, pedile a un administrador que te lo asigne.</p>' +
+      '<p>Esta sección es solo para el perfil <b>Administrador</b>. Si creés que deberías tener acceso, pedile a un administrador que te lo asigne.</p>' +
       '<p><a class="link-volver" href="index.html">← Volver al panel</a></p>' +
     '</div>';
 }
 
 async function cargarRoles(){
-  const {data, error} = await db.from('roles').select('identificador, descripcion').order('descripcion');
+  const {data, error} = await db.from('roles').select('identificador, descripcion');
   if(error){ console.error('No se pudieron cargar los roles:', error); return; }
-  rolesDisponibles = data || [];
+  rolesDisponibles = (data || []).slice().sort(function(a, b){
+    const ia = ORDEN_PERFILES.indexOf(a.descripcion), ib = ORDEN_PERFILES.indexOf(b.descripcion);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
 }
 
 function opcionesRol(rolIdSeleccionado){
   return rolesDisponibles.map(function(r){
-    return '<option value="' + r.identificador + '"' + (r.identificador === rolIdSeleccionado ? ' selected' : '') + '>' + escapeHtml(r.descripcion) + '</option>';
+    return '<option value="' + r.identificador + '"' + (r.identificador === rolIdSeleccionado ? ' selected' : '') + '>' + escapeHtml(perfilLabel(r.descripcion)) + '</option>';
+  }).join('');
+}
+
+function opcionesPais(rol, sel){
+  return paisesDePerfil(rol).map(function(p){
+    return '<option value="' + p + '"' + (p === sel ? ' selected' : '') + '>' + PAIS_LABEL[p] + '</option>';
   }).join('');
 }
 
 async function cargarUsuarios(){
-  /* Sin columna "user": la tabla `usuario` de la base no la tiene (ver el
-     encabezado de supabase/12_roles_permisos.sql). Se muestra `activo`, que
-     sí existe, para distinguir a alguien dado de baja. */
-  let {data, error} = await db.from('usuario').select('identificador, nombre, usuario_login, rol_id, permisos, roles(descripcion)').order('nombre');
+  /* Se piden las columnas nuevas y, si la base todavía no las tiene, se
+     reintenta sin ellas: la gestión de usuarios no se cae por un script sin
+     correr. */
+  const base = 'identificador, nombre, usuario_login, rol_id, activo, roles(descripcion)';
+  let {data, error} = await db.from('usuario').select(base + ', permisos, pais, codigo_comercial').order('nombre');
   if(error){
-    const r = await db.from('usuario').select('identificador, nombre, usuario_login, rol_id, roles(descripcion)').order('nombre');
-    if(!r.error){ hayColumnaPermisos = false; data = r.data; error = null; }
+    const r = await db.from('usuario').select(base + ', permisos').order('nombre');
+    if(!r.error){ hayColumnasPerfil = false; data = r.data; error = null; }
+    else{
+      const r2 = await db.from('usuario').select(base).order('nombre');
+      if(!r2.error){ hayColumnasPerfil = false; hayColumnaPermisos = false; data = r2.data; error = null; }
+    }
   }
   const tbody = document.getElementById('tabla-usuarios-body');
+  const aviso = document.getElementById('aviso-migracion');
+  if(aviso) aviso.hidden = hayColumnasPerfil;
   if(error){
-    tbody.innerHTML = '<tr><td colspan="5"><p class="msg error">No se pudo cargar la lista de usuarios: ' + escapeHtml(error.message) + '</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><p class="msg error">No se pudo cargar la lista de usuarios: ' + escapeHtml(error.message) + '</p></td></tr>';
     return;
   }
   if(!data || !data.length){
-    tbody.innerHTML = '<tr><td colspan="5"><p class="empty-state">Todavía no hay usuarios cargados.</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><p class="empty-state">Todavía no hay usuarios cargados.</p></td></tr>';
     return;
   }
   permisosPorUsuario = {};
-  data.forEach(function(u){ permisosPorUsuario[u.identificador] = u.permisos || null; });
-  tbody.innerHTML = data.map(function(u){
-    /* El identificador es un uuid, no un número: va entre comillas dentro del
-       onchange. Sin las comillas, 2cb308f1-6236-... se interpreta como una
-       resta de identificadores y rompe el handler con un error de sintaxis. */
-    const id = escapeHtml(u.identificador);
-    return '<tr data-id="' + id + '">' +
-      '<td>' + escapeHtml(u.nombre) + '</td>' +
-      '<td>' + escapeHtml(u.usuario_login || '—') + '</td>' +
-      '<td><select onchange="handleCambiarRol(&quot;' + id + '&quot;, this)">' + opcionesRol(u.rol_id) + '</select><span class="rol-status" id="rol-status-' + id + '"></span></td>' +
-      '<td id="permisos-celda-' + id + '">' + permisosCeldaHtml(u.identificador, rolDescripcion(u.rol_id)) + '</td>' +
-      '<td class="acciones-celda">' +
-        '<button type="button" class="btn-mini" onclick="abrirCambioPass(&quot;' + id + '&quot;)">Contraseña</button>' +
-        (u.identificador === miUid ? '' :
-          '<button type="button" class="btn-mini peligro" onclick="eliminarUsuario(&quot;' + id + '&quot;, this)" data-nombre="' + escapeHtml(u.nombre) + '">Eliminar</button>') +
-      '</td>' +
-    '</tr>';
-  }).join('');
+  usuariosPorId = {};
+  data.forEach(function(u){
+    u.rol = (u.roles && u.roles.descripcion) || rolDescripcion(u.rol_id);
+    permisosPorUsuario[u.identificador] = u.permisos || null;
+    usuariosPorId[u.identificador] = u;
+  });
+  /* Activos primero; dentro de cada grupo, por perfil y nombre. */
+  data.sort(function(a, b){
+    return ((a.activo === false) - (b.activo === false)) ||
+      (ORDEN_PERFILES.indexOf(a.rol) - ORDEN_PERFILES.indexOf(b.rol)) ||
+      String(a.nombre).localeCompare(String(b.nombre), 'es');
+  });
+  tbody.innerHTML = data.map(filaUsuarioHtml).join('');
 }
 
-function permisosCeldaHtml(id, rol){
-  if(rol !== ROL_RESTRINGIDO) return '<span class="permisos-resumen">Según el rol</span>';
-  if(!hayColumnaPermisos) return '<span class="permisos-resumen">Falta correr supabase/25</span>';
-  return '<span class="permisos-resumen">' + escapeHtml(permisosResumen(permisosPorUsuario[id])) + '</span>' +
-    '<button type="button" class="btn-mini" onclick="abrirEditorPermisos(&quot;' + escapeHtml(id) + '&quot;)">Editar</button>';
+function filaUsuarioHtml(u){
+  /* El identificador es un uuid, no un número: va entre comillas dentro de los
+     handlers. Sin las comillas, 2cb308f1-6236-... se interpreta como una resta
+     de identificadores y rompe el handler con un error de sintaxis. */
+  const id = escapeHtml(u.identificador);
+  const inactivo = u.activo === false;
+  const esYo = u.identificador === miUid;
+  const paises = paisesDePerfil(u.rol);
+  const paisActual = paisParaPerfil(u.rol, u.pais);
+  const celdaPais = hayColumnasPerfil
+    ? '<select onchange="handleCambiarPais(&quot;' + id + '&quot;, this)"' + (paises.length < 2 ? ' disabled' : '') + '>' + opcionesPais(u.rol, paisActual) + '</select>' +
+      (u.rol === 'ejecutivo'
+        ? '<input class="input-mini" type="text" value="' + escapeHtml(u.codigo_comercial || '') + '" placeholder="código KAM" title="Código comercial: la clave de KAM con la que se crean sus oportunidades convertidas" spellcheck="false" onchange="handleCambiarCodigo(&quot;' + id + '&quot;, this)">'
+        : '') +
+      '<span class="rol-status" id="pais-status-' + id + '"></span>'
+    : '<span class="celda-sub">Falta correr supabase/31</span>';
+  return '<tr data-id="' + id + '"' + (inactivo ? ' class="is-inactivo"' : '') + '>' +
+    '<td>' + escapeHtml(u.nombre) + (inactivo ? '<span class="chip-estado off">Inactivo</span>' : '') + '</td>' +
+    '<td>' + escapeHtml(u.usuario_login || '—') + '</td>' +
+    '<td><select onchange="handleCambiarRol(&quot;' + id + '&quot;, this)"' + (esYo ? ' disabled title="No podés cambiar tu propio perfil"' : '') + '>' + opcionesRol(u.rol_id) + '</select><span class="rol-status" id="rol-status-' + id + '"></span></td>' +
+    '<td>' + celdaPais + '</td>' +
+    '<td id="permisos-celda-' + id + '">' + permisosResumenHtml(u) + '</td>' +
+    '<td class="acciones-celda">' +
+      '<button type="button" class="btn-mini" onclick="abrirCambioPass(&quot;' + id + '&quot;)">Contraseña</button>' +
+      (esYo ? '' :
+        '<button type="button" class="btn-mini" onclick="alternarActivo(&quot;' + id + '&quot;, this)">' + (inactivo ? 'Activar' : 'Desactivar') + '</button>' +
+        '<button type="button" class="btn-mini peligro" onclick="eliminarUsuario(&quot;' + id + '&quot;, this)" data-nombre="' + escapeHtml(u.nombre) + '">Eliminar</button>') +
+    '</td>' +
+  '</tr>';
 }
 
 function abrirEditorPermisos(id){
@@ -378,7 +528,7 @@ function abrirEditorPermisos(id){
   const tr = document.createElement('tr');
   tr.className = 'fila-permisos';
   tr.id = 'fila-permisos-' + id;
-  tr.innerHTML = '<td colspan="5">' + permisosHtml(id, permisosPorUsuario[id]) +
+  tr.innerHTML = '<td colspan="6">' + permisosHtml(id, permisosPorUsuario[id]) +
     '<div class="form-actions"><button type="button" class="btn-submit" onclick="guardarPermisos(&quot;' + escapeHtml(id) + '&quot;, this)">Guardar permisos</button>' +
     '<span class="rol-status" id="permisos-status-' + escapeHtml(id) + '"></span></div></td>';
   fila.after(tr);
@@ -394,7 +544,8 @@ async function guardarPermisos(id, btn){
   btn.disabled = false;
   if(error){ console.error('No se pudieron guardar los permisos:', error); status.textContent = 'Error al guardar'; return; }
   permisosPorUsuario[id] = p;
-  document.getElementById('permisos-celda-' + id).innerHTML = permisosCeldaHtml(id, ROL_RESTRINGIDO);
+  if(usuariosPorId[id]) usuariosPorId[id].permisos = p;
+  document.getElementById('permisos-celda-' + id).innerHTML = permisosResumenHtml(usuariosPorId[id]);
   document.getElementById('fila-permisos-' + id).remove();
 }
 
@@ -407,7 +558,7 @@ function abrirCambioPass(id){
   const tr = document.createElement('tr');
   tr.className = 'fila-permisos';
   tr.id = 'fila-pass-' + id;
-  tr.innerHTML = '<td colspan="5"><div class="permisos"><div class="fila-pass">' +
+  tr.innerHTML = '<td colspan="6"><div class="permisos"><div class="fila-pass">' +
       '<label class="field"><span>Nueva contraseña</span>' + passHtml('pass-' + id) + '</label>' +
       '<button type="button" class="btn-submit" onclick="guardarContrasena(&quot;' + escapeHtml(id) + '&quot;, this)">Guardar contraseña</button>' +
       '<span class="rol-status" id="pass-status-' + escapeHtml(id) + '"></span>' +
@@ -425,44 +576,102 @@ async function guardarContrasena(id, btn){
   btn.disabled = false;
   if(error){
     console.error('No se pudo cambiar la contraseña:', error);
-    status.textContent = /admin_cambiar_contrasena/.test(error.message || '') ? 'Falta correr supabase/27' : (error.message || 'Error al guardar');
+    status.textContent = faltaFuncion(error, 'admin_cambiar_contrasena') ? 'Falta correr supabase/27' : (error.message || 'Error al guardar');
     return;
   }
   status.textContent = 'Contraseña cambiada ✓';
   setTimeout(function(){ const f = document.getElementById('fila-pass-' + id); if(f) f.remove(); }, 1500);
 }
 
+/* Activar / desactivar: la cuenta deja de entrar y de ver datos, pero su
+   perfil, sus registros y el historial se conservan (a diferencia de Eliminar). */
+async function alternarActivo(id, btn){
+  const u = usuariosPorId[id]; if(!u) return;
+  const activar = u.activo === false;
+  if(!activar && !confirm('¿Desactivar a ' + u.nombre + '? No podrá entrar al panel. Sus registros e historial se conservan y podés reactivarlo cuando quieras.')) return;
+  btn.disabled = true; btn.textContent = activar ? 'Activando…' : 'Desactivando…';
+  let {error} = await db.rpc('admin_activar_usuario', {p_uid: id, p_activo: activar});
+  if(error && faltaFuncion(error, 'admin_activar_usuario')){
+    /* Sin supabase/31: se marca el perfil (sin perfil activo no ve datos), pero
+       la cuenta podría seguir iniciando sesión. */
+    const r = await db.from('usuario').update({activo: activar}).eq('identificador', id);
+    error = r.error;
+    if(!error) alert('Perfil ' + (activar ? 'activado' : 'desactivado') + '. Para bloquear también el inicio de sesión corré supabase/31_perfiles_permisos.sql.');
+  }
+  if(error){
+    console.error('No se pudo cambiar el estado del usuario:', error);
+    alert(error.message || 'No se pudo cambiar el estado del usuario.');
+    btn.disabled = false; btn.textContent = activar ? 'Activar' : 'Desactivar';
+    return;
+  }
+  cargarUsuarios();
+}
+
 async function eliminarUsuario(id, btn){
   const nombre = btn.dataset.nombre || 'este usuario';
-  if(!confirm('¿Eliminar a ' + nombre + '? Se borra su cuenta y ya no podrá entrar. No se puede deshacer.')) return;
+  if(!confirm('¿Eliminar DEFINITIVAMENTE a ' + nombre + '? Se borra su cuenta y su perfil, y no se puede deshacer.\n\nSi solo querés que deje de entrar, usá «Desactivar»: conserva su historial.')) return;
   btn.disabled = true; btn.textContent = 'Eliminando…';
   const {error} = await db.rpc('admin_eliminar_usuario', {p_uid: id});
   if(error){
     console.error('No se pudo eliminar el usuario:', error);
-    alert(/admin_eliminar_usuario/.test(error.message || '') ? 'Falta correr supabase/27_admin_contrasena_eliminar.sql en Supabase.' : (error.message || 'No se pudo eliminar el usuario.'));
+    alert(faltaFuncion(error, 'admin_eliminar_usuario') ? 'Falta correr supabase/27_admin_contrasena_eliminar.sql en Supabase.' : (error.message || 'No se pudo eliminar el usuario.'));
     btn.disabled = false; btn.textContent = 'Eliminar';
     return;
   }
   cargarUsuarios();
 }
 
+function mostrarEstado(idStatus, error, ok){
+  const status = document.getElementById(idStatus);
+  if(!status) return;
+  status.textContent = error ? (error.message || 'Error al guardar') : (ok || 'Guardado ✓');
+  setTimeout(function(){ status.textContent = ''; }, error ? 5000 : 2500);
+}
+
+/* Cambio de perfil: el país se ajusta solo al que el perfil admite (Perú +
+   Colombia solo para Administrador y Gerencia). La base lo vuelve a aplicar
+   con un trigger, así que acá se recarga la lista para mostrar lo guardado. */
 async function handleCambiarRol(id, select){
-  const status = document.getElementById('rol-status-' + id);
-  status.textContent = 'Guardando…';
-  const {error} = await db.from('usuario').update({rol_id: Number(select.value)}).eq('identificador', id);
-  status.textContent = error ? 'Error al guardar' : 'Guardado ✓';
-  if(error) console.error('No se pudo cambiar el rol:', error);
-  setTimeout(function(){ status.textContent = ''; }, 2500);
-  if(error) return;
+  const u = usuariosPorId[id] || {};
+  const rol = rolDescripcion(select.value);
+  const cambios = {rol_id: Number(select.value)};
+  if(hayColumnasPerfil) cambios.pais = paisParaPerfil(rol, u.pais);
+  document.getElementById('rol-status-' + id).textContent = 'Guardando…';
+  const {error} = await db.from('usuario').update(cambios).eq('identificador', id);
+  if(error){
+    console.error('No se pudo cambiar el perfil:', error);
+    mostrarEstado('rol-status-' + id, error);
+    select.value = u.rol_id;
+    return;
+  }
+  await cargarUsuarios();
   /* Al pasar al perfil restringido se abren sus permisos para asignarlos:
      sin áreas, la persona entra y no ve nada. */
-  const rol = rolDescripcion(select.value);
-  document.getElementById('permisos-celda-' + id).innerHTML = permisosCeldaHtml(id, rol);
-  const abierta = document.getElementById('fila-permisos-' + id);
-  if(abierta) abierta.remove();
   if(rol === ROL_RESTRINGIDO && hayColumnaPermisos && !(permisosPorUsuario[id] && (permisosPorUsuario[id].areas || []).length)){
     abrirEditorPermisos(id);
   }
+  mostrarEstado('rol-status-' + id, null);
+}
+
+async function handleCambiarPais(id, select){
+  const u = usuariosPorId[id] || {};
+  const cambios = {pais: select.value};
+  /* El código comercial de Colombia lleva el prefijo co_ (KAM de esa operación). */
+  if(u.rol === 'ejecutivo' && u.codigo_comercial && u.codigo_comercial === codigoSugerido(u.nombre, u.pais)){
+    cambios.codigo_comercial = codigoSugerido(u.nombre, select.value);
+  }
+  const {error} = await db.from('usuario').update(cambios).eq('identificador', id);
+  if(error){ console.error('No se pudo cambiar el país:', error); select.value = paisParaPerfil(u.rol, u.pais); mostrarEstado('pais-status-' + id, error); return; }
+  await cargarUsuarios();
+  mostrarEstado('pais-status-' + id, null);
+}
+
+async function handleCambiarCodigo(id, input){
+  const v = input.value.trim().toLowerCase();
+  const {error} = await db.from('usuario').update({codigo_comercial: v || null}).eq('identificador', id);
+  if(error){ console.error('No se pudo guardar el código comercial:', error); mostrarEstado('pais-status-' + id, error); return; }
+  await cargarUsuarios();
+  mostrarEstado('pais-status-' + id, null);
 }
 
 async function handleCrearUsuario(ev){
@@ -472,10 +681,13 @@ async function handleCrearUsuario(ev){
   const email = correoDesdeUsuario(usuarioLogin);
   const password = document.getElementById('nuevo-password').value;
   const rolId = Number(document.getElementById('nuevo-rol').value);
+  const rol = rolDescripcion(rolId);
+  const pais = paisParaPerfil(rol, document.getElementById('nuevo-pais').value);
+  const codigo = document.getElementById('nuevo-codigo').value.trim().toLowerCase();
   const btn = document.getElementById('btn-crear-usuario');
   const msg = document.getElementById('crear-usuario-msg');
   msg.hidden = true;
-  const restringido = rolDescripcion(rolId) === ROL_RESTRINGIDO;
+  const restringido = rol === ROL_RESTRINGIDO;
   const permisos = restringido ? leerPermisos('nuevo') : null;
   const invalido = permisos ? permisosValidos(permisos) : '';
   if(invalido){
@@ -483,6 +695,7 @@ async function handleCrearUsuario(ev){
     return;
   }
   btn.disabled = true; btn.textContent = 'Creando…';
+  creandoUsuario = true;
 
   try{
     /* Único mecanismo disponible sin backend propio para crear una cuenta de
@@ -497,6 +710,7 @@ async function handleCrearUsuario(ev){
     if(sesionAdmin){
       await db.auth.setSession({access_token: sesionAdmin.access_token, refresh_token: sesionAdmin.refresh_token});
     }
+    creandoUsuario = false;
     if(error) throw error;
     if(!data.user){ throw new Error('Supabase no devolvió el usuario creado.'); }
 
@@ -512,17 +726,19 @@ async function handleCrearUsuario(ev){
       nombre: nombre,
       rol_id: rolId,
       ...(permisos ? {permisos: permisos} : {}),
+      ...(hayColumnasPerfil ? {pais: pais} : {}),
+      ...(hayColumnasPerfil && rol === 'ejecutivo' ? {codigo_comercial: codigo || codigoSugerido(nombre, pais)} : {}),
     });
     if(errPerfil) throw errPerfil;
 
     msg.className = 'msg ok';
-    msg.textContent = 'Usuario creado. Si el proyecto tiene "Confirm email" activado en Supabase, la persona debe confirmar su correo antes de poder ingresar.';
+    msg.textContent = 'Usuario creado con el perfil ' + perfilLabel(rol) + ' · ' + PAIS_LABEL[pais] + '. Si el proyecto tiene "Confirm email" activado en Supabase, la persona debe confirmar su correo antes de poder ingresar.';
     msg.hidden = false;
     document.getElementById('form-crear-usuario').reset();
-    usuarioEditadoAMano = false;
+    usuarioEditadoAMano = false; codigoEditadoAMano = false;
     const ojo = document.querySelector('#form-crear-usuario .pass-ojo.is-visible');
     if(ojo) alternarVerPass(ojo);
-    actualizarPermisosNuevo();
+    actualizarFormularioNuevo();
     cargarUsuarios();
   }catch(e){
     console.error('Error al crear usuario:', e);
@@ -530,6 +746,7 @@ async function handleCrearUsuario(ev){
     msg.textContent = e.message || 'No se pudo crear el usuario.';
     msg.hidden = false;
   }finally{
+    creandoUsuario = false;
     btn.disabled = false; btn.textContent = 'Crear usuario';
   }
 }
@@ -543,45 +760,65 @@ function renderPanelAdmin(){
           '<label class="field"><span>Nombre y apellido</span><input type="text" id="nuevo-nombre" placeholder="Ej.: Thalía Pérez" required></label>' +
           '<label class="field"><span>Usuario</span><input type="text" id="nuevo-usuario" autocapitalize="none" spellcheck="false" required></label>' +
           '<label class="field"><span>Contraseña</span>' + passHtml('nuevo-password') + '</label>' +
-          '<label class="field"><span>Rol</span><select id="nuevo-rol" required>' + opcionesRol(null) + '</select></label>' +
+          '<label class="field"><span>Perfil</span><select id="nuevo-rol" required>' + opcionesRol(null) + '</select></label>' +
+          '<label class="field"><span>País asignado</span><select id="nuevo-pais"></select></label>' +
+          '<label class="field" id="nuevo-codigo-wrap" hidden><span>Código comercial (KAM)</span><input type="text" id="nuevo-codigo" autocapitalize="none" spellcheck="false" placeholder="hugo_escobar"></label>' +
         '</div>' +
         '<div id="nuevo-permisos" hidden>' + permisosHtml('nuevo', null) + '</div>' +
         '<div class="form-actions">' +
           '<button type="submit" class="btn-submit" id="btn-crear-usuario">Crear usuario</button>' +
         '</div>' +
         '<p class="msg" id="crear-usuario-msg" hidden></p>' +
-        '<p class="hint">La persona entra con ese usuario y esa contraseña. No hace falta ningún correo: por detrás la cuenta se crea como <b>usuario@' + DOMINIO_USUARIOS + '</b>, que no necesita existir. Si alguien olvida su contraseña, se la cambiás desde Supabase (Authentication &rsaquo; Users), porque sin correo real no hay recuperación por mail.</p>' +
+        '<p class="hint">La persona entra con ese usuario y esa contraseña. No hace falta ningún correo: por detrás la cuenta se crea como <b>usuario@' + DOMINIO_USUARIOS + '</b>, que no necesita existir. Si alguien olvida su contraseña, se la cambiás desde esta lista (botón Contraseña).</p>' +
+        '<p class="hint">Los permisos se asignan solos según el perfil. Perú + Colombia es exclusivo de Administrador y Gerencia. El ejecutivo consulta todas las oportunidades de su país (sin editar); su código comercial es la clave de KAM con la que se crean las oportunidades que nacen de sus conversiones.</p>' +
       '</form>' +
     '</div>' +
     '<div class="card">' +
       '<h2>Usuarios existentes</h2>' +
-      '<table><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Permisos</th><th>Acciones</th></tr></thead><tbody id="tabla-usuarios-body">' +
-        '<tr><td colspan="5"><p class="empty-state">Cargando…</p></td></tr>' +
-      '</tbody></table>' +
+      '<p class="msg error" id="aviso-migracion" hidden>Falta correr <b>supabase/31_perfiles_permisos.sql</b>: hasta entonces no hay perfiles Gerencia / Ejecutivo comercial ni país asignado.</p>' +
+      '<div style="overflow-x:auto"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Perfil</th><th>País</th><th>Permisos efectivos</th><th>Acciones</th></tr></thead><tbody id="tabla-usuarios-body">' +
+        '<tr><td colspan="6"><p class="empty-state">Cargando…</p></td></tr>' +
+      '</tbody></table></div>' +
     '</div>';
   document.getElementById('form-crear-usuario').addEventListener('submit', handleCrearUsuario);
-  /* El usuario se arma solo desde el nombre hasta que alguien lo edite. */
+  /* El usuario y el código se arman solos desde el nombre hasta que alguien los edite. */
   document.getElementById('nuevo-nombre').addEventListener('input', function(){
     if(!usuarioEditadoAMano) document.getElementById('nuevo-usuario').value = usuarioSugerido(this.value);
+    sugerirCodigoNuevo();
   });
   document.getElementById('nuevo-usuario').addEventListener('input', function(){ usuarioEditadoAMano = !!this.value; });
-  document.getElementById('nuevo-rol').addEventListener('change', actualizarPermisosNuevo);
-  actualizarPermisosNuevo();
+  document.getElementById('nuevo-codigo').addEventListener('input', function(){ codigoEditadoAMano = !!this.value; });
+  document.getElementById('nuevo-rol').addEventListener('change', actualizarFormularioNuevo);
+  document.getElementById('nuevo-pais').addEventListener('change', sugerirCodigoNuevo);
+  actualizarFormularioNuevo();
   cargarUsuarios();
 }
 
-let usuarioEditadoAMano = false;
-/* Las casillas de permisos solo aparecen con el rol operativo_restringido. */
-function actualizarPermisosNuevo(){
+let usuarioEditadoAMano = false, codigoEditadoAMano = false;
+function sugerirCodigoNuevo(){
+  if(codigoEditadoAMano) return;
+  document.getElementById('nuevo-codigo').value = codigoSugerido(document.getElementById('nuevo-nombre').value, document.getElementById('nuevo-pais').value);
+}
+/* País según perfil; código comercial solo para ejecutivos; casillas de
+   áreas y vistas solo para el perfil técnico restringido. */
+function actualizarFormularioNuevo(){
   const sel = document.getElementById('nuevo-rol');
-  document.getElementById('nuevo-permisos').hidden = !sel || rolDescripcion(sel.value) !== ROL_RESTRINGIDO;
+  if(!sel) return;
+  const rol = rolDescripcion(sel.value);
+  const selPais = document.getElementById('nuevo-pais');
+  const actual = selPais.value;
+  selPais.innerHTML = opcionesPais(rol, paisParaPerfil(rol, actual));
+  selPais.disabled = paisesDePerfil(rol).length < 2 || !hayColumnasPerfil;
+  document.getElementById('nuevo-codigo-wrap').hidden = rol !== 'ejecutivo' || !hayColumnasPerfil;
+  document.getElementById('nuevo-permisos').hidden = rol !== ROL_RESTRINGIDO;
+  sugerirCodigoNuevo();
 }
 
 async function verificarAccesoYRenderizar(session){
-  const {data, error} = await db.from('usuario').select('rol_id, roles(descripcion)').eq('auth_user_id', session.user.id).maybeSingle();
+  const {data, error} = await db.from('usuario').select('rol_id, activo, roles(descripcion)').eq('auth_user_id', session.user.id).maybeSingle();
   if(error){ console.error('No se pudo verificar el rol:', error); renderAccesoDenegado(); return; }
   const rol = data && data.roles ? data.roles.descripcion : '';
-  if(rol !== 'admin'){ renderAccesoDenegado(); return; }
+  if(rol !== 'admin' || data.activo === false){ renderAccesoDenegado(); return; }
   miUid = session.user.id;
   await cargarRoles();
   renderPanelAdmin();
@@ -597,8 +834,12 @@ window.addEventListener('DOMContentLoaded', function(){
     return;
   }
   db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  /* Solo al iniciar o cambiar de sesión: una renovación de token, o el ida y
+     vuelta de sesión que hace el alta de un usuario (signUp + setSession), no
+     deben repintar la vista (borrarían el mensaje y lo que se esté escribiendo). */
   db.auth.onAuthStateChange(function(event, session){
     if(session){
+      if(creandoUsuario || (miUid && session.user.id === miUid)) return;
       verificarAccesoYRenderizar(session);
     }else{
       window.location.replace('login.html');

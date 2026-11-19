@@ -11,3 +11,7 @@ node_modules/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Archivos locales que no se publican (repositorio público)
+VENTAS 2022-2026 OCTUBRE.xlsx
+Fotos Comercial/
