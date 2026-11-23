@@ -454,6 +454,10 @@
   #modal-overlay.is-solo-consulta .btn-delete,
   #modal-overlay.is-solo-consulta #m-delete-btn{display:none !important;}
   #modal-overlay.is-solo-consulta [data-ficha-ro]{cursor:default;}
+  /* Edición parcial (ejecutivo, su oportunidad): edita Información general y
+     guarda; el resto de la ficha queda en consulta y no se puede borrar. */
+  body.solo-lectura #modal-overlay.is-edicion-parcial .modal-footer-right .btn-primary{display:inline-block !important;}
+  #modal-overlay.is-edicion-parcial [data-ficha-ro]{cursor:default;}
   /* Las tarjetas de Revisión semanal no se arrastran en solo lectura (el
      bloqueo real está en los dragstart; esto solo evita el cursor de agarre). */
   body.solo-lectura .rs-card[draggable="true"],
@@ -2617,6 +2621,7 @@
     .rsw-card,.rsw-card:hover{transform:none;}
   }
   body.solo-lectura .rsw-card[draggable="true"]{cursor:pointer;}
+  body.perfil-ejecutivo .rsw-card[draggable="true"]{cursor:grab;}
 
   /* CALENDARIO SEMANAL */
   .rs-cal-nav{display:flex;align-items:center;gap:10px;}
@@ -9981,6 +9986,7 @@ const PRESUPUESTADORES = [
   {value:'hugo_escobar', label:'Hugo Escobar'},
   {value:'jesus_chavez', label:'Jesús Chávez'},
   {value:'luis_cayao', label:'Luis Cayao'},
+  {value:'jhoana_caqui', label:'Jhoana Caqui'},
 ];
 const METRADOS = [
   {value:'jesus_chavez', label:'Jesús Chávez'},
@@ -10108,6 +10114,9 @@ const BLOQUEO_ORIGENES = [
   {value:'ingenieria', label:'Ingeniería'},
   {value:'informacion', label:'Información pendiente'},
   {value:'decision', label:'Decisión interna'},
+  /* Tarea técnica pedida por un ejecutivo desde Gestión Comercial: nace
+     bloqueada hasta que Administración o Gerencia la habilitan. */
+  {value:'por_habilitar', label:'Por habilitar (pedida por Comercial)'},
   {value:'otro', label:'Otro'},
 ];
 function estadoGruesoDeTarea(v){
@@ -10119,12 +10128,58 @@ function esTareaActiva(e){ return e.estadoTarea==='en_proceso' || e.estadoTarea=
    de Bloqueado: queda como antecedente y el Historial registra el desbloqueo. */
 function aplicarEstadoTarea(e, v, fechaReal){
   if(!ESTADO_TAREA_LABEL[v]) return;
+  const previo = e.estadoTarea;
   e.estadoTarea = v;
   e.estado = estadoGruesoDeTarea(v);
   /* Fecha real de cumplimiento: la que indica quien completa (ver
      fechaRealCampoHtml); si no llega, se conserva la que tenía o se usa hoy. */
   if(v==='completado') e.fechaCompletado = fechaReal || e.fechaCompletado || todayISO();
   else e.fechaCompletado = '';
+  if(v==='bloqueado' && previo!=='bloqueado') bloqueoIniciar(e);
+  else if(previo==='bloqueado' && v!=='bloqueado') bloqueoReanudar(e);
+}
+/* ---------- BLOQUEO CON PAUSA ----------
+   Mientras una tarea está Bloqueada su tiempo no corre: no vence, no cuenta
+   como atraso y no suma al tiempo de ciclo. Al desbloquearla el plazo se
+   REINICIA completo desde ese día:
+     plazo        = días de inicioPlazo (o la creación) a la fecha vigente
+     nueva fecha  = día del desbloqueo + plazo
+   Campos (supabase/35_tareas_comerciales_bloqueo.sql):
+     · bloqueoDesde — día en que se bloqueó (vacío si no está bloqueada).
+     · inicioPlazo  — día desde el que corre el plazo vigente (el último
+                      desbloqueo; vacío = la creación de la tarea).
+     · pausaDias    — días que los reinicios corrieron la fecha. La fecha
+                      original es inmutable (supabase/22): Desempeño la compara
+                      corrida por estos días (fechaOriginalEfectiva). */
+function bloqueoIniciar(e){
+  if(!e.bloqueoDesde) e.bloqueoDesde = todayISO();
+}
+function bloqueoReanudar(e){
+  const hoy = todayISO();
+  const inicio = e.inicioPlazo || e.fechaCreacion || e.bloqueoDesde || hoy;
+  if(e.fechaEntrega){
+    const plazo = Math.max(0, daysBetween(inicio, e.fechaEntrega));
+    const nueva = addDaysISO(hoy, plazo);
+    const corrimiento = daysBetween(e.fechaEntrega, nueva);
+    if(corrimiento > 0){
+      /* Sin fecha original fijada todavía, la vigente previa pasa a serlo. */
+      fijarFechaOriginal(e);
+      e.pausaDias = (Number(e.pausaDias) || 0) + corrimiento;
+      e.fechaEntrega = nueva;
+    }
+  }
+  e.inicioPlazo = hoy;
+  e.bloqueoDesde = '';
+}
+/* Vencida: pendiente, con fecha interna pasada y NO bloqueada (pausada). */
+function tareaVencida(e, hoy){
+  return !!e && e.estado==='pendiente' && e.estadoTarea!=='bloqueado' && !!e.fechaEntrega && e.fechaEntrega < (hoy || todayISO());
+}
+/* Fecha original corrida por los reinicios de plazo tras un bloqueo. */
+function fechaOriginalEfectiva(e){
+  const f = e.fechaOriginal || e.fechaEntrega || '';
+  const d = Number(e.pausaDias) || 0;
+  return f && d ? addDaysISO(f, d) : f;
 }
 /* Campo "Fecha real de entrega" del diálogo de completar: por defecto hoy,
    editable, nunca futura. Es lo que mide Desempeño (no el día del clic). */
@@ -10220,7 +10275,7 @@ function recuperarFechasOriginales(lista){
   return n;
 }
 function esTareaReprogramada(e){
-  return !!(e.fechaOriginal && e.fechaEntrega && e.fechaOriginal !== e.fechaEntrega);
+  return !!(e.fechaOriginal && e.fechaEntrega && fechaOriginalEfectiva(e) !== e.fechaEntrega);
 }
 /* Reconciliación para registros anteriores (o tocados por una versión vieja
    del panel / importación): si el estado grueso y el fino se contradicen, manda
@@ -10962,6 +11017,10 @@ function contextoNegocioDe(o){
 function cambiarEstadoTarea(lista, e, valor, ctx){
   const res = {completada:false, nuevoEnvio:null, enviado:false};
   if(!e || !ESTADO_TAREA_LABEL[valor]) return res;
+  if(solicitudSinResponsable(e, valor)){
+    showToast('Es una solicitud de Comercial: asigna primero al ' + (e.area==='arquitectura' ? 'arquitecto' : 'presupuestador') + ' y luego habilítala.', 'warn');
+    return res;
+  }
   const tareaPrevia = e.estadoTarea;
   aplicarEstadoTarea(e, valor, ctx && ctx.fechaReal);
   res.completada = tareaPrevia!=='completado' && e.estadoTarea==='completado';
@@ -11033,9 +11092,11 @@ const VISTAS_PERFIL_POR_DEFECTO = ['revision', 'carga'];
 let perfilRestringido = false;
 let permisosPerfil = {areas:[], acciones:{}, vistas:VISTAS_PERFIL_POR_DEFECTO};
 /* PERFILES GERENCIA Y EJECUTIVO COMERCIAL (ver supabase/31_perfiles_permisos.sql).
-   Ninguno edita el Planner (puedeEditar = false): Gerencia consulta todo y
-   aprueba conversiones; el ejecutivo consulta, como un visor, todas las
-   oportunidades de su país (usuario.pais). En Gestión Comercial el ejecutivo
+   Gerencia tiene los permisos de admin (edita el Planner, Horarios, Colombia,
+   Gerencia) salvo Gestión de usuarios y las reglas propias de Gestión
+   Comercial (aprueba conversiones). El ejecutivo consulta todas las
+   oportunidades de su país (usuario.pais); solo edita lo acotado en supabase/34
+   (ver EJEC_COLS_*, más abajo). En Gestión Comercial el ejecutivo
    sí edita lo suyo (privado) y solicita conversiones. La base aplica lo mismo
    con RLS; esto lo refleja en la interfaz.
    usuarioActual se declara al final del script: se lee dentro de try. */
@@ -11061,6 +11122,22 @@ function oppEsMia(o){
   try{ c = (usuarioActual && usuarioActual.codigo) || ''; }catch(e){}
   return !!c && !!o && o.kam === c;
 }
+/* ESCRITURA ACOTADA DEL EJECUTIVO (supabase/34_ejecutivo_edicion_acotada.sql).
+   puedeEditar sigue en false (el resto del panel es de consulta, incluidos
+   Gestión de equipos y el Calendario), con dos excepciones:
+     · Ficha de SUS oportunidades (KAM = su código): edita solo la pestaña
+       «Información general» (fichaEdicionEjecutivo, mientras la ficha está abierta).
+     · Revisión semanal: reordena el tablero (secuencia y columna de prioridad).
+   subirCambios() solo envía esas columnas y la base lo vuelve a validar. */
+const EJEC_COLS_REVISION = ['prioridad_tablero', 'semana_revision', 'secuencia_semana'];
+const EJEC_COLS_INFO = ['cliente', 'cliente_id', 'proyecto', 'contacto', 'importe', 'valor_no_frio_eemm', 'valor_no_frio_oocc',
+  'margen_comercial', 'refrigerante', 'refrigerante_otro', 'f_inicio', 'fecha_seguimiento', 'fecha_comprometida_cliente',
+  'etapa', 'estado_operativo', 'prioridad_tablero', 'segmento_cliente', 'sector', 'productos', 'productos_otro',
+  'probabilidad_cierre', 'mes_cierre', 'duracion_proyecto', 'zona', 'region', 'cotizaciones'];
+let fichaEdicionEjecutivo = false;
+function fichaEdicionEjecutivoPermitida(o){ return !puedeEditar && !!o && esEjecutivo() && oppEsMia(o); }
+function puedeEditarFicha(){ return puedeEditar || fichaEdicionEjecutivo; }
+function puedeReordenarRevision(){ return puedeEditar || esEjecutivo(); }
 function puedeAccion(accion){
   if(!rolConfirmado) return false;
   if(!perfilRestringido) return !!puedeEditar;
@@ -11088,7 +11165,7 @@ function vistaPermitida(tab, subvistaCarga){
 /* Desempeño: admin, o perfil restringido con esa vista otorgada (lee solo
    las tareas de sus áreas, que es lo único que le llega de la base). */
 function puedeVerDesempeno(){
-  return esAdmin() || (rolConfirmado && perfilRestringido && vistaPermitida('carga', 'desempeno'));
+  return esAdminPanel() || (rolConfirmado && perfilRestringido && vistaPermitida('carga', 'desempeno'));
 }
 let supabaseSyncTimer = null;
 /* Escrituras propias en vuelo: mientras haya alguna, un refresco por Realtime
@@ -11117,7 +11194,7 @@ const COLUMNAS_OPCIONALES = ['orden_trabajo', 'prioridad_tablero', 'duracion_pro
 /* Igual que COLUMNAS_OPCIONALES, pero para la tabla entregables: "Requiere
    metrado", su responsable y el vínculo con el Metrado autogenerado se agregaron
    por entregable y esta base puede no tener aún esas columnas. */
-const COLUMNAS_OPCIONALES_ENTREGABLES = ['requiere_metrados', 'resp_metrados', 'resp_metrados_otro', 'metrado_origen_identificador', 'pendiente_envio_cliente', 'envio_origen_identificador', 'estado_tarea', 'bloqueo_origen', 'bloqueo_detalle', 'fecha_original', 'carga_persona'];
+const COLUMNAS_OPCIONALES_ENTREGABLES = ['requiere_metrados', 'resp_metrados', 'resp_metrados_otro', 'metrado_origen_identificador', 'pendiente_envio_cliente', 'envio_origen_identificador', 'estado_tarea', 'bloqueo_origen', 'bloqueo_detalle', 'fecha_original', 'carga_persona', 'bloqueo_desde', 'inicio_plazo', 'pausa_dias'];
 const columnasFaltantes = new Set();
 let avisoMigracionMostrado = false;
 
@@ -11310,6 +11387,10 @@ function entregableToRow(e, oppId){
     /* Carga por persona (24_carga_persona.sql): avance, qué falta, esta semana,
        enfoque y complejidad manual, en un solo jsonb. */
     carga_persona: (e.cp && Object.keys(e.cp).length) ? e.cp : null,
+    /* Bloqueo con pausa (35_tareas_comerciales_bloqueo.sql). */
+    bloqueo_desde: orNull(e.bloqueoDesde),
+    inicio_plazo: orNull(e.inicioPlazo),
+    pausa_dias: Number(e.pausaDias) || null,
   };
   /* Mismo mecanismo que en oportunidadToRow: si la base todavía no tiene estas
      columnas, se omiten para no abortar el upsert completo. */
@@ -11336,6 +11417,9 @@ function rowToEntregable(r){
     estadoTarea: r.estado_tarea || '',
     bloqueoOrigen: r.bloqueo_origen || '',
     bloqueoDetalle: r.bloqueo_detalle || '',
+    bloqueoDesde: r.bloqueo_desde ? String(r.bloqueo_desde).slice(0,10) : '',
+    inicioPlazo: r.inicio_plazo ? String(r.inicio_plazo).slice(0,10) : '',
+    pausaDias: Number(r.pausa_dias) || 0,
     cp: (r.carga_persona && typeof r.carga_persona==='object' && !Array.isArray(r.carga_persona)) ? r.carga_persona : undefined,
     proximoPaso: r.proximo_paso || '',
     observacion: r.observacion || '',
@@ -11465,6 +11549,10 @@ async function cargarDesdeSupabase(opts){
         if(!e.fechaOriginal && p && p.fechaOriginal) e.fechaOriginal = p.fechaOriginal;
         if(p && p.fechaCreacion) e.fechaCreacion = p.fechaCreacion;
         if(columnasFaltantes.has('carga_persona') && p && p.cp) e.cp = p.cp;
+        /* Sin las columnas del bloqueo con pausa (35), se conserva lo local. */
+        if(p && columnasFaltantes.has('bloqueo_desde')) e.bloqueoDesde = p.bloqueoDesde || '';
+        if(p && columnasFaltantes.has('inicio_plazo')) e.inicioPlazo = p.inicioPlazo || '';
+        if(p && columnasFaltantes.has('pausa_dias')) e.pausaDias = p.pausaDias || 0;
       }));
     }
     /* Foto de lo que hay en la nube: contra ella se calcula qué subir (solo los
@@ -11574,6 +11662,9 @@ const COLUMNA_OPCIONAL_LABEL = {
   bloqueo_origen: 'el origen del bloqueo de las tareas',
   bloqueo_detalle: 'el detalle del bloqueo de las tareas',
   fecha_original: 'la fecha planificada original de las tareas',
+  bloqueo_desde: 'el día de bloqueo de las tareas',
+  inicio_plazo: 'el reinicio del plazo tras un bloqueo',
+  pausa_dias: 'los días de pausa por bloqueo',
   semana_revision: 'la semana de la secuencia semanal',
   secuencia_semana: 'la secuencia semanal (#1…#N)',
   fecha_comprometida_cliente: 'la fecha comprometida con el cliente del proyecto',
@@ -11645,6 +11736,7 @@ async function subirCambios(){
      sin saber qué hay allá, cualquier escritura podría pisar datos ajenos. La
      copia local queda guardada y lo pendiente sube en el próximo guardado. */
   if(!nubeBase) return;
+  if(!puedeEditar){ if(esEjecutivo()) await subirCambiosEjecutivo(); return; }
   const oppActual = new Map(oportunidades.map(o=>[o.id, oportunidadToRow(o)]));
   const entActual = new Map();
   oportunidades.forEach(o=>o.entregables.forEach(e=>entActual.set(e.id, entregableToRow(e, o.id))));
@@ -11696,6 +11788,49 @@ async function subirCambios(){
     const { error } = await db.from('oportunidades').delete().in('Identificador', oppBorradas);
     if(error) throw error;
     oppBorradas.forEach(id=>nubeBase.opp.delete(id));
+  }
+}
+
+/* Ejecutivo: solo updates de oportunidades existentes, y de ellas solo las
+   columnas que su perfil escribe (EJEC_COLS_*), más las tareas NUEVAS que crea
+   en sus oportunidades desde Gestión Comercial (insert; nunca edita ni borra
+   tareas). La propiedad se mide con el KAM de la nube, no con el local. */
+async function subirCambiosEjecutivo(){
+  const cambios = [], tareasNuevas = [];
+  oportunidades.forEach(o=>{
+    const base = nubeBase.opp.get(o.id);
+    if(!base) return;
+    const c = columnasCambiadas(oportunidadToRow(o), base);
+    const mia = oppEsMia({kam: base.kam});
+    const ok = {};
+    Object.keys(c).forEach(k=>{ if(EJEC_COLS_REVISION.includes(k) || (mia && EJEC_COLS_INFO.includes(k))) ok[k] = c[k]; });
+    if(Object.keys(ok).length) cambios.push([o.id, ok]);
+    if(mia) o.entregables.forEach(e=>{ if(!nubeBase.ent.has(e.id)) tareasNuevas.push(entregableToRow(e, o.id)); });
+  });
+  await enLotesNube(cambios, async ([id, c])=>{
+    const { error } = await db.from('oportunidades').update(c).eq('Identificador', id);
+    if(error) throw error;
+    Object.assign(nubeBase.opp.get(id), c);
+  });
+  if(tareasNuevas.length){
+    const { error } = await db.from('entregables').insert(tareasNuevas);
+    if(error) throw error;
+    tareasNuevas.forEach(f=>nubeBase.ent.set(f.Identificador, Object.assign({}, f)));
+  }
+  /* Solicitudes retiradas: solo las que en la nube siguen por habilitar, en
+     una oportunidad suya (misma regla que entregables_delete_ejecutivo). */
+  const locales = new Set();
+  oportunidades.forEach(o=>o.entregables.forEach(e=>locales.add(e.id)));
+  const retiradas = [...nubeBase.ent.entries()].filter(([id, r])=>{
+    if(locales.has(id)) return false;
+    const opp = nubeBase.opp.get(r.oportunidad_identificador);
+    return !!opp && oppEsMia({kam: opp.kam}) && esAreaTecnica(r.area)
+      && r.estado_tarea==='bloqueado' && r.bloqueo_origen==='por_habilitar';
+  }).map(([id])=>id);
+  if(retiradas.length){
+    const { error } = await db.from('entregables').delete().in('Identificador', retiradas);
+    if(error) throw error;
+    retiradas.forEach(id=>nubeBase.ent.delete(id));
   }
 }
 
@@ -11784,7 +11919,9 @@ function persistLocal(opts){
      interacciones que no son botones y que el CSS no puede esconder.
      La seguridad real igual está en la base (12_roles_permisos.sql): esto
      evita que el visor crea que guardó algo que la base va a rechazar. */
-  if(!puedeEditar){ avisarSoloLectura(); return; }
+  /* Ejecutivo: solo pasan los guardados que lo piden expresamente (ficha de su
+     oportunidad, nota de bitácora, orden de Revisión semanal). */
+  if(!puedeEditar && !(opts && opts.ejecutivo && esEjecutivo())){ avisarSoloLectura(); return; }
   /* Operación Colombia (maqueta): los datos de demostración nunca tocan la
      copia local de Perú, su historial pendiente ni Supabase. */
   if(esOperacionCO()){ coPersistir(); return; }
@@ -12667,7 +12804,7 @@ function getPrimaryPendingDeliverable(o){
   const hoy = todayISO();
   const pendientes = o.entregables.filter(e=>e.estado==='pendiente');
   if(!pendientes.length) return null;
-  const vencidos = pendientes.filter(e=>e.fechaEntrega && e.fechaEntrega < hoy).sort((a,b)=>a.fechaEntrega.localeCompare(b.fechaEntrega));
+  const vencidos = pendientes.filter(e=>tareaVencida(e, hoy)).sort((a,b)=>a.fechaEntrega.localeCompare(b.fechaEntrega));
   if(vencidos.length) return vencidos[0];
   const hoyMismo = pendientes.filter(e=>e.fechaEntrega === hoy);
   if(hoyMismo.length) return hoyMismo[0];
@@ -12874,7 +13011,8 @@ function rsTareasPendientes(o, filters){
     .sort((a,b)=>(a.fechaEntrega||'9999-12-31').localeCompare(b.fechaEntrega||'9999-12-31') || a.id-b.id);
 }
 function rsTareaEstado(e){
-  if(!e.fechaEntrega || e.estado!=='pendiente') return '';
+  /* Bloqueada: su tiempo está detenido (ver BLOQUEO CON PAUSA): no vence. */
+  if(!e.fechaEntrega || e.estado!=='pendiente' || e.estadoTarea==='bloqueado') return '';
   const hoy = todayISO();
   if(e.fechaEntrega < hoy) return 'vencida';
   return daysBetween(hoy, e.fechaEntrega) <= 2 ? 'proxima' : '';
@@ -12961,7 +13099,7 @@ function rsEscribirSecuencia(lista){
   lista.forEach((o,i)=>{ o.semanaRev = W; o.secSemana = i+1; });
 }
 function rsGuardarSecuencia(){
-  persistLocal();
+  persistLocal({ejecutivo:true});
   renderRevisionSemanal();
   renderKPIs();
   if(rsDrawerOppId!=null) openRSDetailDrawer(rsDrawerOppId);
@@ -13162,8 +13300,8 @@ function renderRSLista(alcance, filters){
    ============================================================ */
 function rsCardDragStart(ev, id){
   /* Frenar acá y no en persistLocal(): sin esto el visor vería la card
-     reubicada en pantalla aunque no se guardara nada. */
-  if(!puedeEditar){ ev.preventDefault(); avisarSoloLectura(); return; }
+     reubicada en pantalla aunque no se guardara nada. El ejecutivo sí ordena. */
+  if(!puedeReordenarRevision()){ ev.preventDefault(); avisarSoloLectura(); return; }
   rsDragOrdenId = id;
   hideGlobalTooltip();
   ev.dataTransfer.effectAllowed = 'move';
@@ -13212,7 +13350,7 @@ function rsColumnDrop(ev, colIdx){
   const id = rsDragOrdenId;
   rsDragOrdenId = null;
   if(id===null) return;
-  if(!puedeEditar){ avisarSoloLectura(); return; }
+  if(!puedeReordenarRevision()){ avisarSoloLectura(); return; }
   const o = oportunidades.find(x=>x.id===id);
   const col = RS_COLUMNAS[colIdx];
   if(!o || !col) return;
@@ -13424,7 +13562,7 @@ function renderRSCalendario(filters, alcance){
 
   /* Vencidos = pendientes con fecha interna anterior a hoy: viven en el bloque
      superior (arrastrables a un día) y no se repiten en su casilla. */
-  const vencidos = universo.filter(x=>x.e.fechaEntrega && x.e.fechaEntrega < hoy)
+  const vencidos = universo.filter(x=>tareaVencida(x.e, hoy))
     .sort((a,b)=>a.e.fechaEntrega.localeCompare(b.e.fechaEntrega) || orden(a,b));
   let shownCount = vencidos.length;
   const gridHtml = dias.map((iso,i)=>{
@@ -14883,7 +15021,7 @@ function renderCarga(){
       imp: items.filter(({e})=>e.prioridad===2).length,
       complejos: cx.filter(k=>k==='alta').length,
       avance: Math.round(items.reduce((s,{e})=>s+cpAvanceDe(e),0) / items.length),
-      vencidos: items.filter(({e})=>e.fechaEntrega && e.fechaEntrega < hoy).length,
+      vencidos: items.filter(({e})=>tareaVencida(e, hoy)).length,
       semana: items.filter(({e})=>d.enSemana(e, lunesAct)).length,
       peso: items.reduce((s,{e},i)=>s + PESO_PRI[cpPriKey(e)] * PESO_CX[cx[i]], 0),
       enfoques: items.filter(({e})=>cpEnfoque(e)),
@@ -15090,6 +15228,10 @@ function equipoRolOtrosHtml(o, rol, nombreMostrado){
 function esAdmin(){
   try{ return !!(usuarioActual && usuarioActual.rol === 'admin'); }catch(e){ return false; }
 }
+/* Gerencia tiene los mismos permisos que admin en todo el panel, salvo
+   Gestión Comercial (sus reglas propias, con esAdmin/esGerencia) y Gestión de
+   usuarios (solo esAdmin). Ver supabase/33_gerencia_como_admin.sql. */
+function esAdminPanel(){ return esAdmin() || esGerencia(); }
 function setCargaVista(vista){
   if(vista === 'desempeno' && !puedeVerDesempeno()) vista = 'carga';
   if(!vistaPermitida('carga', vista)) vista = 'carga';
@@ -15183,14 +15325,14 @@ function desTareas(f){
       if(f.areas.length && !f.areas.includes(e.area)) return;
       const resp = nombreResponsableEntregable(e) || DES_SIN_RESP;
       if(f.resps.length && !f.resps.includes(resp)) return;
-      const original = e.fechaOriginal || e.fechaEntrega || '';
+      const original = fechaOriginalEfectiva(e);
       let clase = '', dev = null, claseO = '', devO = null;
       if(e.estado==='completado'){
         if(!e.fechaCompletado || !desEnRango(e.fechaCompletado, r)) return;
         if(e.fechaEntrega){ dev = daysBetween(e.fechaEntrega, e.fechaCompletado); clase = desClase(dev); }
         else clase = 'sinfecha';
         if(original){ devO = daysBetween(original, e.fechaCompletado); claseO = desClase(devO); }
-      } else if(e.estado==='pendiente' && e.fechaEntrega && e.fechaEntrega < hoy){
+      } else if(tareaVencida(e, hoy)){
         /* Vencido por confirmar: es el estado de hoy, no depende del periodo y
            no se atribuye como incumplimiento. */
         clase = 'vencido';
@@ -15198,7 +15340,8 @@ function desTareas(f){
       } else return;
       /* Tiempo de ciclo: de la creación a la entrega real (solo completadas);
          plan = de la creación a la fecha original comprometida. */
-      const creacion = e.fechaCreacion || '';
+      /* Tras un bloqueo el plazo se reinicia: el ciclo corre desde el desbloqueo. */
+      const creacion = e.inicioPlazo || e.fechaCreacion || '';
       const ciclo = e.estado==='completado' && creacion ? daysBetween(creacion, e.fechaCompletado) : null;
       const plan = creacion && original ? daysBetween(creacion, original) : null;
       out.push({o, e, resp, area:e.area, clase, dev, claseO, devO, original, creacion, ciclo: ciclo!=null && ciclo>=0 ? ciclo : null, plan: plan!=null && plan>=0 ? plan : null, reprog: esTareaReprogramada(e)});
@@ -16321,7 +16464,7 @@ function setDetailView(view){
      nombre cae en Oportunidades. 'apoyo' es la bandeja de solicitudes de
      Colombia que atiende Perú (solo admin y solo en Perú). */
   if(view === 'entregables') view = 'oportunidades';
-  if(view === 'apoyo' && (!esAdmin() || esOperacionCO())) view = 'oportunidades';
+  if(view === 'apoyo' && (!esAdminPanel() || esOperacionCO())) view = 'oportunidades';
   detailView = view;
   document.querySelectorAll('.detail-view-btn').forEach(b=>b.classList.toggle('active', b.dataset.detailView===view));
   document.getElementById('detail-view-oportunidades').style.display = view==='oportunidades' ? '' : 'none';
@@ -17115,7 +17258,7 @@ function fichaOrdenTareas(a, b){
   if(fa!==fb) return fa < fb ? -1 : 1;
   return (a.id||0) - (b.id||0);
 }
-function fichaEsVencida(e){ return e.estado==='pendiente' && !!e.fechaEntrega && e.fechaEntrega < todayISO(); }
+function fichaEsVencida(e){ return tareaVencida(e); }
 
 /* ---------- Pestañas ---------- */
 function fichaSetTab(tab){
@@ -17703,7 +17846,7 @@ function fichaCliRenderLista(){
   const lista = document.getElementById('ficha-cli-lista');
   const txt = document.getElementById('m-cliente');
   const q = txt.value.trim();
-  if(!q || !puedeEditar){ fichaCliCerrarLista(); return; }
+  if(!q || !puedeEditarFicha()){ fichaCliCerrarLista(); return; }
   const r = cliBuscar(q);
   const items = [];
   const op = c => {
@@ -17787,7 +17930,7 @@ function fichaCliAplicar(c){
 }
 /* Registrar un cliente nuevo; ante nombres parecidos pide confirmación. */
 function fichaCliRegistrarNuevo(nombre, alTerminar){
-  if(!puedeEditar){ avisarSoloLectura(); return; }
+  if(!puedeEditarFicha()){ avisarSoloLectura(); return; }
   fichaCliCerrarLista();
   const hacer = async ()=>{
     const r = await cliRegistrar(nombre);
@@ -17983,7 +18126,7 @@ function fichaRenderCotizaciones(){
   if(!cont) return;
   const principal = modalCotizaciones.find(c=>c.principal);
   document.getElementById('ficha-op-principal').innerHTML = `Opción ${principal ? principal.num : 1} <span class="fx-op-badge">Principal</span>`;
-  const ro = !puedeEditar ? ' disabled' : '';
+  const ro = !puedeEditarFicha() ? ' disabled' : '';
   const refrigOpts = v => [...document.getElementById('m-refrigerante').options]
     .map(op=>`<option value="${escAttr(op.value)}"${op.value===v ? ' selected' : ''}>${escAttr(op.textContent)}</option>`).join('');
   const campo = (c, k, label) => `<label class="fx-campo"><span>${label}</span><input type="number" class="ficha-input fx-num" value="${c[k] || ''}" min="0" step="0.01" placeholder="0.00" oninput="fichaCotCampo('${c.id}','${k}',this.value)"${ro}></label>`;
@@ -18505,8 +18648,9 @@ function renderFichaDetalle(){
     </div>` : ''}
     <div class="fx-detalle-pie">
       <span class="ft-nota">${nota}</span>
-      <button type="button" class="fe-link" onclick="incAbrirForm('ficha',${id})">Registrar incidencia</button>
-      <button type="button" class="fe-link fe-link-danger" onclick="fichaEliminarTarea(${id})">Eliminar tarea</button>
+      ${puedeEditar ? `<button type="button" class="fe-link" onclick="incAbrirForm('ficha',${id})">Registrar incidencia</button>
+      <button type="button" class="fe-link fe-link-danger" onclick="fichaEliminarTarea(${id})">Eliminar tarea</button>`
+      : esSolicitudRetirable(e, fichaOpp()) ? `<button type="button" class="fe-link fe-link-danger ft-retirar-sol" onclick="fichaRetirarSolicitud(${id})">Retirar solicitud</button>` : ''}
     </div>`;
 }
 /* Las fechas de la tarea, de solo lectura: creada, original (primer
@@ -18616,6 +18760,10 @@ function fichaTareaFecha(id, campo, valor){
 function fichaTareaEstado(id, valor){
   const e = fichaTarea(id);
   if(!e) return;
+  if(solicitudSinResponsable(e, valor)){
+    showToast('Es una solicitud de Comercial: asigna primero al ' + (e.area==='arquitectura' ? 'arquitecto' : 'presupuestador') + ' y luego habilítala.', 'warn');
+    return;
+  }
   if(valor==='completado' && e.estadoTarea!=='completado'){
     askConfirm(`¿Deseas marcar «${e.nombre || 'Tarea'}» como concluido?`, ()=>fichaAplicarEstado(id, valor, leerFechaReal()), null, {
       title: '✅ Marcar entregable como concluido',
@@ -18651,6 +18799,36 @@ function fichaEliminarTarea(id){
   if(idx<0) return;
   if(fichaTareaSel===id) fichaTareaSel = null;
   modalEntRemove(idx);
+}
+/* Solicitud de tarea del ejecutivo (Gestión Comercial): mientras siga por
+   habilitar, el KAM de la oportunidad puede retirarla. No la modifica nunca.
+   La base aplica la misma regla (supabase/35, entregables_delete_ejecutivo). */
+function esSolicitudRetirable(e, o){
+  return !!e && !!o && !puedeEditar && esEjecutivo() && oppEsMia(o) && !esOperacionCO()
+    && esAreaTecnica(e.area) && e.estadoTarea==='bloqueado' && e.bloqueoOrigen==='por_habilitar';
+}
+function fichaRetirarSolicitud(id){
+  const o = fichaOpp();
+  const real = o && o.entregables.find(x=>x.id===id);
+  if(!esSolicitudRetirable(real, o)){ showToast('Solo puedes retirar tus solicitudes que siguen por habilitar.', 'warn'); return; }
+  askConfirm(`¿Retirar la solicitud «${real.nombre || 'Tarea'}» de ${AREA_LABEL[real.area] || ''}? Se elimina de la oportunidad.`, ()=>{
+    o.entregables = o.entregables.filter(x=>x.id!==id);
+    /* También del borrador de la ficha: si después guarda Información general,
+       no debe volver a aparecer. */
+    modalEntregables = modalEntregables.filter(x=>x.id!==id);
+    modalIdsOriginales.delete(id);
+    if(fichaTareaSel===id) fichaTareaSel = null;
+    persistLocal({ejecutivo:true});
+    renderModalEntregables();
+    renderAll();
+    showToast('Solicitud retirada.', 'ok');
+  }, null, {title:'Retirar solicitud', confirmLabel:'Retirar solicitud', confirmClass:'btn-delete'});
+}
+/* Una solicitud por habilitar no se habilita sin responsable: primero se asigna
+   al arquitecto o presupuestador. Cancelarla o dejarla bloqueada sí se puede. */
+function solicitudSinResponsable(e, valor){
+  return !!e && e.estadoTarea==='bloqueado' && e.bloqueoOrigen==='por_habilitar' && !e.responsable
+    && valor!=='bloqueado' && valor!=='cancelado';
 }
 function fichaAbrirNuevaTarea(area){
   if(fichaNuevaTarea && fichaNuevaTarea.area===area){ fichaNuevaTarea = null; renderModalEntregables(); return; }
@@ -18938,7 +19116,7 @@ function fichaNotaEstado(){
   txt.placeholder = 'Escribe una nota…';
   btn.textContent = ver ? 'Nueva nota' : 'Agregar nota';
   btn.classList.toggle('is-nueva', ver);
-  btn.disabled = ver ? !puedeEditar : (!o || !txt.value.trim());
+  btn.disabled = ver ? !puedeEditarFicha() : (!o || !txt.value.trim());
   btn.title = o ? '' : 'Guarda la oportunidad para empezar su bitácora';
   if(ult){
     const n = fichaUltimaNota(o);
@@ -18947,13 +19125,13 @@ function fichaNotaEstado(){
   }
 }
 function fichaAgregarNota(){
-  if(!puedeEditar){ avisarSoloLectura(); return; }
+  if(!puedeEditarFicha()){ avisarSoloLectura(); return; }
   const o = fichaOpp();
   const txt = document.getElementById('m-nota-bitacora');
   const texto = txt ? txt.value.trim() : '';
   if(!o || !texto) return;
   registrarEventoManual(o, 'comercial', 'Nota', texto, '', '');
-  persistLocal();
+  persistLocal({ejecutivo:fichaEdicionEjecutivo});
   /* La nota recién agregada queda a la vista, sin poder editarse. */
   fichaNotaModo = 'ver';
   txt.value = texto;
@@ -19131,16 +19309,19 @@ function openEditModal(id){
      desactiva el nombre del cliente en Detalle y esconde "Abrir ficha
      completa", pero el guard va igual acá, que es por donde pasan las tres
      entradas a la ficha. */
-  /* Excepción: el ejecutivo abre la ficha completa de SUS oportunidades (KAM),
-     en solo consulta (fichaSoloConsulta bloquea todos los controles). */
+  /* Excepción: el ejecutivo abre la ficha completa de SUS oportunidades (KAM)
+     y edita solo «Información general» (fichaSoloConsulta en modo parcial). */
   const o = oportunidades.find(x=>x.id===id);
   if(!puedeEditar && !fichaConsultaPermitida(o)){ avisarSoloLectura(); return; }
   if(!o) return;
   lastFocusedElement = document.activeElement;
   editingOppId = id;
+  /* Antes de pintar: los renders de Información general (cotizaciones,
+     bitácora, cliente) leen puedeEditarFicha(). */
+  fichaEdicionEjecutivo = fichaEdicionEjecutivoPermitida(o);
   fichaPrepararApertura(o);
   const overlay = document.getElementById('modal-overlay');
-  fichaSoloConsulta(!puedeEditar);
+  fichaSoloConsulta(!puedeEditar, fichaEdicionEjecutivo);
   overlay.classList.remove('hidden');
   overlay.querySelector('.modal-box').scrollTop = 0;
   trapFocus(overlay, closeModal);
@@ -19155,20 +19336,31 @@ function openEditModal(id){
    navegación (pestañas, subpestañas, desplegables) y el cierre. Además,
    persistLocal() no guarda sin permiso y la base rechaza cualquier escritura. */
 function fichaConsultaPermitida(o){ return !!o && esEjecutivo() && oppEsMia(o); }
-const FICHA_NAV_PERMITIDA = '.fx-tab, .fx-ent-sub-btn, .fe-area-toggle, .modal-close, .fx-close, .modal-footer .btn-secondary, [role="tab"], summary';
+/* .ft-card: seleccionar una tarea solo muestra su detalle (que sigue bloqueado).
+   .ft-retirar-sol: el ejecutivo retira su solicitud por habilitar (esSolicitudRetirable). */
+const FICHA_NAV_PERMITIDA = '.fx-tab, .fx-ent-sub-btn, .fe-area-toggle, .modal-close, .fx-close, .modal-footer .btn-secondary, [role="tab"], summary, .ft-card, .ft-retirar-sol';
+/* Edición parcial (ejecutivo, su oportunidad): Información general y Guardar
+   quedan activos; el país no (sus oportunidades son de su país). */
+const FICHA_EDICION_PARCIAL = '#ficha-panel-info *, .modal-footer-right .btn-primary';
 let fichaConsultaObs = null;
 function fichaBloquearControles(){
   const box = document.querySelector('#modal-overlay .modal-box');
   if(!box) return;
+  const parcial = document.getElementById('modal-overlay').classList.contains('is-edicion-parcial');
   box.querySelectorAll('input, select, textarea, button').forEach(el=>{
     if(el.tagName === 'BUTTON' && el.matches(FICHA_NAV_PERMITIDA)) return;
+    if(parcial && el.id !== 'm-pais' && el.matches(FICHA_EDICION_PARCIAL)) return;
     if(!el.disabled){ el.disabled = true; el.dataset.fichaRo = '1'; }
   });
-  box.querySelectorAll('[contenteditable="true"]').forEach(el=>el.setAttribute('contenteditable', 'false'));
+  box.querySelectorAll('[contenteditable="true"]').forEach(el=>{
+    if(parcial && el.closest('#ficha-panel-info')) return;
+    el.setAttribute('contenteditable', 'false');
+  });
 }
-function fichaSoloConsulta(activar){
+function fichaSoloConsulta(activar, parcial){
   const overlay = document.getElementById('modal-overlay');
-  overlay.classList.toggle('is-solo-consulta', !!activar);
+  overlay.classList.toggle('is-solo-consulta', !!activar && !parcial);
+  overlay.classList.toggle('is-edicion-parcial', !!activar && !!parcial);
   if(fichaConsultaObs){ fichaConsultaObs.disconnect(); fichaConsultaObs = null; }
   if(!activar){
     /* Devuelve los controles a su estado: la próxima ficha puede ser de edición. */
@@ -19183,6 +19375,7 @@ function fichaSoloConsulta(activar){
 function closeModal(){
   const overlay = document.getElementById('modal-overlay');
   fichaSoloConsulta(false);
+  fichaEdicionEjecutivo = false;
   overlay.classList.add('hidden');
   releaseFocusTrap(overlay);
   editingOppId = null;
@@ -19294,6 +19487,8 @@ function confirmDeleteCurrentOpp(){
 }
 
 function saveModal(confirmado){
+  /* El ejecutivo solo guarda la ficha de una oportunidad suya ya existente. */
+  if(!puedeEditar && !(fichaEdicionEjecutivo && editingOppId!==null)){ avisarSoloLectura(); return; }
   /* Campos obligatorios (nuevas y existentes): un registro histórico
      incompleto pide aquí lo que le falta; nada se borra. */
   const faltantes = fichaCamposFaltantes();
@@ -19428,7 +19623,7 @@ function saveModal(confirmado){
   }
   finalizarRondaSiCorresponde(savedId);
   /* persistLocal registra el historial y aplica el estado general automático. */
-  persistLocal();
+  persistLocal({ejecutivo:fichaEdicionEjecutivo});
   renderAll();
   closeModal();
   /* Mismo toast que en el resto de las vistas, solo por las tareas que en
@@ -20650,7 +20845,7 @@ function gerReprogsProyecto(o){
 function gerCumplimiento(tareas){
   let ok = 0, med = 0;
   tareas.forEach(e=>{
-    const ref = e.fechaOriginal || e.fechaEntrega;
+    const ref = fechaOriginalEfectiva(e);
     if(!ref || !e.fechaCompletado) return;
     med++; if(e.fechaCompletado <= ref) ok++;
   });
@@ -20665,7 +20860,7 @@ function gerMotivos(o, pend, hoy){
   if(fc && fc < hoy && pend.length) out.push({sev:100 + daysBetween(fc, hoy), riesgo:true, txt:'Fecha cliente vencida hace ' + gerDiasTxt(daysBetween(fc, hoy))});
   const ue = pend.filter(e=>e.fechaEntrega).map(e=>e.fechaEntrega).sort().pop();
   if(fc && ue && ue > fc && fc >= hoy) out.push({sev:80 + daysBetween(fc, ue), riesgo:true, txt:'Entrega interna ' + gerDiasTxt(daysBetween(fc, ue)) + ' después de la fecha cliente'});
-  const venc = pend.filter(e=>e.fechaEntrega && e.fechaEntrega < hoy).sort((a,b)=>a.fechaEntrega < b.fechaEntrega ? -1 : 1)[0];
+  const venc = pend.filter(e=>tareaVencida(e, hoy)).sort((a,b)=>a.fechaEntrega < b.fechaEntrega ? -1 : 1)[0];
   if(venc) out.push({sev:60 + daysBetween(venc.fechaEntrega, hoy), txt:(venc.nombre || 'Tarea') + ' vencida hace ' + gerDiasTxt(daysBetween(venc.fechaEntrega, hoy))});
   const bloq = pend.find(e=>e.estadoTarea==='bloqueado');
   if(bloq){
@@ -20715,7 +20910,7 @@ function gerModelo(){
   const historialCubre = primerEvento <= R.ant.desdeTs;
 
   /* Foto global. */
-  const vencidas = pendientes.filter(x=>x.e.fechaEntrega && x.e.fechaEntrega < hoy);
+  const vencidas = pendientes.filter(x=>tareaVencida(x.e, hoy));
   const atencion = activas.map(o=>{
     const pend = o.entregables.filter(e=>e.estado==='pendiente' && enArea(e));
     const motivos = gerMotivos(o, pend, hoy);
@@ -20745,7 +20940,7 @@ function gerModelo(){
       const n = lista.filter(o=>o.fechaSeguimiento && o.fechaSeguimiento < hoy).length;
       if(n) alerta = gerPlural(n, 'seguimiento vencido', 'seguimientos vencidos');
     } else {
-      const n = lista.filter(o=>o.entregables.some(e=>e.estado==='pendiente' && enArea(e) && e.fechaEntrega && e.fechaEntrega < hoy)).length;
+      const n = lista.filter(o=>o.entregables.some(e=>enArea(e) && tareaVencida(e, hoy))).length;
       if(n) alerta = n + ' con atraso';
     }
     return Object.assign({}, st, {opps: lista, importe: gerImporte(lista), alerta});
@@ -21243,7 +21438,7 @@ function gcRenderPulso(){
     const activas = gerUnicas(pend.map(x=>x.o)).length;
     const semana = tareas.filter(x=>x.e.fechaEntrega && x.e.fechaEntrega >= sem.lunesISO && x.e.fechaEntrega <= sem.domingoISO);
     const hechas = semana.filter(x=>x.e.estado==='completado').length;
-    const venc = pend.filter(x=>x.e.fechaEntrega && x.e.fechaEntrega < hoy).length;
+    const venc = pend.filter(x=>tareaVencida(x.e, hoy)).length;
     const pct = semana.length ? Math.round(hechas * 100 / semana.length) : 0;
     return `<button type="button" class="gco-pu is-${area}" onclick="gerIrCarga('${area}')" title="Ver en Carga laboral">
       <span class="gco-pu-k">${AREA_LABEL[area]}<span class="gco-pu-ir" aria-hidden="true">→</span></span>
@@ -21333,10 +21528,10 @@ function gerModalAbrir(tipo, clave){
       destino = ()=>gerIrTab('revision');
     } else if(clave==='cumplimiento'){
       titulo = 'Cumplimiento · ' + per;
-      const tarde = M.entregadas.filter(x=>{ const ref = x.e.fechaOriginal || x.e.fechaEntrega; return ref && x.e.fechaCompletado > ref; });
+      const tarde = M.entregadas.filter(x=>{ const ref = fechaOriginalEfectiva(x.e); return ref && x.e.fechaCompletado > ref; });
       html = gerResumenHtml([[M.cumAct.pct==null ? '—' : M.cumAct.pct + '%', 'a tiempo'], [M.cumAct.ok, 'en fecha'], [M.cumAct.med - M.cumAct.ok, 'fuera de fecha', tarde.length ? 'danger' : '']]) +
         `<p class="ger-m-sub">Tareas completadas hasta su fecha original. Entregadas fuera de fecha:</p>` +
-        gerModalLista(tarde.map(x=>gerModalFila(x.o, '+' + gerDiasTxt(daysBetween(x.e.fechaOriginal || x.e.fechaEntrega, x.e.fechaCompletado)), 'warn', (x.e.nombre || 'Tarea') + ' · ' + (RS_AREA_CORTA[x.e.area] || ''))));
+        gerModalLista(tarde.map(x=>gerModalFila(x.o, '+' + gerDiasTxt(daysBetween(fechaOriginalEfectiva(x.e), x.e.fechaCompletado)), 'warn', (x.e.nombre || 'Tarea') + ' · ' + (RS_AREA_CORTA[x.e.area] || ''))));
       destino = ()=>gerIrCarga(null);
     } else if(clave==='vencidas'){
       titulo = 'Tareas vencidas';
@@ -21483,9 +21678,8 @@ function gerDescargarInforme(){
    ============================================================ */
 const PERMISOS_POR_ROL = {
   admin:  ['gerencia.gerente', 'gerencia.planner', 'gerencia.operaciones'],
-  /* Gerencia consulta (sin editar): G. Comercial y Operaciones. Planner lo
-     sigue administrando el admin. */
-  gerencia: ['gerencia.gerente', 'gerencia.operaciones'],
+  /* Gerencia: igual que admin. */
+  gerencia: ['gerencia.gerente', 'gerencia.planner', 'gerencia.operaciones'],
   editor: [],
   visor:  [],
 };
@@ -21821,7 +22015,7 @@ function plnModelo(){
 
   /* Alertas resumidas. */
   const pendActivas = pend.filter(x=>activa(x.o));
-  const tareasVencidas = pendActivas.filter(x=>x.e.fechaEntrega && x.e.fechaEntrega < hoy);
+  const tareasVencidas = pendActivas.filter(x=>tareaVencida(x.e, hoy));
   const clienteVencida = opps.filter(o=>activa(o) && rsFechaCliente(o) && rsFechaCliente(o) < hoy && o.entregables.some(e=>e.estado==='pendiente'));
   const segVencidos = pipeline.filter(o=>info.get(o.id).segVencido);
   const sinEquipo = opps.filter(o=>activa(o) && (
@@ -22838,7 +23032,7 @@ function coSolicitudes(){
   /* Todo lo de Colombia es solo para admin: sin solicitudes, en Perú no
      aparecen la bandeja «Colombia» de Detalle, sus avisos ni los trabajos de
      Colombia en Carga laboral. */
-  if(!esAdmin()) return [];
+  if(!esAdminPanel()) return [];
   const st = coCargarStore();
   return st.solicitudes.filter(s=>{ const o = st.oportunidades.find(x=>x.id===s.oppId); return o && o.entregables.some(e=>e.id===s.entId); });
 }
@@ -22928,7 +23122,7 @@ function coNotificar(para, tono, titulo, texto, solId){
   if(st.notificaciones.length > 60) st.notificaciones.length = 60;
 }
 function coNotifsDe(op){
-  const co = esAdmin() ? coCargarStore().notificaciones.filter(n=>n.para===op) : [];
+  const co = esAdminPanel() ? coCargarStore().notificaciones.filter(n=>n.para===op) : [];
   /* Control de horarios (solo Perú): solicitudes por resolver (admin) o
      resueltas (colaborador). Ver horNotificaciones(). */
   if(op !== 'peru' || typeof horNotificaciones !== 'function') return co;
@@ -23648,7 +23842,7 @@ function iniIrCarga(area, tipo, motivo){
   const F = {
     pendientes:{label:'Pendientes vigentes', test:(e, o)=>op(e, o)},
     semana:{label:'Vencen esta semana · ' + formatFechaCorta(M.sem.lunesISO) + ' – ' + formatFechaCorta(M.viernes), test:(e, o)=>op(e, o) && !!e.fechaEntrega && e.fechaEntrega >= M.sem.lunesISO && e.fechaEntrega <= M.viernes},
-    atrasados:{label:'Atrasados · fecha interna vencida', test:(e, o)=>op(e, o) && !!e.fechaEntrega && e.fechaEntrega < todayISO()},
+    atrasados:{label:'Atrasados · fecha interna vencida', test:(e, o)=>op(e, o) && tareaVencida(e)},
     bloqueo:{label:motivo ? 'Bloqueados · ' + iniMotivoLabel(motivo) : 'Bloqueos activos', test:(e, o)=>op(e, o) && e.estadoTarea==='bloqueado' && (!motivo || iniMotivoKey(e)===motivo)},
   }[tipo || 'pendientes'];
   cpFiltroInicio = {tipo:tipo || 'pendientes', label:F.label, test:F.test};
@@ -23941,7 +24135,7 @@ function coPintarNotif(){
         <span class="notif-t"><b>${escAttr(n.titulo)}</b><small>${escAttr(n.texto)}</small></span>
         <span class="notif-h">${coHace(n.ts)}</span>
       </button>`).join('') || '<div class="cp-empty">Sin notificaciones.</div>'}</div>
-    ${esAdmin() ? '<p class="co-pop-nota">Demostración: solicitudes y entregables Colombia ↔ Perú.</p>' : ''}`;
+    ${esAdminPanel() ? '<p class="co-pop-nota">Demostración: solicitudes y entregables Colombia ↔ Perú.</p>' : ''}`;
 }
 function coAbrirNotif(id){
   if(String(id).indexOf('HN-') === 0){ horAbrirNotif(id); return; }
@@ -24285,7 +24479,7 @@ let appIniciada = false;  // evita recargar datos/realtime en cada TOKEN_REFRESH
    (sin fila en `usuario`, sin conexión), se queda en false — negar por
    defecto es lo correcto acá, y además coincide con lo que va a hacer la base,
    así que el panel no ofrece botones que el servidor después va a rechazar. */
-const ROLES_QUE_EDITAN = ['admin', 'editor'];
+const ROLES_QUE_EDITAN = ['admin', 'gerencia', 'editor'];
 
 /* Gerencia: admin y perfil Gerencia, con al menos una subvista permitida (ver
    PERMISOS_POR_ROL / GER_SUBVISTAS). */
@@ -24293,6 +24487,7 @@ function puedeVerGerencia(){ return rolConfirmado && (esAdmin() || esGerencia())
 function aplicarPermisosDeRol(){
   document.body.classList.toggle('solo-lectura', !puedeEditar);
   document.body.classList.toggle('perfil-restringido', perfilRestringido);
+  document.body.classList.toggle('perfil-ejecutivo', !puedeEditar && esEjecutivo());
   if(perfilRestringido) aplicarNavegacionPerfilRestringido();
   document.getElementById('btn-usuarios').style.display = esAdmin() ? '' : 'none';
   /* Desempeño: admin, o perfil restringido con la vista otorgada. Si otro rol
@@ -24382,10 +24577,8 @@ function avisarSoloLectura(){
   avisoSoloLecturaMostrado = true;
   showToast(perfilRestringido
     ? 'Tu perfil es de consulta (' + areasPerfilTexto() + '): podés ver, pero no modificar.'
-    : esGerencia()
-    ? 'Gerencia consulta el Planner en solo lectura: las oportunidades las administra Planner. Las conversiones se aprueban desde Gestión Comercial.'
     : esEjecutivo()
-    ? 'Tus oportunidades son de solo consulta: las administra Planner. Tus leads, agenda y tareas se gestionan en Gestión Comercial.'
+    ? 'Puedes editar la Información general de tus oportunidades y ordenar la Revisión semanal; lo demás es de consulta. Tus leads, agenda y tareas se gestionan en Gestión Comercial.'
     : 'Tu rol es visor: podés consultar el panel, pero no modificarlo. Pedile a un admin que te cambie el rol si necesitás editar.', 'warn');
 }
 
@@ -24594,6 +24787,7 @@ var HOR_EQUIPO = [
   {value:'manuel_enriquez',   label:'Manuel Enríquez',   grupo:'presupuestos', cargo:'Asistente de Presupuestos e Ingeniería'},
   {value:'elver_leon',        label:'Elver León',        grupo:'presupuestos', cargo:'Analista de Presupuestos e Ingeniería'},
   {value:'jose_perez',        label:'José Pérez',        grupo:'presupuestos', cargo:'Analista de Presupuestos e Ingeniería'},
+  {value:'jhoana_caqui',      label:'Jhoana Caqui',      grupo:'presupuestos', cargo:'Presupuestos e Ingeniería'},
 ];
 /* Cabezas de grupo: aro de color en la foto. */
 var HOR_LIDERES = new Set(['misael_estrada','jesus_chavez','thalia_borja']);
@@ -24705,7 +24899,7 @@ function horAvisarSinTabla(){
   if(horAvisoSinTabla) return;
   horAvisoSinTabla = true;
   console.warn('La tabla ' + HOR_TABLA + ' no existe en Supabase. Control de horarios guarda solo en este navegador hasta correr supabase/29_control_horarios.sql.');
-  if(esAdmin()) showToast('Control de horarios guarda solo en este equipo: falta correr 29_control_horarios.sql en Supabase.', 'warn');
+  if(esAdminPanel()) showToast('Control de horarios guarda solo en este equipo: falta correr 29_control_horarios.sql en Supabase.', 'warn');
 }
 async function horCargar(){
   if(!db || horCargando) return;
@@ -24930,7 +25124,8 @@ function horIr(){
 }
 
 /* ---------- permisos ---------- */
-function horPuedeSolicitar(){ return rolConfirmado && !esAdmin() && !!horMiPersona(); }
+/* El ejecutivo ve Gestión de equipos (Control de horarios incluido) solo en consulta. */
+function horPuedeSolicitar(){ return rolConfirmado && !esAdminPanel() && !esEjecutivo() && !!horMiPersona(); }
 function horAplicarPermisos(){
   horPintarBadges();
   if(typeof coRenderHerramientas === 'function') coRenderHerramientas();
@@ -24938,7 +25133,7 @@ function horAplicarPermisos(){
   if(v && !v.hidden) renderHorarios();
 }
 function horPintarBadges(){
-  const n = esAdmin() ? horPendientes().length : 0;
+  const n = esAdminPanel() ? horPendientes().length : 0;
   document.querySelectorAll('[data-hor-badge]').forEach(b=>{ b.textContent = n; b.hidden = !n; });
 }
 function horRefrescar(){
@@ -24959,7 +25154,7 @@ function horMarcarNotifLeida(id){
 function horNotificaciones(){
   if(!rolConfirmado) return [];
   const leidas = horLeidas();
-  if(esAdmin()){
+  if(esAdminPanel()){
     return horPendientes().map(f=>({id:'HN-' + f.id, ts:f.creado_en, tono:'warn', titulo:'Solicitud de horario',
       texto:(f.datos.personaLabel || '') + ' · ' + (HOR_EST[f.datos.estado] || {label:'Base'}).label + ' · ' + horFechasTxt(f.datos), leida:leidas.has('HN-' + f.id)}));
   }
@@ -25052,7 +25247,7 @@ function horHitos(alc, alertas){
   horPendientes().filter(f=>vals.has(f.datos.persona) && enAlcance(f.datos)).forEach(f=>{
     const p = horPersona(f.datos.persona);
     hitos.push({orden:'0' + f.datos.desde, tipo:'pend', tono:'warn', p, t:'Cambio pendiente · ' + f.datos.personaLabel,
-      s:(HOR_EST[f.datos.estado] || {label:'Base'}).label + ' · ' + horFechasTxt(f.datos), acc:(esAdmin() || (horMiPersona() || {}).value === f.datos.persona) ? `horPanelAbrir('solicitudes')` : ''});
+      s:(HOR_EST[f.datos.estado] || {label:'Base'}).label + ' · ' + horFechasTxt(f.datos), acc:(esAdminPanel() || (horMiPersona() || {}).value === f.datos.persona) ? `horPanelAbrir('solicitudes')` : ''});
   });
   /* Cobertura baja: un hito por área, con los días afectados. */
   HOR_AREAS.forEach(area=>{
@@ -25142,7 +25337,7 @@ function horPintarSeleccion(){
 
 /* ---------- «Opciones»: acciones, búsqueda y filtros secundarios ---------- */
 function horPintarOpciones(){
-  const admin = esAdmin(), yo = horPuedeSolicitar() ? horMiPersona() : null;
+  const admin = esAdminPanel(), yo = horPuedeSolicitar() ? horMiPersona() : null;
   const nPend = admin ? horPendientes().length : (yo ? horPendientes().filter(f=>f.datos.persona === yo.value).length : 0);
   const nFil = mselValues('hor-f-col').length + (horBuscar ? 1 : 0);
   const b = document.getElementById('hor-mas-n'); if(b){ b.textContent = nPend; b.hidden = !nPend; }
@@ -25190,7 +25385,7 @@ function horBuscarInput(v){
 }
 
 /* ---------- calendario ---------- */
-function horPuedeTocar(p){ return esAdmin() || (horPuedeSolicitar() && horMiPersona().value === p.value); }
+function horPuedeTocar(p){ return esAdminPanel() || (horPuedeSolicitar() && horMiPersona().value === p.value); }
 function horSemanaHtml(personas, per, calc){
   const hoy = todayISO();
   const sel = iso=> iso === horDiaSel ? ' is-sel' : '';
@@ -25347,7 +25542,7 @@ function horSolHtml(f, admin, sinAcciones){
   </div>`;
 }
 function horBandejaHtml(){
-  if(esAdmin()){
+  if(esAdminPanel()){
     const pend = horPendientes();
     const recientes = horSolicitudes().filter(f=>f.datos.status !== 'pendiente').slice(0, 6);
     return {titulo:'Solicitudes de cambio', sub:pend.length ? pend.length + ' por resolver · el calendario cambia al aprobar' : 'Sin solicitudes pendientes',
@@ -25380,7 +25575,7 @@ function horSeguimientoHtml(personas){
     if(abierto){
       const evs = eventos.filter(f=>f.datos.persona === p.value).slice(0, 8);
       det = `<div class="hor-seg-det">
-        <div><p class="hor-sub-t">Cambios vigentes en el mes</p>${misReglas.length ? misReglas.sort((a,b)=> a.datos.desde < b.datos.desde ? -1 : 1).map(f=>`<div class="hor-regla">${f.datos.estado === 'B' ? '<span class="hor-pill hor-t-oficina"><b>B</b><span>Base</span></span>' : horChipHtml({k:f.datos.estado})}<span class="hor-regla-f">${escAttr(horFechasTxt(f.datos))}</span><small>${escAttr(f.datos.nota || '')}${f.datos.origen === 'solicitud' ? ' · por solicitud' : ''}</small>${esAdmin() ? `<button type="button" class="co-link" onclick="horAnularRegla('${f.id}')">Anular</button>` : ''}</div>`).join('') : '<span class="hor-muted">Sin cambios: sigue la programación base.</span>'}</div>
+        <div><p class="hor-sub-t">Cambios vigentes en el mes</p>${misReglas.length ? misReglas.sort((a,b)=> a.datos.desde < b.datos.desde ? -1 : 1).map(f=>`<div class="hor-regla">${f.datos.estado === 'B' ? '<span class="hor-pill hor-t-oficina"><b>B</b><span>Base</span></span>' : horChipHtml({k:f.datos.estado})}<span class="hor-regla-f">${escAttr(horFechasTxt(f.datos))}</span><small>${escAttr(f.datos.nota || '')}${f.datos.origen === 'solicitud' ? ' · por solicitud' : ''}</small>${esAdminPanel() ? `<button type="button" class="co-link" onclick="horAnularRegla('${f.id}')">Anular</button>` : ''}</div>`).join('') : '<span class="hor-muted">Sin cambios: sigue la programación base.</span>'}</div>
         <div><p class="hor-sub-t">Historial</p>${evs.length ? evs.map(f=>`<div class="hor-ev"><span>${escAttr(f.datos.accion)}</span><small>${escAttr(f.datos.detalle)} · ${escAttr(f.datos.usuario || f.creado_por || '')} · ${coHace(f.creado_en)}</small></div>`).join('') : '<span class="hor-muted">Sin movimientos registrados.</span>'}</div>
       </div>`;
     }
@@ -25422,7 +25617,7 @@ function horPop(){
 function horCelda(ev, persona, iso){
   ev.stopPropagation();
   const p = horPersona(persona); if(!p) return;
-  if(!esAdmin()){ horAbrirModal({persona, desde:iso, hasta:iso}); return; }
+  if(!esAdminPanel()){ horAbrirModal({persona, desde:iso, hasta:iso}); return; }
   const e = horEstado(p, iso);
   const pop = horPop();
   pop.innerHTML = `<div class="hor-pop-h"><b>${escAttr(p.label)}</b><small>${HOR_DOW_L[horDow(iso)]} ${horDdMm(iso)}</small></div>
@@ -25442,7 +25637,7 @@ function horCelda(ev, persona, iso){
 }
 function horAplicarRapido(persona, iso, k){
   const pop = document.getElementById('hor-pop'); if(pop) pop.hidden = true;
-  if(!esAdmin()) return;
+  if(!esAdminPanel()) return;
   const p = horPersona(persona);
   const antes = horEstado(p, iso);
   if(antes && antes.k === k && k !== 'B') return;
@@ -25460,7 +25655,7 @@ function horCrearRegla(d, sinEvento){
   return f;
 }
 function horAnularRegla(id){
-  if(!esAdmin()) return;
+  if(!esAdminPanel()) return;
   const f = horFilas.get(id); if(!f) return;
   f.datos.anulada = true; f.datos.anuladaPor = horUsuario();
   horTocarFila(f); horSubir(f);
@@ -25471,7 +25666,7 @@ function horAnularRegla(id){
 
 /* ---------- solicitudes ---------- */
 function horAprobar(id){
-  if(!esAdmin()) return;
+  if(!esAdminPanel()) return;
   const f = horFilas.get(id); if(!f || f.datos.status !== 'pendiente') return;
   const d = f.datos;
   const r = horCrearRegla({persona:d.persona, desde:d.desde, hasta:d.hasta, dias:d.dias, estado:d.estado, nota:d.motivo || '', origen:'solicitud', solicitudId:f.id}, true);
@@ -25486,7 +25681,7 @@ function horAbrirRechazo(id){
   horAbrirModal({modo:'rechazo', solicitudId:id});
 }
 function horRechazar(id, comentario){
-  if(!esAdmin()) return;
+  if(!esAdminPanel()) return;
   const f = horFilas.get(id); if(!f || f.datos.status !== 'pendiente') return;
   Object.assign(f.datos, {status:'rechazada', comentario:comentario || '', resueltoPor:horUsuario(), resueltoEn:new Date().toISOString()});
   horTocarFila(f); horSubir(f);
@@ -25506,7 +25701,7 @@ function horCancelarSolicitud(id){
 
 /* ---------- modal ---------- */
 function horAbrirModal(ctx){
-  const admin = esAdmin();
+  const admin = esAdminPanel();
   if(ctx.modo !== 'rechazo' && !admin && !horPuedeSolicitar()){
     showToast('Tu usuario no está vinculado a un colaborador del calendario: puedes consultarlo, pero no solicitar cambios.', 'warn');
     return;
@@ -25595,7 +25790,7 @@ function horConfirmarModal(){
   if(!horJornadas(d).length){ showToast('El rango no tiene días hábiles.', 'warn'); return; }
   const p = horPersona(c.persona);
   if(c.modo === 'admin'){
-    if(!esAdmin()) return;
+    if(!esAdminPanel()) return;
     horCrearRegla(Object.assign(d, {nota:(c.nota || '').trim(), origen:'admin'}));
     showToast('Horario de ' + p.label + ' actualizado.', 'ok');
   } else {
@@ -25612,7 +25807,7 @@ function horConfirmarModal(){
 
 /* ---------- equipo visible (admin) ---------- */
 function horAbrirEquipo(){
-  if(!esAdmin()) return;
+  if(!esAdminPanel()) return;
   const cfg = horConfig();
   horModalCtx = {modo:'equipo', ocultos:cfg.ocultos.slice(), extra:cfg.extra.slice(), nuevoNombre:'', nuevoGrupo:'ejecutivos', nuevoCargo:''};
   horPintarEquipo();
@@ -26534,8 +26729,9 @@ function gcmTareaForm(pre){
   const t = pre.editar ? gcmTarea(pre.editar) : null;
   if(pre.editar && !t) return;
   GCM.t = t ? {modo:'editar', id:t.id, titulo:t.titulo, vinc:t.vinculo ? Object.assign({}, t.vinculo) : null, vence:t.vence, responsable:t.responsable, desc:t.desc||'', estado:t.estado}
-    : {modo:'nueva', titulo:pre.titulo||'', vinc:pre.vinc || null, vence:pre.vence || gcmD(1), responsable:pre.responsable || GCM.yo || GCM.ses, desc:'', estado:'Pendiente'};
-  GCM.pk.tar = {q:'', tipos:['lead','cliente','oportunidad'], cb:(tipo, id)=>{ GCM.t.vinc = tipo ? {tipo, id} : null; gcmTareaFormRender(); }};
+    : {modo:'nueva', titulo:pre.titulo||'', vinc:pre.vinc || null, vence:pre.vence || gcmD(1), responsable:pre.responsable || GCM.yo || GCM.ses, desc:'', estado:'Pendiente', area:'comercial', tarea:'', otro:''};
+  /* El ejecutivo solo vincula tareas a SUS oportunidades (ver gcmTareaPlanner). */
+  GCM.pk.tar = {q:'', tipos:['lead','cliente','oportunidad'], soloMias:esEjecutivo(), cb:(tipo, id)=>{ GCM.t.vinc = tipo ? {tipo, id} : null; gcmTareaFormRender(); }};
   GCM.shModo = 'tarea';
   gcmSh(t ? 'Editar tarea' : 'Nueva tarea', gcmTareaFormHTML(), gcmTareaBotones());
   if(!t) setTimeout(()=>{ const i = document.getElementById('gcm-t-tit'); if(i) i.focus(); }, 60);
@@ -26551,6 +26747,7 @@ function gcmResponsables(){
 }
 function gcmTareaFormHTML(){
   const t = GCM.t;
+  if(gcmTareaPlanner()) return gcmTareaPlannerHTML();
   const resp = gcmSupervisa() || t.modo === 'editar' ? gcmResponsables() : [GCM.ses];
   return `<section class="gcm-f-s" id="gcm-ts-tit"><p class="gcm-f-t">Título <i>*</i></p>
       <input type="text" class="gcm-in" id="gcm-t-tit" maxlength="120" placeholder="p. ej. Enviar ficha técnica al cliente" value="${gcmE(t.titulo)}" oninput="GCM.t.titulo=this.value"></section>
@@ -26565,6 +26762,7 @@ function gcmTareaFormHTML(){
 }
 function gcmTareaGuardar(){
   const f = GCM.t; if(!f) return;
+  if(gcmTareaPlanner()){ gcmTareaPlannerGuardar(); return; }
   const titulo = String(f.titulo||'').trim();
   document.querySelectorAll('#gcm-sh-body .gcm-f-s').forEach(s=>s.classList.remove('is-err'));
   const err = !titulo ? ['tit','Escribe el título de la tarea'] : !f.vence ? ['ven','Indica la fecha de vencimiento'] : null;
@@ -26621,6 +26819,95 @@ function gcmTareaAbrir(id){
       : [{t:'Cerrar', cls:'btn-primary'}]);
 }
 
+/* ---------- Tareas del Planner desde Gestión Comercial (ejecutivo) ----------
+   Vinculada a una oportunidad SUYA, la tarea no es una tarea comercial suelta:
+   es una tarea real de la oportunidad (un entregable, el mismo registro que
+   muestran la ficha, Revisión semanal, Calendario, Carga laboral e Historial),
+   elegida del mismo catálogo de la ficha (TAREAS_POR_AREA). El ejecutivo solo
+   la crea; después la gestiona Planner.
+     · Comercial: responsable él mismo, nace «En proceso» con su fecha.
+     · Arquitectura / Presupuestos: es una SOLICITUD de tarea. Nace Bloqueada
+       («Por habilitar») con la fecha pedida y SIN responsable: Administración
+       o Gerencia asigna al arquitecto o presupuestador y la habilita (no se
+       puede habilitar sin responsable). Su tiempo no corre hasta entonces, y
+       el plazo se reinicia (ver BLOQUEO CON PAUSA). Mientras siga por
+       habilitar, el ejecutivo puede retirarla desde la ficha, pero nunca
+       modificarla (esSolicitudRetirable, supabase/35). */
+const GCM_PLN_AREAS = ['comercial', 'arquitectura', 'presupuestos'];
+function gcmOppReal(id){ return gcmOppsDe(GCM.pais).find(o=>String(o.id)===String(id)) || null; }
+function gcmTareaPlanner(){
+  const t = GCM.t;
+  return !!t && t.modo === 'nueva' && esEjecutivo() && !!t.vinc && t.vinc.tipo === 'oportunidad';
+}
+/* Responsable del entregable según el área: el ejecutivo (KAM) en Comercial, el
+   principal del equipo de la oportunidad en las áreas técnicas. */
+function gcmPlnResponsable(o, area){
+  if(area === 'comercial') return {responsable:o.kam || '', responsableOtro:o.kam === 'otro' ? (o.kamOtro || '') : ''};
+  const rol = EQUIPO_ROLES.find(r=>r.area === area);
+  const v = rol ? (o[rol.campo] || '') : '';
+  if(!v || v === 'no_requiere') return {responsable:'', responsableOtro:''};
+  return {responsable:v, responsableOtro:v === 'otro' ? (o[rol.campoOtro] || '') : ''};
+}
+function gcmPlnOpciones(area){ return (TAREAS_POR_AREA[area] || []).concat([FICHA_OTRA_TAREA]); }
+function gcmPlnElegir(i){ GCM.t.tarea = gcmPlnOpciones(GCM.t.area)[i] || ''; gcmTareaFormRender(); }
+function gcmTareaPlannerHTML(){
+  const t = GCM.t, o = gcmOppReal(t.vinc.id);
+  const opciones = gcmPlnOpciones(t.area);
+  const tecnica = t.area !== 'comercial';
+  const r = o && !tecnica ? gcmPlnResponsable(o, t.area) : {responsable:'', responsableOtro:''};
+  const respNom = tecnica
+    ? 'Lo asigna Administración o Gerencia (' + (t.area === 'arquitectura' ? 'arquitecto' : 'presupuestador') + ')'
+    : (o ? (resolveNombre(getResponsableOptionsForArea(t.area), r.responsable, r.responsableOtro) || 'Sin asignar') : '—');
+  const areas = GCM_PLN_AREAS.map(a=>`<button type="button" class="${t.area===a?'is-on':''}" aria-pressed="${t.area===a}" onclick="GCM.t.area='${a}';GCM.t.tarea='';gcmTareaFormRender()">${gcmE(AREA_LABEL[a] || a)}</button>`).join('');
+  const chips = opciones.map((x,i)=>`<button type="button" class="gcm-ch${t.tarea===x?' is-on':''}" aria-pressed="${t.tarea===x}" onclick="gcmPlnElegir(${i})">${gcmE(x===FICHA_OTRA_TAREA ? 'Otro' : x)}</button>`).join('');
+  const rapidas = [['Hoy',0],['Mañana',1],['En 3 días',3],['Próxima semana',7]].map(x=>`<button type="button" class="gcm-ch" onclick="GCM.t.vence=gcmD(${x[1]});document.getElementById('gcm-t-ven').value=GCM.t.vence">${x[0]}</button>`).join('');
+  const nota = tecnica
+    ? 'Es una <b>solicitud</b>: se crea en la oportunidad <b>Por habilitar</b> (bloqueada) y sin responsable. Administración o Gerencia asigna al ' + (t.area === 'arquitectura' ? 'arquitecto' : 'presupuestador') + ' y la habilita; su tiempo no corre hasta entonces y el plazo hasta la fecha pedida se cuenta desde ese día. No puedes modificarla, pero sí retirarla desde la ficha mientras siga por habilitar.'
+    : 'Se crea en la oportunidad <b>En proceso</b>, a tu nombre, con esta fecha.';
+  return `<section class="gcm-f-s" id="gcm-ts-vin"><p class="gcm-f-t">Vincular a <small>lead, cliente u oportunidad existente</small></p>${gcmPickHTML('tar', t.vinc)}</section>
+    <section class="gcm-f-s"><p class="gcm-f-t">Área</p><div class="gcm-seg" role="group" aria-label="Área">${areas}</div></section>
+    <section class="gcm-f-s" id="gcm-ts-tit"><p class="gcm-f-t">Tarea <i>*</i> <small>las mismas opciones de la ficha de la oportunidad</small></p>
+      <div class="gcm-f-chips">${chips}</div>
+      ${t.tarea===FICHA_OTRA_TAREA ? `<input type="text" class="gcm-in" id="gcm-t-otro" maxlength="120" placeholder="Nombre de la tarea" value="${gcmE(t.otro)}" oninput="GCM.t.otro=this.value">` : ''}</section>
+    <div class="gcm-f-2">
+      <section class="gcm-f-s" id="gcm-ts-ven"><p class="gcm-f-t">Fecha <i>*</i></p><input type="date" class="gcm-in" id="gcm-t-ven" value="${gcmE(t.vence)}" oninput="GCM.t.vence=this.value"></section>
+      <section class="gcm-f-s"><p class="gcm-f-t">Responsable</p><p class="gcm-f-hint">${gcmE(respNom)}${tecnica ? '' : ' (tú)'}</p></section>
+    </div>
+    <div class="gcm-f-chips">${rapidas}</div>
+    <label class="gcm-f-l">Observación <small>opcional</small><textarea class="gcm-in" rows="2" maxlength="500" oninput="GCM.t.desc=this.value">${gcmE(t.desc)}</textarea></label>
+    <p class="gcm-f-hint">${nota} Aparece en la ficha, Revisión semanal, Calendario y Carga laboral. Después la gestiona Planner.</p>`;
+}
+function gcmTareaPlannerGuardar(){
+  const f = GCM.t;
+  const o = gcmOppReal(f.vinc.id);
+  document.querySelectorAll('#gcm-sh-body .gcm-f-s').forEach(x=>x.classList.remove('is-err'));
+  const nombre = f.tarea === FICHA_OTRA_TAREA ? String(f.otro || '').trim() : f.tarea;
+  const err = !nombre ? ['tit', 'Elige la tarea (o escribe su nombre en «Otro»)'] : !f.vence ? ['ven', 'Indica la fecha'] : null;
+  if(err){ const x = document.getElementById('gcm-ts-'+err[0]); if(x){ x.classList.add('is-err'); x.scrollIntoView({block:'center', behavior:'smooth'}); } showToast(err[1]+'.', 'warn'); return; }
+  if(GCM.pais !== operacionActiva || !o || !oppEsMia(o)){ showToast('Solo puedes crear tareas en tus oportunidades.', 'warn'); return; }
+  const hoy = todayISO(), tecnica = f.area !== 'comercial';
+  const e = Object.assign({
+    id: nextEntId++, nombre, area:f.area,
+    etapa:o.etapa, prioridad:[1,2,3,4].includes(Number(o.prioridadTablero)) ? Number(o.prioridadTablero) : 3,
+    fechaEntrega:f.vence, fechaComprometidaCliente:'', fechaCompletado:'',
+    estado:'pendiente', estadoTarea: tecnica ? 'bloqueado' : 'en_proceso',
+    bloqueoOrigen: tecnica ? 'por_habilitar' : '',
+    bloqueoDetalle: tecnica ? 'Solicitada por ' + gcmUsuario() + ' desde Gestión Comercial. Falta asignar ' + (f.area === 'arquitectura' ? 'arquitecto' : 'presupuestador') + ' y habilitarla.' : '',
+    bloqueoDesde: tecnica ? hoy : '', inicioPlazo:'', pausaDias:0,
+    proximoPaso:'', observacion:String(f.desc || '').trim(), ronda:o.rondaActual || 1,
+    requiereMetrados:false, respMetrados:'', respMetradosOtro:'', metradoOrigenId:null,
+    pendienteEnvioCliente:false, envioOrigenId:null, fechaCreacion:hoy,
+  }, tecnica ? {responsable:'', responsableOtro:''} : gcmPlnResponsable(o, f.area));
+  o.entregables.push(e);
+  persistLocal({ejecutivo:true});
+  renderAll();
+  gcmShCerrar();
+  showToast(tecnica
+    ? 'Solicitud de ' + AREA_LABEL[f.area] + ' enviada en la oportunidad #' + o.id + ': queda por asignar y habilitar.'
+    : 'Tarea creada en la oportunidad #' + o.id + ' · ' + gcmFmtL(f.vence) + '.', 'ok');
+  gcmRefrescar();
+}
+
 /* ---------- selector de vínculo (lead, cliente u oportunidad) ----------
    Busca por cliente o proyecto y devuelve el identificador real. */
 function gcmPickTxt(v){
@@ -26661,7 +26948,7 @@ function gcmPickRes(id){
     if(C.length) html += '<p class="gcm-f-l2">Clientes · Base Maestra</p>' + C.map(e=>it('cliente', e.id, 'building', e.nombre, e.id+(e.ruc ? ' · '+e.ruc : ''))).join('');
   }
   if(tipos.includes('oportunidad')){
-    const O = GCM.d.ops.filter(o=>has([o.id, o.t, o.cliente].join(' '))).slice(0, 5);
+    const O = GCM.d.ops.filter(o=>has([o.id, o.t, o.cliente].join(' ')) && (!pk.soloMias || oppEsMia(gcmOppReal(o.id)))).slice(0, 5);
     if(O.length) html += '<p class="gcm-f-l2">Oportunidades</p>' + O.map(o=>it('oportunidad', o.id, 'link', '#'+o.id+' · '+o.t, gcmCorto(o.cliente)+(o.ejecutivo ? ' · '+o.ejecutivo : ''))).join('');
   }
   return html || '<p class="gcm-f-hint">Sin coincidencias.</p>';

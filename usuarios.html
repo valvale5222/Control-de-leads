@@ -310,16 +310,20 @@ function permisosEfectivos(u){
     L.push(['Eliminación definitiva', 'sí', true]);
   } else if(rol === 'gerencia'){
     L.push(['Países', 'Perú + Colombia', true]);
-    L.push(['Planner', 'consulta todo · oportunidades en solo lectura', true]);
+    L.push(['Planner', 'consulta y edita todo (como admin)', true]);
+    L.push(['Control de horarios', 'administra, como admin', true]);
     L.push(['Gestión Comercial', 'consulta todo el equipo, los dos países', true]);
     L.push(['Conversiones', 'aprueba o rechaza las validadas por administración', true]);
-    L.push(['Gerencia', 'G. Comercial y Operaciones', true]);
+    L.push(['Gerencia', 'todas las subvistas', true]);
     L.push(['Usuarios', 'no', false]);
-    L.push(['Eliminación', 'no', false]);
   } else if(rol === 'ejecutivo'){
     L.push(['País', pais, true]);
-    L.push(['Planner', 'consulta todas las oportunidades de su país, como visor (sin editar)', true]);
+    L.push(['Planner', 'consulta todas las oportunidades de su país; en las suyas (KAM) edita solo «Información general»', true]);
+    L.push(['Revisión semanal', 'reordena el tablero (orden y columna de prioridad)', true]);
+    L.push(['Calendario · tareas', 'consulta: no mueve tareas entre fechas', false]);
+    L.push(['Gestión de equipos', 'solo consulta', true]);
     L.push(['Gestión Comercial', 'crea y edita sus leads, agenda, visitas y tareas', true]);
+    L.push(['Tareas en sus oportunidades', 'Comercial: las crea en proceso. Arquitectura y Presupuestos: las solicita (por habilitar, sin responsable); Administración o Gerencia asigna al arquitecto o presupuestador y la habilita. No las modifica; puede retirar la solicitud mientras siga por habilitar', true]);
     L.push(['Leads y agenda de otros ejecutivos', 'no los ve', false]);
     L.push(['Código KAM', u.codigo_comercial || 'sin código: sus conversiones quedarán con KAM «otro»', !!u.codigo_comercial]);
     L.push(['Base Maestra de Clientes', 'compartida: consulta y registra clientes', true]);
@@ -770,7 +774,7 @@ function renderPanelAdmin(){
         '</div>' +
         '<p class="msg" id="crear-usuario-msg" hidden></p>' +
         '<p class="hint">La persona entra con ese usuario y esa contraseña. No hace falta ningún correo: por detrás la cuenta se crea como <b>usuario@' + DOMINIO_USUARIOS + '</b>, que no necesita existir. Si alguien olvida su contraseña, se la cambiás desde esta lista (botón Contraseña).</p>' +
-        '<p class="hint">Los permisos se asignan solos según el perfil. Perú + Colombia es exclusivo de Administrador y Gerencia. El ejecutivo consulta todas las oportunidades de su país (sin editar); su código comercial es la clave de KAM con la que se crean las oportunidades que nacen de sus conversiones.</p>' +
+        '<p class="hint">Los permisos se asignan solos según el perfil. Perú + Colombia es exclusivo de Administrador y Gerencia. El ejecutivo consulta todas las oportunidades de su país, edita la Información general de las suyas y reordena la Revisión semanal; su código comercial es la clave de KAM con la que se crean las oportunidades que nacen de sus conversiones.</p>' +
       '</form>' +
     '</div>' +
     '<div class="card">' +
