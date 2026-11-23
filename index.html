@@ -2748,6 +2748,11 @@
   .rsc-done-cliente{font-family:'Inter',sans-serif;font-weight:600;color:var(--ink-soft);}
   .rsc-done-tag{font-family:'Inter',sans-serif;font-weight:600;color:var(--ok);}
   .cal-card-tags{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:2px;}
+  /* Motivo del bloqueo a la vista (motivoBloqueo); el texto completo va en el title. */
+  .cal-card-motivo, .rsw-motivo, .cp-row-motivo{color:var(--danger);font-weight:500;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere;}
+  .cal-card-motivo{font-size:10px;margin-top:2px;}
+  .rsw-motivo{font-size:11px;margin-top:4px;}
+  .cp-row-motivo{font-size:11.5px;margin-top:1px;}
   .cal-tag{font-size:11px;font-weight:600;color:var(--ink-soft);white-space:nowrap;}
   .cal-tag.is-danger{color:var(--danger);}
   /* Bloque Vencidos / Bloqueados del calendario: reutiliza .rsw-avisos de
@@ -10116,7 +10121,7 @@ const BLOQUEO_ORIGENES = [
   {value:'decision', label:'Decisión interna'},
   /* Tarea técnica pedida por un ejecutivo desde Gestión Comercial: nace
      bloqueada hasta que Administración o Gerencia la habilitan. */
-  {value:'por_habilitar', label:'Por habilitar (pedida por Comercial)'},
+  {value:'por_habilitar', label:'Solicitud de Comercial (por habilitar)'},
   {value:'otro', label:'Otro'},
 ];
 function estadoGruesoDeTarea(v){
@@ -11993,9 +11998,23 @@ function esTareaEnvioPropuesta(e){
 }
 function esAreaTecnica(area){ return area==='arquitectura' || area==='presupuestos'; }
 function textoBloqueo(t){
-  if(!t || !t.bloqueoOrigen) return 'Bloqueado';
+  if(!t || !t.bloqueoOrigen) return t && t.bloqueoDetalle ? 'Bloqueado — ' + t.bloqueoDetalle : 'Bloqueado';
+  if(t.bloqueoOrigen==='por_habilitar') return motivoBloqueo(t) + (t.bloqueoDetalle ? ' — ' + t.bloqueoDetalle : '');
   return 'Pendiente información de: ' + (catalogLabel(BLOQUEO_ORIGENES, t.bloqueoOrigen) || t.bloqueoOrigen)
     + (t.bloqueoDetalle ? ' — ' + t.bloqueoDetalle : '');
+}
+/* Motivo del bloqueo en una línea, para mostrarlo a la vista en las tarjetas
+   (Calendario, Revisión semanal, Carga laboral). El texto completo sigue en
+   textoBloqueo (globo / title). Las solicitudes de Comercial dicen qué falta. */
+function motivoBloqueo(t){
+  if(!t) return '';
+  if(t.bloqueoOrigen==='por_habilitar'){
+    if(!t.responsable) return 'Solicitud de Comercial · falta asignar ' + (t.area==='arquitectura' ? 'arquitecto' : 'presupuestador');
+    return 'Solicitud de Comercial · asignada a ' + (nombreResponsableEntregable(t) || t.responsable) + ', por habilitar';
+  }
+  const origen = t.bloqueoOrigen ? (catalogLabel(BLOQUEO_ORIGENES, t.bloqueoOrigen) || t.bloqueoOrigen) : '';
+  if(origen && t.bloqueoDetalle) return origen + ': ' + t.bloqueoDetalle;
+  return origen || t.bloqueoDetalle || 'Sin motivo indicado';
 }
 function nombreApoyo(a){
   return resolveNombre(getResponsableOptionsForArea(a.area), a.responsable, '') || a.responsable;
@@ -13162,6 +13181,7 @@ function rsAvisoCardHtml(o, tipo, ent){
     <div class="rsw-l1"><span class="rsw-cliente">${escAttr(o.cliente)}</span><span class="rsw-id">ID ${o.id}</span></div>
     <div class="rsw-proyecto" title="${escAttr(o.proyecto || '')}">${escAttr(o.proyecto || '—')}</div>
     <div class="rsw-pie"><span class="rsw-importe">${formatMoneda(o.importe)}</span>${pie}</div>
+    ${bloq ? `<div class="rsw-motivo" title="${escAttr(textoBloqueo(bloq))}">${escAttr(motivoBloqueo(bloq))}</div>` : ''}
   </div>`;
 }
 function rsRenderAvisos(alcance){
@@ -13213,6 +13233,7 @@ function rsCardHtml(o, n, filters){
   const hayProxima = !hayVencida && tareas.some(e=>rsTareaEstado(e)==='proxima');
   const fcTone = fc && (riesgo || fc < hoy) ? ' is-danger' : (fc && daysBetween(hoy, fc) <= 2 ? ' is-warn' : '');
   const bloq = rsBloqueado(o);
+  const bloqT = bloq ? o.entregables.find(e=>e.estado==='pendiente' && e.estadoTarea==='bloqueado') : null;
   const cls = ' pri-' + RS_COLUMNAS[rsColDe(o)].pri + (bloq ? ' is-bloq' : '') + (hayVencida ? ' is-vencido' : (hayProxima ? ' is-proximo' : '')) + (riesgo ? ' is-riesgo' : '') + (rsUltimoMovido===o.id ? ' is-recien' : '');
   const senal = hayVencida ? 'Tiene tareas vencidas' : (hayProxima ? 'Tiene tareas que vencen en 48 h' : '');
   const fcTitle = riesgo ? 'Riesgo: entrega interna posterior al compromiso cliente' : 'Fecha comprometida con el cliente';
@@ -13221,8 +13242,9 @@ function rsCardHtml(o, n, filters){
       onclick="openRSDetailDrawer(${o.id})" onkeydown="if(event.key==='Enter'){event.preventDefault();openRSDetailDrawer(${o.id});}">
     <span class="rsw-seq" aria-label="Secuencia semanal ${n}"><span class="rsw-seq-hash">#</span>${n}</span>
     <div class="rsw-main">
-      <div class="rsw-l1"><span class="rsw-cliente">${escAttr(o.cliente)}</span><span class="rsw-id">ID ${o.id}</span>${bloq ? `<span class="rsw-lock" title="Bloqueado: tiene una tarea bloqueada" aria-label="Bloqueado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>` : ''}${senal ? `<span class="rsw-senal" title="${senal}" aria-label="${senal}"></span>` : ''}</div>
+      <div class="rsw-l1"><span class="rsw-cliente">${escAttr(o.cliente)}</span><span class="rsw-id">ID ${o.id}</span>${bloq ? `<span class="rsw-lock" title="${escAttr(bloqT ? 'Bloqueada: ' + (bloqT.nombre || 'Tarea') + ' · ' + textoBloqueo(bloqT) : 'Bloqueado: tiene una tarea bloqueada')}" aria-label="Bloqueado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>` : ''}${senal ? `<span class="rsw-senal" title="${senal}" aria-label="${senal}"></span>` : ''}</div>
       <div class="rsw-proyecto" title="${escAttr(o.proyecto || '')}">${escAttr(o.proyecto || '—')}</div>
+      ${bloqT ? `<div class="rsw-motivo" title="${escAttr(textoBloqueo(bloqT))}">${escAttr((bloqT.nombre || 'Tarea') + ' · ' + motivoBloqueo(bloqT))}</div>` : ''}
       <div class="rsw-pie"><span class="rsw-importe">${formatMoneda(o.importe)}${altCotizacionesHtml(o)}</span><span class="rsw-fc${fcTone}" title="${fcTitle}"><span class="rsw-fc-k">Cliente</span>${fc ? formatFechaCorta(fc) : '—'}</span></div>
     </div>
   </div>`;
@@ -13472,6 +13494,7 @@ function calCardHtml(o, e, ctx){
     <div class="cal-card-row2">ID ${o.id}${n ? ` · <b>#${n}</b>` : ''}</div>
     <div class="cal-card-row3">${RS_AREA_CORTA[e.area] || AREA_LABEL[e.area] || '—'} · ${resp ? escAttr(rsNombreInicial(resp)) : (coSolicitudDe(o, e) ? '<span class="rsw-t-sinresp">Solicitado a Perú</span>' : '<span class="rsw-t-sinresp">Sin responsable</span>')}${coMarcaHtml(o, e)}</div>
     ${tags.length ? `<div class="cal-card-tags">${tags.join('')}</div>` : ''}
+    ${bloq ? `<div class="cal-card-motivo" title="${escAttr(textoBloqueo(e))}">${escAttr(motivoBloqueo(e))}</div>` : ''}
   </div>`;
 }
 /* Cada día muestra como máximo RS_CAL_MAX_VISIBLES cards completas; el resto
@@ -14884,7 +14907,6 @@ function cpRenderDetalle(hoy){
     const abierto = cpAbiertos.has(e.id);
     const enf = cpEnfoque(e);
     const bloqueado = e.estadoTarea === 'bloqueado';
-    const origen = bloqueado ? ((BLOQUEO_ORIGENES.find(b=>b.value===e.bloqueoOrigen)||{}).label || '') : '';
     const ref = refrigeranteDisplay(o);
     const sit = dias===null ? '' : dias < 0 ? 'Vencido hace ' + (-dias) + ' d' : dias===0 ? 'Vence hoy' : dias===1 ? 'Vence mañana' : 'En ' + dias + ' días';
     return `<div class="cp-row${abierto?' is-open':''}${estadoFecha}${bloqueado?' is-bloqueado':''}" data-ent="${e.id}" data-fecha="${e.fechaEntrega||''}">
@@ -14893,6 +14915,7 @@ function cpRenderDetalle(hoy){
         <span class="cp-row-main">
           <span class="cp-row-ent">${e.prioridad===1 ? '<span class="cp-row-sir" title="Prioritario">🚨</span>' : ''}${escAttr(e.nombre)}</span>
           <span class="cp-row-proy"><span class="cp-id">#${o.id}</span>${coMarcaHtml(o, e)} ${escAttr(o.cliente||'(sin cliente)')} · ${escAttr(o.proyecto||'(sin nombre)')}</span>
+          ${bloqueado ? `<span class="cp-row-motivo" title="${escAttr(textoBloqueo(e))}">Bloqueada · ${escAttr(motivoBloqueo(e))}</span>` : ''}
         </span>
         <span class="cp-row-ref${ref ? '' : ' vacio'}">${escAttr(ref || '—')}</span>
         <button type="button" class="cp-row-star${enf?' on':''}" onclick="event.stopPropagation();cpToggleEnfoque(${ids})"${ro} title="${enf ? 'Quitar de enfoque' : 'Marcar como enfoque de la semana'} (máx. ${CP_MAX_ENFOQUE})" aria-pressed="${enf}" aria-label="Enfoque">${enf ? '★' : '☆'}</button>
@@ -14928,7 +14951,7 @@ function cpRenderDetalle(hoy){
         </div>
         <div class="cp-acc-line full cp-acc-imp">
           ${bloqueado
-            ? `<span class="cp-imp"><span class="cp-imp-dot" aria-hidden="true"></span><span>Bloqueado${origen ? ' por ' + escAttr(origen) : ''}${e.bloqueoDetalle ? ' · ' + escAttr(e.bloqueoDetalle) : ''}</span></span>${perfilRestringido ? '' : `<button type="button" class="cp-link cp-link-ent" onclick="openRSDetailDrawer(${o.id},${e.id})">Ver detalle del entregable →</button>`}`
+            ? `<span class="cp-imp"><span class="cp-imp-dot" aria-hidden="true"></span><span>Bloqueado · ${escAttr(motivoBloqueo(e))}${e.bloqueoOrigen==='por_habilitar' && e.bloqueoDetalle ? ' · ' + escAttr(e.bloqueoDetalle) : ''}</span></span>${perfilRestringido ? '' : `<button type="button" class="cp-link cp-link-ent" onclick="openRSDetailDrawer(${o.id},${e.id})">Ver detalle del entregable →</button>`}`
             : '<span class="cp-imp-ok">Sin impedimentos</span>'}
           ${perfilRestringido ? `<span class="cp-link"${cpAbrirFichaAttrs(o.id)}>Abrir ficha del proyecto →</span>` : ''}
         </div>
